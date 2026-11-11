@@ -9,8 +9,57 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ### Planned
 
-- Phase 1 — playable 3D environment: terrain, first-person camera and movement,
-  gravity, collisions, interaction raycasting, lighting and initial environment.
+- Complete Phase 1 — playable 3D environment: terrain, gravity, jumping, collision
+  detection, interaction raycasting and initial environment. (First-person camera,
+  mouse look and movement are implemented in 0.2.0; Phase 1 is not complete.)
+
+## [0.2.0] — 2026-11-11
+
+First-person camera and input foundation (Phase 1 groundwork).
+
+### Added
+
+- `PlayerController` — Three-free first-person controller with mouse look, pitch
+  clamping, yaw normalization, accelerated WASD movement, sprint, spawn/reset and
+  a circular foundation play-area bound.
+- `InputManager` — keyboard axes, pointer-lock mouse look with click-drag fallback,
+  ignored keys while typing, blur/visibility key clearing and complete listener
+  cleanup. Pointer-lock state drives the UI hint.
+- Presentation `FrameSystem` stage in `Game`: runs once per frame before rendering,
+  included in statistics, unregisterable and fail-fast on errors.
+- `CameraView` contract and `Engine.applyView` → `CameraManager.applyView`
+  (`YXZ` rotation, finite-value validation).
+- Validated, immutable `GameConfig.controls` section (eye height, move speed,
+  sprint multiplier, acceleration, look sensitivity, pitch limit, play-area radius).
+- Crosshair, controls hint and control documentation in the shell.
+- Tests for input, player movement/look, controls hint, camera application, frame
+  systems and bootstrap camera wiring (110 → 158 tests).
+- Architecture Appendix B (camera/input stages, control config, persistence design
+  baseline, data-driven definition baseline) and GDD Appendix A (open decisions).
+
+### Changed
+
+- `GameStats` now reports `frameSystems`; the debug overlay shows simulation and
+  frame system counts.
+- Verification scripts also check the crosshair, controls hint and new modules.
+- Bumped version to 0.2.0.
+
+### Design notes
+
+- Industrial simulation remains deterministic and fixed-step; only presentation
+  camera updates use frame deltas. Camera movement is explicitly not physics.
+- No save code and no item/recipe registries were added: their designs are
+  documented and deferred to Phases 12 and 2–7 to avoid placeholder systems.
+
+### Verification
+
+- `npm run typecheck` — pass.
+- `npm test` — 158/158 tests pass (15 files).
+- `npm run build` — pass.
+- `npm run verify:build` / `verify:preview` / `verify:dev` — all pass.
+- No browser binary is available in the sandbox, so real WebGL rendering and
+  pointer-lock behaviour remain a manual check. GitHub Pages source is still a
+  legacy branch deployment; see `PROJECT_STATUS.md`.
 
 ## [0.1.0] — 2026-11-11
 

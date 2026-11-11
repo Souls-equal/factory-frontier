@@ -39,6 +39,18 @@ export interface SimulationSystem {
   fixedUpdate(fixedDeltaMs: number): void;
 }
 
+/**
+ * Presentation-stage system executed once per rendered frame, before rendering.
+ *
+ * Used for input-driven view updates and other visual smoothing that must not
+ * run inside the deterministic industrial simulation. Frame systems must not
+ * mutate game state that the simulation also owns.
+ */
+export interface FrameSystem {
+  readonly id: string;
+  update(frameDeltaMs: number): void;
+}
+
 export interface GameStats {
   readonly status: GameStatus;
   readonly fps: number;
@@ -47,6 +59,7 @@ export interface GameStats {
   readonly tickCount: number;
   readonly fixedStepsLastFrame: number;
   readonly systems: number;
+  readonly frameSystems: number;
   readonly drawCalls: number;
   readonly triangles: number;
 }
@@ -82,6 +95,7 @@ export class Game {
   private readonly gameState: GameState;
   private readonly loop: GameLoop;
   private readonly systems = new Map<string, SimulationSystem>();
+  private readonly frameSystems = new Map<string, FrameSystem>();
   private readonly onError: ((error: unknown) => void) | undefined;
 
   constructor(options: GameOptions) {
@@ -102,7 +116,7 @@ export class Game {
     this.loop = new GameLoop({
       clock: this.simulationClock,
       onFixedUpdate: (fixedDeltaMs) => this.runFixedUpdate(fixedDeltaMs),
-      onRender: (frame) => this.engine.render(frame.alpha),
+      onRender: (frame) => this.renderFrame(frame.alpha, frame.frameDeltaMs),
       ...(options.scheduler !== undefined ? { scheduler: options.scheduler } : {}),
       maxFrameDeltaMs: options.config.simulation.maxFrameDeltaMs,
       onError: (error) => this.handleFrameError(error),
@@ -139,6 +153,7 @@ export class Game {
       tickCount: this.simulationClock.tickCount,
       fixedStepsLastFrame: loopStats.lastFixedStepCount,
       systems: this.systems.size,
+      frameSystems: this.frameSystems.size,
       drawCalls: engineStats.drawCalls,
       triangles: engineStats.triangles,
     };
@@ -197,6 +212,7 @@ export class Game {
     this.bus.emit('game:disposed', {});
     this.bus.clear();
     this.systems.clear();
+    this.frameSystems.clear();
   }
 
   /** Resize the rendering surface. Logical simulation state is unaffected. */
@@ -225,16 +241,7 @@ export class Game {
    * Returns an idempotent unregister function.
    */
   registerSystem(system: SimulationSystem): () => void {
-    if (this.gameState.is(GameStatus.Disposed)) {
-      throw new Error(`Cannot register system "${system.id}" after the game was disposed.`);
-    }
-    if (system.id.trim() === '') {
-      throw new Error('Simulation system id must not be empty.');
-    }
-    if (this.systems.has(system.id)) {
-      throw new Error(`Simulation system "${system.id}" is already registered.`);
-    }
-
+    this.assertSystemIdAvailable(system.id, 'Simulation system');
     this.systems.set(system.id, system);
     return () => {
       this.unregisterSystem(system.id);
@@ -245,9 +252,37 @@ export class Game {
     return this.systems.delete(id);
   }
 
+  /**
+   * Register a presentation-stage system. Returns an idempotent unregister
+   * function. Frame systems run once per rendered frame, before `render`.
+   */
+  registerFrameSystem(system: FrameSystem): () => void {
+    this.assertSystemIdAvailable(system.id, 'Frame system');
+    this.frameSystems.set(system.id, system);
+    return () => {
+      this.unregisterFrameSystem(system.id);
+    };
+  }
+
+  unregisterFrameSystem(id: string): boolean {
+    return this.frameSystems.delete(id);
+  }
+
   private assertStatus(action: string, expected: readonly GameStatus[]): void {
     if (!expected.includes(this.gameState.status)) {
       throw new GameLifecycleError(action, this.gameState.status, expected);
+    }
+  }
+
+  private assertSystemIdAvailable(id: string, kind: string): void {
+    if (this.gameState.is(GameStatus.Disposed)) {
+      throw new Error(`Cannot register system "${id}" after the game was disposed.`);
+    }
+    if (id.trim() === '') {
+      throw new Error(`${kind} id must not be empty.`);
+    }
+    if (this.systems.has(id) || this.frameSystems.has(id)) {
+      throw new Error(`${kind} "${id}" is already registered.`);
     }
   }
 
@@ -256,6 +291,13 @@ export class Game {
     for (const system of [...this.systems.values()]) {
       system.fixedUpdate(fixedDeltaMs);
     }
+  }
+
+  private renderFrame(alpha: number, frameDeltaMs: number): void {
+    for (const system of [...this.frameSystems.values()]) {
+      system.update(frameDeltaMs);
+    }
+    this.engine.render(alpha);
   }
 
   private handleFrameError(error: unknown): void {

@@ -21,6 +21,23 @@ export const DEFAULT_SIMULATION_CONFIG = Object.freeze({
   maxFrameDeltaMs: 250,
 });
 
+export const DEFAULT_CONTROLS_CONFIG = Object.freeze({
+  /** Camera height above the ground in metres. */
+  eyeHeight: 1.7,
+  /** Walking speed in metres per second. */
+  moveSpeed: 5.5,
+  /** Sprint speed multiplier. */
+  sprintMultiplier: 1.8,
+  /** Horizontal acceleration / braking in metres per second squared. */
+  acceleration: 28,
+  /** Look sensitivity in radians per mouse pixel. */
+  lookSensitivity: 0.0022,
+  /** Maximum absolute pitch in radians (± ≈83°). */
+  pitchLimit: 1.45,
+  /** Foundation-only safety bound in metres (terrain collision replaces it in Phase 1). */
+  playAreaRadius: 120,
+});
+
 export const DEFAULT_RENDER_CONFIG = Object.freeze({
   antialias: true,
   shadows: true,
@@ -41,6 +58,16 @@ export interface SimulationConfig {
   readonly maxFrameDeltaMs: number;
 }
 
+export interface ControlsConfig {
+  readonly eyeHeight: number;
+  readonly moveSpeed: number;
+  readonly sprintMultiplier: number;
+  readonly acceleration: number;
+  readonly lookSensitivity: number;
+  readonly pitchLimit: number;
+  readonly playAreaRadius: number;
+}
+
 export interface RenderConfig {
   readonly antialias: boolean;
   readonly shadows: boolean;
@@ -59,6 +86,7 @@ export interface GameConfig {
   readonly debug: boolean;
   readonly simulation: SimulationConfig;
   readonly render: RenderConfig;
+  readonly controls: ControlsConfig;
 }
 
 export interface GameConfigOverrides {
@@ -68,6 +96,7 @@ export interface GameConfigOverrides {
   readonly debug?: boolean;
   readonly simulation?: Partial<SimulationConfig>;
   readonly render?: Partial<RenderConfig>;
+  readonly controls?: Partial<ControlsConfig>;
 }
 
 export class ConfigurationError extends Error {
@@ -79,11 +108,12 @@ export class ConfigurationError extends Error {
 
 export const DEFAULT_GAME_CONFIG: GameConfig = Object.freeze({
   appName: 'Factory Frontier',
-  version: '0.1.0',
+  version: '0.2.0',
   basePath: '/',
   debug: false,
   simulation: DEFAULT_SIMULATION_CONFIG,
   render: DEFAULT_RENDER_CONFIG,
+  controls: DEFAULT_CONTROLS_CONFIG,
 });
 
 /**
@@ -122,6 +152,11 @@ export function createGameConfig(overrides: GameConfigOverrides = {}): GameConfi
     ...overrides.render,
   });
 
+  const controls: ControlsConfig = Object.freeze({
+    ...DEFAULT_CONTROLS_CONFIG,
+    ...overrides.controls,
+  });
+
   const config: GameConfig = Object.freeze({
     appName: overrides.appName ?? DEFAULT_GAME_CONFIG.appName,
     version: overrides.version ?? DEFAULT_GAME_CONFIG.version,
@@ -129,6 +164,7 @@ export function createGameConfig(overrides: GameConfigOverrides = {}): GameConfi
     debug: overrides.debug ?? DEFAULT_GAME_CONFIG.debug,
     simulation,
     render,
+    controls,
   });
 
   validateGameConfig(config);
@@ -162,6 +198,14 @@ export function validateGameConfig(config: GameConfig): void {
   assertNumberInRange(config.render.far, 'render.far', config.render.near + 1, 100_000);
   assertIntegerInRange(config.render.backgroundColor, 'render.backgroundColor', 0, 0xffffff);
   assertIntegerInRange(config.render.gridColor, 'render.gridColor', 0, 0xffffff);
+
+  assertNumberInRange(config.controls.eyeHeight, 'controls.eyeHeight', 0.5, 5);
+  assertNumberInRange(config.controls.moveSpeed, 'controls.moveSpeed', 0.5, 20);
+  assertNumberInRange(config.controls.sprintMultiplier, 'controls.sprintMultiplier', 1, 5);
+  assertNumberInRange(config.controls.acceleration, 'controls.acceleration', 1, 200);
+  assertNumberInRange(config.controls.lookSensitivity, 'controls.lookSensitivity', 0.0001, 0.02);
+  assertNumberInRange(config.controls.pitchLimit, 'controls.pitchLimit', 0.1, 1.5);
+  assertNumberInRange(config.controls.playAreaRadius, 'controls.playAreaRadius', 5, 150);
 }
 
 function assertNumberInRange(value: number, field: string, min: number, max: number): void {

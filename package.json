@@ -1,6 +1,6 @@
 {
   "name": "factory-frontier",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Factory Frontier \u2014 a browser-based 3D factory automation game.",
   "type": "module",

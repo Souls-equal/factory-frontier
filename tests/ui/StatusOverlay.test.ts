@@ -23,6 +23,7 @@ const STATS: GameStats = {
   tickCount: 50,
   fixedStepsLastFrame: 1,
   systems: 0,
+  frameSystems: 1,
   drawCalls: 42,
   triangles: 12345,
 };
@@ -108,6 +109,6 @@ describe('formatStats', () => {
     expect(text.split('\n')).toHaveLength(2);
     expect(text).toContain('frame 16.7 ms');
     expect(text).toContain('tris 12,345');
-    expect(text).toContain('systems 0');
+    expect(text).toContain('systems 0 sim / 1 frame');
   });
 });

@@ -89,6 +89,6 @@ export function formatStats(stats: GameStats): string {
 
   return [
     `FPS ${fps}   frame ${frameTime} ms   sim ${simSeconds} s   ticks ${stats.tickCount}`,
-    `draws ${stats.drawCalls}   tris ${triangles}   systems ${stats.systems}   status ${stats.status}`,
+    `draws ${stats.drawCalls}   tris ${triangles}   systems ${stats.systems} sim / ${stats.frameSystems} frame   status ${stats.status}`,
   ].join('\n');
 }

@@ -14,7 +14,7 @@
 ## PROGRESS TRACKER
 
 **Last updated:** 2026-11-11
-**Current phase:** Phase 0 complete pending manual browser confirmation; Phase 1 not started
+**Current phase:** Phase 0 complete; Phase 1 partially started (camera/input foundation only)
 
 The phase definitions below are authoritative. This tracker only records status;
 detailed evidence and verification results live in `PROJECT_STATUS.md`.
@@ -22,7 +22,7 @@ detailed evidence and verification results live in `PROJECT_STATUS.md`.
 | Phase | Status | Notes |
 |---|---|---|
 | 0 — Repository inspection and foundation | ✅ Implementation complete | Toolchain, core architecture, render loop, foundation scene, tests, Pages build; manual browser check pending |
-| 1 — Playable 3D environment | ⏳ Next | Not started; requires a manual browser check of the Phase 0 build first |
+| 1 — Playable 3D environment | 🟡 Partially started | First-person camera, mouse look and movement foundation implemented. **Not complete:** terrain, gravity, collisions, interaction raycasting, environment. Phase 1 acceptance criteria are not met |
 | 2 — Resources and inventory | ◻ Planned | — |
 | 3 — Building and placement | ◻ Planned | — |
 | 4 — First automated extractor | ◻ Planned | — |

@@ -42,8 +42,23 @@ describe('createGameConfig', () => {
     expect(config.simulation.maxFrameDeltaMs).toBe(250);
     expect(config.render.pixelRatioCap).toBe(2);
     expect(config.render.far).toBeGreaterThan(config.render.near);
+    expect(config.controls.eyeHeight).toBe(1.7);
+    expect(config.controls.moveSpeed).toBe(5.5);
+    expect(config.controls.pitchLimit).toBeGreaterThan(0);
     expect(config.basePath).toBe('/');
     expect(config.debug).toBe(false);
+    expect(config.version).toBe('0.2.0');
+  });
+
+  it('supports control overrides', () => {
+    const config = createGameConfig({
+      controls: { moveSpeed: 8, lookSensitivity: 0.001, playAreaRadius: 50 },
+    });
+
+    expect(config.controls.moveSpeed).toBe(8);
+    expect(config.controls.lookSensitivity).toBe(0.001);
+    expect(config.controls.playAreaRadius).toBe(50);
+    expect(config.controls.eyeHeight).toBe(1.7);
   });
 
   it('merges section overrides without dropping other values', () => {
@@ -70,6 +85,7 @@ describe('createGameConfig', () => {
     expect(Object.isFrozen(config)).toBe(true);
     expect(Object.isFrozen(config.simulation)).toBe(true);
     expect(Object.isFrozen(config.render)).toBe(true);
+    expect(Object.isFrozen(config.controls)).toBe(true);
   });
 
   it('rejects invalid simulation values', () => {
@@ -77,6 +93,16 @@ describe('createGameConfig', () => {
     expect(() => createGameConfig({ simulation: { fixedTimestepMs: 5000 } })).toThrow(ConfigurationError);
     expect(() => createGameConfig({ simulation: { maxCatchUpSteps: 1.5 } })).toThrow(ConfigurationError);
     expect(() => createGameConfig({ simulation: { maxFrameDeltaMs: 10 } })).toThrow(ConfigurationError);
+  });
+
+  it('rejects invalid control values', () => {
+    expect(() => createGameConfig({ controls: { eyeHeight: 0 } })).toThrow(ConfigurationError);
+    expect(() => createGameConfig({ controls: { moveSpeed: 100 } })).toThrow(ConfigurationError);
+    expect(() => createGameConfig({ controls: { sprintMultiplier: 0.5 } })).toThrow(ConfigurationError);
+    expect(() => createGameConfig({ controls: { acceleration: 0 } })).toThrow(ConfigurationError);
+    expect(() => createGameConfig({ controls: { lookSensitivity: 0 } })).toThrow(ConfigurationError);
+    expect(() => createGameConfig({ controls: { pitchLimit: 2 } })).toThrow(ConfigurationError);
+    expect(() => createGameConfig({ controls: { playAreaRadius: 0 } })).toThrow(ConfigurationError);
   });
 
   it('rejects invalid render values', () => {

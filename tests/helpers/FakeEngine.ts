@@ -1,4 +1,4 @@
-import type { GameEngine, RendererStats } from '../../src/engine/types';
+import type { CameraView, GameEngine, RendererStats } from '../../src/engine/types';
 
 export interface ResizeCall {
   readonly width: number;
@@ -12,6 +12,7 @@ export class FakeEngine implements GameEngine {
   disposeCalls = 0;
   initError: unknown = null;
   readonly renderCalls: number[] = [];
+  readonly viewCalls: CameraView[] = [];
   readonly resizeCalls: ResizeCall[] = [];
   readonly statsValue: RendererStats = {
     drawCalls: 7,
@@ -29,6 +30,10 @@ export class FakeEngine implements GameEngine {
 
   resize(width: number, height: number, pixelRatio: number): void {
     this.resizeCalls.push({ width, height, pixelRatio });
+  }
+
+  applyView(view: CameraView): void {
+    this.viewCalls.push(view);
   }
 
   render(alpha: number): void {

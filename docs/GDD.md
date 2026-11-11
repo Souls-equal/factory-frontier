@@ -1502,3 +1502,29 @@ The logical game state is what must be saved.
 
 ---
 
+
+---
+
+# APPENDIX A — OPEN DESIGN DECISIONS
+
+**Added:** 2026-11-11.
+**Purpose:** record decisions that the specification deliberately leaves open.
+They must not be silently resolved in code; each needs an explicit choice, a
+documented rationale and a corresponding test when its phase begins.
+
+| Decision | Current state | Resolve in |
+|---|---|---|
+| Exact production rates, recipe durations and ingredient/output amounts | Only illustrative examples exist in §12.5 | Phase 6 (with balance pass) |
+| Machine footprints, port dimensions and foundation grid metrics | Not specified | Phase 3 |
+| World size, terrain resolution, chunk dimensions and view distance | Configurable ranges only (§4.2–4.3) | Phase 1 / Phase 10 |
+| Save slot policy, autosave cadence and migration support window | Baseline design in Technical Architecture Appendix B.5 | Phase 12 |
+| Milestone quantities and progression pacing | Example quantities only (§15.2) | Phase 11 |
+| Power distribution priority during shortages | Rules described qualitatively (§14.4) | Phase 8 |
+| Fluid network fidelity and capacity model | Simplified deterministic simulation required (§13) | Later fluid phase |
+| Pointer-lock UX and keybind customization scope | Foundation uses click-to-lock plus drag fallback; §6.1 lists default keys | Phase 13 (settings) |
+| Audio asset pipeline and licensing | Categories listed only (§18.1) | Phase 13 |
+| Final item/resource names and icons for later tiers | Only "possible later resources" listed (§5.2) | Progression phase |
+
+Until a decision is made, the implementation must use validated configuration
+values, keep the illustrative GDD values out of gameplay logic, and avoid
+presenting a provisional choice as final balance.

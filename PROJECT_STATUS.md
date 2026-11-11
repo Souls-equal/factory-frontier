@@ -1,205 +1,237 @@
 # PROJECT STATUS
 
 **Project:** Factory Frontier
-**Version:** 0.1.0
-**Current Phase:** Phase 0 — Repository Inspection and Foundation
-**Phase Status:** ✅ Implementation complete · automated verification passed ·
-manual browser confirmation pending
-**Next Phase:** Phase 1 — Playable 3D Environment (not started)
+**Version:** 0.2.0
+**Current Phase:** Phase 1 — Playable 3D Environment (foundation portion only)
+**Phase Status:** 🟡 Partially started · first-person camera/input foundation complete ·
+Phase 1 acceptance criteria **not** met
+**Next Recommended Task:** Complete Phase 1 — terrain, gravity, collisions and
+interaction raycasting
 **Last Updated:** 2026-11-11
+
+---
+
+## Repository Inspection Findings (this task)
+
+- The Phase 0 foundation from `main` was present and working: toolchain, docs,
+  core architecture, foundation scene, tests and deployment workflows.
+- No existing implementation needed to be replaced or removed; it was preserved.
+- **Missing for this task:** any input layer, player controller, camera-view
+  application, frame-stage update pipeline and control UI — now implemented.
+- **Missing by design:** terrain/physics/raycasting (Phase 1), inventory and
+  factories (Phases 2–9), save code (Phase 12), data registries (Phases 2–7).
+  Designs for save/data are documented rather than stubbed.
+- **External technical issue:** the repository's GitHub Pages source is a legacy
+  branch deployment, so the live site publishes raw sources instead of `dist/`.
+  The build/workflow are correct; the repository setting needs changing.
 
 ---
 
 ## Current Development Phase
 
-Phase 0 — Repository Inspection and Foundation.
+Phase 0 (repository inspection and foundation) is complete and merged into `main`.
+It delivered the toolchain, core architecture, deterministic fixed-timestep loop,
+foundation scene, tests and Pages-compatible build.
 
-The technical foundation defined by §24 of the roadmap is implemented: TypeScript,
-Vite, Three.js, the central `Game` class, the rendering loop, a basic scene, GitHub
-Pages compatibility, and an automated test/verification pipeline.
+This task extended the foundation with the first functional player-facing
+capability: a **controllable first-person camera** (pointer-lock mouse look,
+click-drag fallback, WASD movement, sprint, acceleration and bounded flat play
+area), plus the input/player modules, frame-stage update pipeline, control UI and
+tests.
 
-No Phase 1 or later gameplay systems have been started.
+This is explicitly authorised Phase 1 groundwork, not a completed Phase 1. There is
+still no terrain, gravity, jumping, collision detection or interaction raycasting,
+so the Phase 1 acceptance criteria in `docs/DEVELOPMENT_ROADMAP.md` are not met.
+No factory gameplay system has been started.
 
 ---
 
-## Completed Phases
+## Completed Work
 
-### Phase 0 — Repository inspection and foundation (implementation complete)
+### Phase 0 — Repository inspection and foundation ✅
 
-| Objective | Status | Outcome |
+Toolchain (strict TypeScript, Vite, Three.js, Vitest), documentation split into
+`docs/*`, central `Game` lifecycle, fixed-timestep clock and render loop, engine
+renderer/scene/camera/lighting, foundation scene, event bus, configuration,
+build/preview/dev verification scripts, CI and Pages workflows, 110 tests.
+
+### Foundation extension — controllable first-person camera ✅
+
+| Objective | Status | Evidence |
 |---|---|---|
-| Inspect the repository | ✅ | Repository contained only documentation and an empty `src/index.html` |
-| Configure TypeScript | ✅ | Strict TS 5.9.3, `tsc --noEmit` clean |
-| Configure Vite | ✅ | Vite 8.3.8 dev/build/preview, base path, preview-host support |
-| Install and configure Three.js | ✅ | Three.js 0.187.0 with typed wrapper (`Renderer`, `SceneManager`, …) |
-| Establish the main application structure | ✅ | `core/`, `engine/`, `ui/`, `utils/`, `styles/`, `tests/`, `scripts/` |
-| Configure GitHub Pages compatibility | ✅ | Production base `/factory-frontier/`, deploy workflow, verified artifact URLs |
-| Create the central Game class | ✅ | `src/core/Game.ts` with lifecycle, systems, stats and events |
-| Create the rendering loop | ✅ | `GameLoop` + `GameClock` fixed-step loop with bounded catch-up |
-| Create a basic scene | ✅ | Foundation survey scene with lighting, shadows, fog and instancing |
+| Inspect repository and preserve existing implementation | ✅ | Phase 0 preserved; no working functionality rewritten |
+| TypeScript / Three.js / Vite requirement | ✅ | Existing toolchain retained; strict check passes |
+| Modular architecture (input, player, engine, core, UI) | ✅ | New `src/input/` and `src/player/` modules, small focused files |
+| Fixed-timestep simulation + independent render loop | ✅ | Existing fixed stage retained; new presentation frame stage documented and tested |
+| Data-driven machines/recipes/resources/items | 📝 Design only | Baseline interfaces and rules documented in Technical Architecture Appendix B.6; implementation deferred to Phases 2–7 |
+| Save system designed for browser persistence | 📝 Design only | IndexedDB envelope, versioning, validation and atomic-write baseline documented in Technical Architecture Appendix B.5; implementation deferred to Phase 12 |
+| GitHub Pages-compatible build | ✅ | Verified production base path and served assets |
+| Basic Three.js scene with ground and lighting | ✅ | Foundation scene preserved and verified by tests and HTTP serving |
+| Controllable 3D first-person camera | ✅ | `PlayerController` + `InputManager`; mouse look, WASD, sprint, pitch clamp, bounds |
+| Application starts through the dev server | ✅ | Dev-server verification script passes; manual server run confirmed HTTP 200 |
+| Production build succeeds | ✅ | `npm run build` passes |
+| Documentation synchronized | ✅ | README, status, changelog, roadmap tracker, architecture appendices updated |
 
----
+### Implemented in this task
 
-## Phase 0 Task Checklist
+- **`src/input/InputManager.ts`** — WASD/Shift keyboard state; pointer-lock mouse
+  look with click-drag fallback; ignored keys while typing; blur/visibility key
+  clearing; pointer-lock change callback; complete listener cleanup on dispose.
+- **`src/player/PlayerController.ts`** — Three-free first-person controller:
+  accelerated walking/strafe/sprint, mouse look with pitch clamp and yaw
+  normalization, circular safety bound, spawn/reset, camera-view output.
+- **`src/ui/ControlsHint.ts`** — pointer-lock-aware control hint (real state only).
+- **Frame systems** — `Game.registerFrameSystem` / `unregisterFrameSystem`, run
+  once per rendered frame immediately before `engine.render(alpha)`; fail-fast on
+  errors; included in statistics and disposal.
+- **Camera application** — `CameraView` contract and `Engine.applyView` →
+  `CameraManager` (`YXZ` rotation, finite-value validation).
+- **Control configuration** — validated, immutable `GameConfig.controls`
+  (eye height, speed, sprint, acceleration, sensitivity, pitch limit, play area).
+- **Shell** — crosshair, control hint, updated phase label/boot copy.
+- **Tests** — new suites for input, player movement, controls hint, frame systems,
+  camera application and bootstrap wiring (110 → 158 tests).
+- **Verification scripts** — now also check the controls hint, crosshair and new
+  modules.
 
-- [x] Inspect repository structure.
-- [x] Inspect existing dependencies (none were present; no lockfile or package manifest).
-- [x] Review project documentation (master specification, ARENA rules, status).
-- [x] Create the missing canonical docs (`docs/GDD.md`, `docs/TECHNICAL_ARCHITECTURE.md`, `docs/DEVELOPMENT_ROADMAP.md`).
-- [x] Configure TypeScript (strict, bundler resolution, no emit).
-- [x] Configure Vite (dev, production build, preview, GitHub Pages base path).
-- [x] Integrate Three.js behind an engine boundary.
-- [x] Establish the initial game architecture (Game, GameEngine, GameLoop, GameClock, EventBus, GameState).
-- [x] Create the main rendering loop (fixed 50 ms simulation, variable render rate).
-- [x] Add automated tests for all deterministic Phase 0 systems (110 tests).
-- [x] Add build/preview/dev-server verification scripts.
-- [x] Validate the initial build and HTTP serving (Pages base path included).
-- [ ] Confirm the WebGL scene visually in a real browser (environment limitation — see below).
+### Preserved from Phase 0
+
+Toolchain and lockfile, strict configuration, `Game`/`GameClock`/`GameLoop`/
+`GameState`/`EventBus`, `Engine`/`Renderer`/`SceneManager`/`CameraManager`/
+`LightingManager`, foundation scene, `StatusOverlay`, build and verification
+scripts, CI and GitHub Pages workflows.
 
 ---
 
 ## Verification Results
 
-All commands below were executed in the development sandbox.
+Commands executed in this sandbox:
 
 | Command | Result |
 |---|---|
-| `npm ci` | ✅ 90 packages installed from the committed lockfile |
+| `npm ci` | ✅ 92 packages installed from lockfile |
 | `npm run typecheck` | ✅ No errors (strict TypeScript 5.9.3) |
-| `npm test` | ✅ 12 test files, **110/110 tests passed** |
-| `npm run build` | ✅ Built in ≈0.26 s; 20 modules transformed |
-| `npm run verify:build` | ✅ 21 checks passed (Pages base path, asset integrity, favicon, no localhost) |
-| `npm run verify:preview` | ✅ Served `dist/` under `/factory-frontier/`, all assets HTTP 200 |
-| `npm run verify:dev` | ✅ Dev entry page, module graph, Three.js pre-bundle and CSS served |
+| `npm test` | ✅ 15 test files, **158/158 tests passed** |
+| `npm run build` | ✅ Built in ≈0.33 s |
+| `npm run verify:build` | ✅ 23 checks passed (base path, assets, favicon, HUD, no localhost) |
+| `npm run verify:preview` | ✅ 11 checks passed; production build served under `/factory-frontier/`, all assets HTTP 200 |
+| `npm run verify:dev` | ✅ 22 checks passed; dev entry page and module graph served/transformed (including new input/player modules) |
 
 Production build output:
 
 ```text
-dist/index.html                   2.38 kB
-dist/assets/index-*.css           4.15 kB
-dist/assets/index-*.js          560.34 kB   (Three.js included)
-dist/assets/index-*.js.map      2919.51 kB
+dist/index.html                   2.64 kB
+dist/assets/index-*.css           5.07 kB
+dist/assets/index-*.js          568.68 kB   (Three.js included)
+dist/assets/index-*.js.map    2,950.23 kB
 dist/favicon.svg                    395 B
 ```
 
-The built HTML references assets under `/factory-frontier/assets/…`, and the
-preview server returned HTTP 200 for the entry document and every referenced asset.
+### New tests
 
-### Test coverage by area
+- `tests/input/InputManager.test.ts` — axes, sprint, blur, typing-target guard,
+  drag deltas, pointer-lock deltas, lock requests, rejection handling, dispose.
+- `tests/player/PlayerController.test.ts` — spawn/view, forward/strafe relative to
+  yaw, acceleration, sprint, braking, diagonal normalization, pitch clamp, yaw
+  normalization, invalid input, frame-delta clamp, play-area bound, reset.
+- `tests/ui/ControlsHint.test.ts` — binding, missing element, pointer-lock display.
+- Extended `tests/core/Game.test.ts` — frame-system ordering, registration,
+  duplicate-id protection, failure handling, disposal.
+- Extended engine/config/overlay/bootstrap tests for camera application, controls
+  config and real shell wiring.
 
-| Area | Verified behaviour |
-|---|---|
-| `GameClock` | Accumulation, multi-step frames, delta clamping, catch-up cap, dropped time, invalid input, determinism, reset |
-| `GameLoop` | First-frame origin, fixed updates, single render per frame, start/stop/restart, frame clamping, FPS stats, error fail-fast |
-| `EventBus` | on/off/once, listener counts, error isolation, mutation during emit, clearing |
-| `Configuration` | Defaults, overrides, immutability, base-path normalization, range validation |
-| `GameState` / `Game` | Legal/illegal transitions, per-action guards, init failures, start/pause/resume/stop, resizing, system registration, disposal, error handling |
-| Engine | Scene construction, instancing, camera aspect, lighting/shadows, render delegation, resize, dispose/teardown |
-| UI | Boot status, fatal panel, debug stats, real shell markup, page-unload disposal, fatal engine error path |
-| Bootstrap | Real `main.ts` against real `index.html` with only `Engine.create` mocked |
-
----
-
-## Phase 0 Acceptance Criteria
+### Acceptance status for this task
 
 | Criterion | Status | Evidence |
 |---|---|---|
-| Project builds successfully | ✅ Verified | `npm run build` exited 0 and emitted `dist/` with JS, CSS, source map and favicon |
-| Game loads in a browser | ⚠️ Partially verified | Entry document, module graph and build artifacts are served correctly; the real bootstrap runs under jsdom. Actual page load in a browser was not executed (no browser binary in the sandbox) |
-| Three.js scene renders | ⚠️ Partially verified | Scene graph, camera, lights, instancing and render delegation are unit-tested; GPU rasterization was not executed |
-| No critical console errors | ⚠️ Partially verified | No transform/import errors, bootstrap integration test produces no `console.error`. Runtime console of a real browser was not captured |
-| GitHub Pages base path configured correctly | ✅ Verified | Built HTML and every asset use `/factory-frontier/…`; preview server fetch checks pass; override documented |
+| TypeScript checks | ✅ Passed | `npm run typecheck` |
+| Production build | ✅ Passed | `npm run build` |
+| Tests | ✅ Passed | 158/158 |
+| Dev server starts | ✅ Passed | `verify:dev` + live server HTTP 200 check |
+| Basic scene / ground / lighting | ✅ Constructed and tested | Scene graph, lights, render delegation; real rasterization pending browser |
+| Controllable first-person camera | ✅ Logic verified | 35+ player/input/camera assertions; real pointer lock pending browser |
+| GitHub Pages configuration coherent | ✅ Build / ⚠️ site setting | Artifacts and base path verified; repository Pages source is still legacy |
+| Application renders correctly in a browser | ⚠️ Not executed | No browser binary in sandbox; manual check required |
 
-**Phase 0 is not declared fully accepted until the manual browser check below has
-been performed and recorded here.** Phase 1 must not start before that check.
-
-Manual check required:
-
-1. Run `npm run dev` and open the printed URL (or use the live preview).
-2. Confirm the boot overlay disappears, the survey scene is visible, and the
-   debug panel works with `?debug=1`.
-3. Confirm the browser console shows the `Factory Frontier … ready` info line and
-   no errors; verify WebGL2 is active.
-4. Record the result in this document.
-
----
-
-## Architectural Decisions
-
-1. **Documentation split.** The 2,222-line master specification was divided into
-   `docs/GDD.md` (§0–19), `docs/TECHNICAL_ARCHITECTURE.md` (§20–23) and
-   `docs/DEVELOPMENT_ROADMAP.md` (§24–26), preserving the text byte-for-byte. This
-   satisfies the mandatory structure in `ARENA_RULES.md` and avoids maintaining
-   three divergent copies. `README.md` is now the entry point.
-2. **Gameplay/rendering boundary.** `Game` depends only on the `GameEngine`
-   interface in `src/engine/types.ts`; `Engine` composes the Three.js subsystems.
-   Gameplay code must never import Three.js. This enables headless logic tests and
-   future rendering-backend changes.
-3. **Fixed timestep with bounded catch-up.** 50 ms steps, 250 ms maximum frame
-   delta, 10-step catch-up limit, excess backlog discarded and reported. This
-   protects determinism and prevents the simulation from entering an unbounded
-   catch-up spiral after a stall.
-4. **Explicit lifecycle.** `GameState` owns the transition table; `Game` enforces
-   per-action preconditions. This fixed a real gap where `resume()` was accepted
-   from `initialized`.
-5. **Fail-fast loop errors.** An exception in a simulation system or in rendering
-   stops the loop, moves the game to `stopped`, emits `game:error`, and surfaces a
-   fatal panel in the UI instead of silently continuing with inconsistent state.
-6. **Environment-aware base path.** Production defaults to `/factory-frontier/`,
-   development to `/`; both dev and build use the same resolver, and
-   `VITE_BASE_PATH` supports renamed repositories or custom domains.
-7. **Dependency minimalism.** Runtime dependency: Three.js only. Dev tooling:
-   TypeScript, Vite, Vitest, jsdom, type packages. No physics engine, state library
-   or UI framework has been introduced.
-8. **Verification as code.** Base-path, asset, preview-server and dev-server
-   checks are scripts run locally and in CI, not manual steps.
-9. **Phase 0 scene is explicitly a fixture.** The survey scene proves the render
-   pipeline and instancing path. It contains no fake gameplay systems.
-10. **No empty scaffolding.** Folders and registries for later phases are created
-    only when those phases begin.
+**Manual browser check still required:** open the live preview, click to capture
+the mouse, move/look with WASD + mouse, sprint with Shift, release with Esc, verify
+no console errors, then record the result here.
 
 ---
 
 ## Known Issues and Limitations
 
-1. **Browser/WebGL verification not executed in the sandbox.** There is no browser
-   binary or system browser library available, and browser downloads are outside
-   the allowed network hosts. The game is verified through build artifacts, HTTP
-   serving, jsdom bootstrap and Node scene-graph tests. A manual browser check is
-   required before Phase 1.
-2. **The scene is a Phase 0 fixture**, not terrain: flat ground plane, grid, pad,
-   beacon and instanced markers. It does not represent Phase 1 world generation.
-3. **No gameplay systems are registered.** `Game.registerSystem` is the extension
-   point; Phase 0 intentionally has an empty simulation system list.
-4. **Source maps are shipped** (≈2.9 MB `.map`) for debuggability. Compression and
-   map policy can be revisited in Phase 13 (deployment optimization).
-5. **The Pages deployment workflow has not run on GitHub Actions yet.** It is
-   configured for `main`; this branch (`arena/f9c37f65-factory-frontier`) does not
-   trigger a deployment. Repositories with a different name or a custom domain
-   must set `VITE_BASE_PATH`.
-6. **No persistence, audio, UI framework or asset pipeline.** These are later
-   phases and no placeholders were added.
-7. **GitHub Pages SPA fallback is not configured.** Not needed in Phase 0 (single
-   route); required if client-side routing is introduced later.
+1. **GitHub Pages source is configured as legacy branch deployment** (`main` / root),
+   not GitHub Actions. The deployment workflow succeeds and uploads `dist/`, but
+   the live site publishes raw source files. The sandbox token cannot change Pages
+   settings (`403 Resource not accessible by integration`). Fix: Settings → Pages →
+   Build and deployment → Source = **GitHub Actions**, then re-run the workflow.
+2. **No real-browser verification in this environment.** WebGL rasterization,
+   pointer lock and browser console output were not executed. Unit/integration
+   tests and HTTP serving checks pass, but visual confirmation is pending.
+3. **Camera foundation is not Phase 1 physics.** There is no terrain height
+   sampling, gravity, jumping, slope handling or collision. The player walks on an
+   assumed flat plane and is constrained by a circular safety radius. Phase 1 must
+   replace this with a deterministic player simulation.
+4. **Movement is presentation-stage.** It integrates frame deltas clamped to
+   250 ms; it is bounded and frame-rate independent in speed but not a
+   deterministic physics step. Industrial simulation remains fixed-step.
+5. **No save system code and no data-driven registries yet.** Only documented
+   designs exist (Technical Architecture Appendices B.5/B.6); no placeholder code
+   was added. Phase 12 and Phases 2–7 respectively.
+6. **No key remapping, settings menu, audio, terrain or interaction prompt.**
+7. **Source maps (~2.95 MB) ship with the production build** for debuggability;
+   revisit in Phase 13.
+8. **No empty gameplay scaffolding.** Factory/system folders will be created when
+   their phases begin.
 
 ---
 
-## Next Objective
+## Architectural Decisions (this increment)
 
-1. Perform and record the manual browser smoke check above.
-2. Start **Phase 1 — Playable 3D environment** only after that check passes:
-   terrain, first-person camera, pointer lock, movement, gravity, collisions,
-   interaction raycasting, basic lighting and initial environment.
-3. Add automated tests for movement/collision math and raycast selection while
-   implementing Phase 1; keep the fixed-step simulation and rendering separation.
+1. **Two-stage update model.** Deterministic industrial simulation stays on the
+   50 ms fixed clock (`SimulationSystem`); input-driven camera/view updates run in
+   a new `FrameSystem` stage once per render. This avoids 20 Hz mouse-look stutter
+   without compromising simulation determinism.
+2. **Three-free player controller.** `PlayerController` owns plain numbers and a
+   `CameraView`; only `Engine`/`CameraManager` touch Three.js. This keeps movement
+   logic testable in Node and preserves the gameplay/rendering boundary.
+3. **Unified system id space.** Simulation and frame systems cannot share ids,
+   preventing ambiguous statistics and teardown.
+4. **Pointer lock with drag fallback.** Pointer lock is preferred, but look input
+   remains usable if the browser denies it, which also makes jsdom-based tests
+   meaningful without faking a lock.
+5. **Controls as validated configuration.** Sensitivity, speeds, pitch limit and
+   play-area radius are data, not constants buried in the controller.
+6. **Design-before-implementation for persistence and data.** Save and registry
+   designs are documented with explicit deferral; no fake systems were introduced.
+7. **Version 0.2.0.** New player-facing capability; compatible with Phase 0
+   foundation.
+
+Unresolved design choices are tracked in `docs/GDD.md` Appendix A; no provisional
+gameplay balance values were encoded.
+
+---
+
+## Next Recommended Task
+
+1. Perform the manual browser check and record it here.
+2. **Complete Phase 1 — Playable 3D environment** (do not start Phase 2):
+   - deterministic terrain heightfield and walkable ground,
+   - gravity, jumping, ground detection and collision with terrain/major objects,
+   - interaction raycasting and contextual prompts,
+   - basic environment placement that does not interfere with construction,
+   - movement/collision/raycast tests and update of Phase 1 acceptance evidence.
+3. Fix the GitHub Pages source setting before relying on the live deployment.
 
 ---
 
 ## Development Notes
 
-- Documentation is the source of truth. Update this file and `CHANGELOG.md` after
-  every task, and update the roadmap when progress or scope changes.
-- Do not mark a phase complete based on visual appearance or on unexecuted checks.
-- Preserve the layering: DOM in `main.ts`/`ui/`, orchestration in `core/`, Three.js
-  in `engine/`, gameplay (when added) independent of rendering.
-- Run `npm run verify` before considering a task complete.
+- Documentation is the source of truth; update this file, `CHANGELOG.md` and the
+  roadmap tracker after every task, and architecture appendices when decisions
+  change.
+- Never mark a phase complete based on visual appearance or unexecuted checks.
+- Run `npm run verify` before declaring a task complete.
+- Preserve the layering: DOM in `main.ts`/`ui/`, orchestration in `core/`,
+  Three.js in `engine/`, player math without Three.js.

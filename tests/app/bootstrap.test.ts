@@ -5,6 +5,8 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { CameraView } from '../../src/engine/types';
+
 /**
  * Integration test for the real application bootstrap.
  *
@@ -19,11 +21,15 @@ const { fakeEngine, createMock } = vi.hoisted(() => {
     disposeCalls: 0,
     resizeCalls: [] as Array<{ width: number; height: number; pixelRatio: number }>,
     renderCalls: [] as number[],
+    viewCalls: [] as CameraView[],
     async init() {
       fakeEngine.initCalls += 1;
     },
     resize(width: number, height: number, pixelRatio: number) {
       fakeEngine.resizeCalls.push({ width, height, pixelRatio });
+    },
+    applyView(view: CameraView) {
+      fakeEngine.viewCalls.push(view);
     },
     render(alpha: number) {
       fakeEngine.renderCalls.push(alpha);
@@ -48,18 +54,36 @@ const testDir = dirname(fileURLToPath(import.meta.url));
 const shellHtml = readFileSync(resolve(testDir, '../../index.html'), 'utf8');
 const shellBody = /<body[^>]*>([\s\S]*)<\/body>/i.exec(shellHtml)?.[1] ?? '';
 
+let pendingFrames: Array<(timestampMs: number) => void> = [];
+
+function runNextFrame(timestampMs: number): void {
+  const callback = pendingFrames.shift();
+  if (callback === undefined) {
+    throw new Error('No animation frame was scheduled.');
+  }
+  callback(timestampMs);
+}
+
 beforeEach(() => {
   vi.resetModules();
   fakeEngine.initCalls = 0;
   fakeEngine.disposeCalls = 0;
   fakeEngine.resizeCalls = [];
   fakeEngine.renderCalls = [];
+  fakeEngine.viewCalls = [];
+  pendingFrames = [];
   createMock.mockClear();
   // Use the real application shell markup (script tags are inert in jsdom).
   document.body.innerHTML = shellBody;
 
-  // The loop must not schedule real animation frames in tests.
-  vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1));
+  // Capture animation frames so tests can step the real GameLoop manually.
+  vi.stubGlobal(
+    'requestAnimationFrame',
+    vi.fn((callback: (timestampMs: number) => void) => {
+      pendingFrames.push(callback);
+      return pendingFrames.length;
+    }),
+  );
   vi.stubGlobal('cancelAnimationFrame', vi.fn());
 });
 
@@ -94,6 +118,17 @@ describe('application bootstrap', () => {
     expect(fatal?.hidden).toBe(true);
     expect(error).not.toHaveBeenCalled();
     expect(info).toHaveBeenCalled();
+
+    expect(document.querySelector('[data-ui="controls-hint"]')).not.toBeNull();
+
+    // Step one real animation frame: the player frame system must apply the
+    // starting camera pose before the engine renders.
+    expect(fakeEngine.renderCalls).toHaveLength(0);
+    runNextFrame(16);
+    expect(fakeEngine.viewCalls).toHaveLength(1);
+    expect(fakeEngine.viewCalls[0]?.position.y).toBeCloseTo(1.7);
+    expect(fakeEngine.viewCalls[0]?.position.z).toBeCloseTo(18);
+    expect(fakeEngine.renderCalls).toHaveLength(1);
   });
 
   it('disposes the game when the page unloads', async () => {
