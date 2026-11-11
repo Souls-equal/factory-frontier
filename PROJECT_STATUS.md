@@ -2,14 +2,14 @@
 
 **Project:** Factory Frontier
 **Version:** 0.3.0
-**Current Phase:** Phase 1 — Playable 3D Environment
-**Phase Status:** 🟡 Implemented; acceptance pending browser verification
-**Next Recommended Task:** Manual browser verification of Phase 1; Phase 2 requires explicit authorization
+**Current Phase:** Phase 2 — Resources and Inventory
+**Phase Status:** 🟡 Implemented; acceptance pending browser verification and placement limitations
+**Next Recommended Task:** Manual browser verification of the Phase 1/2 resource loop and collision regression
 **Last Updated:** 2026-11-11
 
 ---
 
-## Repository Inspection Findings (this task)
+## Phase 1 repository inspection (historical)
 
 - Phase 0 + the camera foundation from `main` (`821a943`) were present and working:
   strict TypeScript/Vite/Three.js toolchain, `Game` lifecycle, fixed-timestep clock,
@@ -21,8 +21,50 @@
 - Missing for Phase 1 and now implemented: terrain, gravity, jumping, ground
   detection, collision, slope handling, interaction raycasting, interactable
   contract, interaction UI, real environment.
-- Still absent by design: inventory, resources, buildings, machines, power, saves
-  (Phases 2–12). No placeholder modules were created for them.
+- At that point inventory and resources were absent; Phase 2 now adds them.
+  Buildings, machines, power and saves remain out of scope.
+
+---
+
+## Phase 2 — Resources and inventory (2026-11-11)
+
+Implemented, but **not accepted as complete**: WebGL, pointer lock, resource
+readability and in-browser controls have not been manually verified. Phase 1
+browser acceptance is also pending.
+
+- Central registry: six raw resources, unique IDs, descriptions, icons and stack
+  limits; no water item. The solid slot inventory is renderer-independent and
+  supports partial add/remove/transfers, quantity/capacity queries, move, split
+  and merge. Every operation validates before mutation and reports quantities.
+- Default inventory: 24 configurable slots; gathering: 5 configurable units per
+  press. Purity multipliers 0.5/1/2 are configurable and informational only.
+- Seeded deposits form a starting iron cluster and five exploration clusters;
+  they query terrain, avoid existing obstacles, other deposits and the spawn, and
+  carry their own logical IDs, purity and extraction metadata. Solid deposit
+  colliders reuse `ObstacleField` and Three.js meshes consume deposit data.
+- The existing interaction system handles targeting and edge-triggered gathering;
+  partial/full results appear in its feedback. Inventory opens with Tab, closes
+  with Tab/Escape/button, and supports slot selection, inspection, moving,
+  merging and half-stack splitting. Modal input clears held/queued actions and
+  releases pointer lock; after closing click the viewport to recapture it.
+- `npm run typecheck`, `npm test`, `npm run build`, `npm run verify` all passed:
+  **299 tests in 27 files**, including the real bootstrap with mocked WebGL, seeded
+  generation across 20 seeds, registry/inventory conservation, targeting and
+  gathering, modal input, rendering scene graph, and Phase 1 regressions. Build
+  generated 4.03 kB HTML, 7.90 kB CSS and 606.09 kB JS (uncompressed).
+- Additional collision check: 500 repeated steps against adjacent cylinders and
+  moving away passed. No physics changes were needed beyond the existing merged
+  fix. This does not prove stability for all configurations.
+- Known placement limits: generation is best-effort with bounded attempts; very
+  constrained configurations can produce fewer deposits than requested, and a
+  per-position slope/spacing check does not prove paths are reachable. Interaction
+  still has no line-of-sight occlusion. Deposits are infinite and inventory does
+  not persist between reloads; both are intentional for this phase.
+- Required browser checks: appearance and placement of all six resource types;
+  discovery and sustained collision pressure; mouse look, movement, sprint and
+  jump; aiming, purity, E repeat prevention, success/partial/full feedback; Tab,
+  Escape, close button, pointer-lock release/recapture; selecting, moving,
+  splitting and merging stacks; inventory capacity and controls isolation.
 
 ---
 
@@ -95,7 +137,7 @@
 
 ---
 
-## Verification (executed 2026-11-11)
+## Phase 1 verification (historical, 2026-11-11)
 
 | Check | Result |
 |---|---|
@@ -165,8 +207,7 @@ GitHub Actions. Last confirmed deployment: `7721488024` (run `43102108684`).
 This task's merge is deployed by the same pipeline; the result is recorded below.
 
 - **Previous v0.3.0 Pages deployment:** run `43105952909`, deployment
-  `7721918068`, on merge `8d30fbd`, succeeded. This collision fix is not deployed
-  until it is merged and a subsequent deployment succeeds.
+  `7721918068`, on merge `8d30fbd`, succeeded. This Phase 2 work is not deployed until merged and a subsequent deployment succeeds.
 
 ---
 
@@ -185,8 +226,8 @@ This task's merge is deployed by the same pipeline; the result is recorded below
 6. **Two interactable props exist as environment content.** They demonstrate the
    interaction contract (ping log, relay channel) and are not resource/gameplay
    systems.
-7. **No save system, inventory, building, machines or power** — by design.
-8. **Source maps (~3.07 MB) ship with the production build** for debuggability.
+7. **No save system, building, machines or power** — by design. Inventory exists in memory only.
+8. **Source maps (~3.11 MB) ship with the production build** for debuggability.
 9. **Collision bounds:** a deeply embedded spawn or pathological intersecting
    cylinder cluster may need a noticeable depenetration correction or remain
    overlapped. Remaining movement is conservatively stopped when the bounded
@@ -199,12 +240,10 @@ This task's merge is deployed by the same pipeline; the result is recorded below
 
 ## Next Recommended Task
 
-1. Perform the manual browser check and record the result here.
-2. **Phase 2 — Resources and inventory (only with explicit authorization):**
-   item registry, inventory model with capacity rules, resource deposits placed on
-   the Phase 1 terrain (`TerrainQuery` + `ObstacleField` are the extension points),
-   manual gathering through the existing interaction contract, minimal HUD.
-3. Do not start Phase 3+ before Phase 2 acceptance criteria are validated.
+1. Perform and record all manual browser checks above; investigate any failures.
+2. Address any constrained-generation or reachability issues discovered during
+   testing. Do not start Phase 3 without explicit authorization and validated
+   Phase 2 acceptance.
 
 ---
 

@@ -89,6 +89,24 @@ export const DEFAULT_INTERACTION_CONFIG = Object.freeze({
   targetRadius: 1.1,
 });
 
+export const DEFAULT_RESOURCE_CONFIG = Object.freeze({
+  inventorySlots: 24,
+  gatherQuantity: 5,
+  depositsPerType: 2,
+  impureMultiplier: 0.5,
+  normalMultiplier: 1,
+  pureMultiplier: 2,
+});
+
+export interface ResourceConfig {
+  readonly inventorySlots: number;
+  readonly gatherQuantity: number;
+  readonly depositsPerType: number;
+  readonly impureMultiplier: number;
+  readonly normalMultiplier: number;
+  readonly pureMultiplier: number;
+}
+
 export const DEFAULT_RENDER_CONFIG = Object.freeze({
   antialias: true,
   shadows: true,
@@ -177,6 +195,7 @@ export interface GameConfig {
   readonly world: WorldConfig;
   readonly player: PlayerConfig;
   readonly interaction: InteractionConfig;
+  readonly resources: ResourceConfig;
 }
 
 export interface GameConfigOverrides {
@@ -190,6 +209,7 @@ export interface GameConfigOverrides {
   readonly world?: Partial<WorldConfig>;
   readonly player?: Partial<PlayerConfig>;
   readonly interaction?: Partial<InteractionConfig>;
+  readonly resources?: Partial<ResourceConfig>;
 }
 
 export class ConfigurationError extends Error {
@@ -210,6 +230,7 @@ export const DEFAULT_GAME_CONFIG: GameConfig = Object.freeze({
   world: DEFAULT_WORLD_CONFIG,
   player: DEFAULT_PLAYER_CONFIG,
   interaction: DEFAULT_INTERACTION_CONFIG,
+  resources: DEFAULT_RESOURCE_CONFIG,
 });
 
 /**
@@ -268,6 +289,8 @@ export function createGameConfig(overrides: GameConfigOverrides = {}): GameConfi
     ...overrides.interaction,
   });
 
+  const resources: ResourceConfig = Object.freeze({ ...DEFAULT_RESOURCE_CONFIG, ...overrides.resources });
+
   const config: GameConfig = Object.freeze({
     appName: overrides.appName ?? DEFAULT_GAME_CONFIG.appName,
     version: overrides.version ?? DEFAULT_GAME_CONFIG.version,
@@ -279,6 +302,7 @@ export function createGameConfig(overrides: GameConfigOverrides = {}): GameConfi
     world,
     player,
     interaction,
+    resources,
   });
 
   validateGameConfig(config);
@@ -344,6 +368,13 @@ export function validateGameConfig(config: GameConfig): void {
 
   assertNumberInRange(config.interaction.range, 'interaction.range', 0.5, 20);
   assertNumberInRange(config.interaction.targetRadius, 'interaction.targetRadius', 0.1, 5);
+
+  assertIntegerInRange(config.resources.inventorySlots, 'resources.inventorySlots', 1, 200);
+  assertIntegerInRange(config.resources.gatherQuantity, 'resources.gatherQuantity', 1, 10000);
+  assertIntegerInRange(config.resources.depositsPerType, 'resources.depositsPerType', 1, 20);
+  assertNumberInRange(config.resources.impureMultiplier, 'resources.impureMultiplier', 0.01, 100);
+  assertNumberInRange(config.resources.normalMultiplier, 'resources.normalMultiplier', 0.01, 100);
+  assertNumberInRange(config.resources.pureMultiplier, 'resources.pureMultiplier', 0.01, 100);
 
   if (config.player.height < config.controls.eyeHeight) {
     throw new ConfigurationError(

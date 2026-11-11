@@ -441,3 +441,22 @@ body {
     opacity: 0.35;
   }
 }
+
+
+/* Inventory is an on-demand modal, not a permanent HUD. */
+.inventory { position: absolute; inset: 0; z-index: 15; display: grid; place-items: center;
+  background: #030b10d9; padding: 20px; }
+.inventory__panel { width: min(820px, 100%); max-height: 90vh; overflow: auto; padding: 26px;
+  background: linear-gradient(145deg, #102832, #07121b); border: 1px solid #5ad6e866;
+  border-radius: 14px; box-shadow: 0 25px 80px #000b; }
+.inventory__header, .inventory__footer { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.inventory__header h2 { margin: 6px 0; font-size: 27px; }
+.inventory__eyebrow { color: var(--ff-accent); font: 10px var(--ff-mono); letter-spacing: .2em; }
+.inventory__intro, .inventory__detail, .inventory__footer { color: var(--ff-muted); font-size: 12px; line-height: 1.5; }
+.inventory__grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.inventory button { color: var(--ff-text); background: #132832; border: 1px solid #5ad6e84a;
+  border-radius: 7px; padding: 10px; cursor: pointer; }
+.inventory button:hover, .inventory button:focus-visible, .inventory__slot.is-selected { border-color: var(--ff-accent); background: #214550; }
+.inventory button:disabled { opacity: .4; cursor: default; }
+.inventory__slot { min-height: 58px; text-align: left; overflow-wrap: anywhere; font: 11px var(--ff-mono); }
+@media (max-width: 650px) { .inventory__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

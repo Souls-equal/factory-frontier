@@ -7,6 +7,20 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added — Phase 2 (browser acceptance pending)
+
+- Central item registry with iron ore, copper ore, limestone, coal, stone and wood;
+  slot inventory with partial add/remove/transfer, capacity, split and merge.
+- Seeded terrain-aware deposits with purity metadata, shared procedural visuals
+  and solid colliders, plus gathering via the existing interaction system.
+- Tab inventory modal with real slot contents, selection, inspection, moving,
+  merging and half-stack splitting. Gameplay input is suspended while open.
+- Added collision-release, inventory conservation, generation, gathering, modal,
+  input and mocked-renderer bootstrap tests. `npm run typecheck`, `npm test`,
+  `npm run build` and `npm run verify` passed (299 tests, 27 files).
+- No manual browser/WebGL or pointer-lock testing was performed. Bounded deposit
+  placement can yield fewer results on constrained world configurations.
+
 ### Fixed
 
 - Fixed player launches under repeated obstacle pressure. Floating-point residual
@@ -22,7 +36,7 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ### Planned
 
-- Phase 2 — resources and inventory (not started; requires authorization).
+- Browser acceptance checks for the Phase 1 and Phase 2 implementations.
 
 ## [0.3.0] — 2026-11-11
 

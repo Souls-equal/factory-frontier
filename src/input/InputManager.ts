@@ -24,6 +24,8 @@ export interface LookDelta {
 
 export interface InputManagerOptions {
   readonly onPointerLockChange?: (locked: boolean) => void;
+  readonly onInventoryToggle?: () => void;
+  readonly onInventoryClose?: () => void;
 }
 
 const FORWARD_CODES = new Set(['KeyW']);
@@ -40,6 +42,9 @@ export class InputManager {
   private readonly document: Document;
   private readonly keys = new Set<string>();
   private readonly onPointerLockChange: ((locked: boolean) => void) | undefined;
+  private readonly onInventoryToggle: (() => void) | undefined;
+  private readonly onInventoryClose: (() => void) | undefined;
+  private gameplayEnabled = true;
 
   private dragging = false;
   private disposed = false;
@@ -60,6 +65,8 @@ export class InputManager {
     this.document = element.ownerDocument;
     this.view = view;
     this.onPointerLockChange = options.onPointerLockChange;
+    this.onInventoryToggle = options.onInventoryToggle;
+    this.onInventoryClose = options.onInventoryClose;
 
     this.element.addEventListener('mousedown', this.handleMouseDown);
     this.view.addEventListener('keydown', this.handleKeyDown);
@@ -111,9 +118,20 @@ export class InputManager {
     return delta;
   }
 
+  /** Suspend gameplay while a modal is open; clear queued input and release capture. */
+  setGameplayEnabled(enabled: boolean): void {
+    this.gameplayEnabled = enabled;
+    this.keys.clear(); this.dragging = false;
+    this.jumpQueued = false; this.interactQueued = false;
+    this.lookX = 0; this.lookY = 0;
+    if (!enabled && this.isPointerLocked) {
+      try { this.document.exitPointerLock(); } catch { /* capture release is best effort */ }
+    }
+  }
+
   /** Request pointer lock; drag-look remains available if it is denied. */
   requestPointerLock(): void {
-    if (this.disposed) {
+    if (this.disposed || !this.gameplayEnabled) {
       return;
     }
 
@@ -173,7 +191,7 @@ export class InputManager {
   }
 
   private readonly handleMouseDown = (event: MouseEvent): void => {
-    if (event.button !== 0) {
+    if (!this.gameplayEnabled || event.button !== 0) {
       return;
     }
     this.dragging = true;
@@ -187,6 +205,7 @@ export class InputManager {
   };
 
   private readonly handleMouseMove = (event: MouseEvent): void => {
+    if (!this.gameplayEnabled) return;
     if (this.isPointerLocked) {
       const movementX = Number.isFinite(event.movementX) ? event.movementX : 0;
       const movementY = Number.isFinite(event.movementY) ? event.movementY : 0;
@@ -209,9 +228,17 @@ export class InputManager {
     if (isTypingTarget(event.target)) {
       return;
     }
-    if (!this.isHandledCode(event.code)) {
+    if (event.code === 'Tab' && this.onInventoryToggle) {
+      event.preventDefault();
+      if (!event.repeat) this.onInventoryToggle();
       return;
     }
+    if (event.code === 'Escape' && !this.gameplayEnabled && this.onInventoryClose) {
+      event.preventDefault();
+      if (!event.repeat) this.onInventoryClose();
+      return;
+    }
+    if (!this.gameplayEnabled || !this.isHandledCode(event.code)) return;
 
     // Space would scroll the page in a browser without a focused control.
     if (JUMP_CODES.has(event.code)) {
@@ -256,6 +283,10 @@ export class InputManager {
       return;
     }
     this.dragging = false;
+    // A pending pointer-lock request may resolve after the inventory opens.
+    if (!this.gameplayEnabled && this.isPointerLocked) {
+      try { this.document.exitPointerLock(); } catch { /* release remains best effort */ }
+    }
     this.onPointerLockChange?.(this.isPointerLocked);
   };
 

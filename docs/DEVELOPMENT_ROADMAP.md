@@ -14,7 +14,7 @@
 ## PROGRESS TRACKER
 
 **Last updated:** 2026-11-11
-**Current phase:** Phase 1 implemented; browser acceptance pending — Phase 2 not started
+**Current phase:** Phase 2 implemented; browser acceptance pending; Phase 1 browser verification also pending
 
 The phase definitions below are authoritative. This tracker only records status;
 detailed evidence and verification results live in `PROJECT_STATUS.md`.
@@ -23,7 +23,7 @@ detailed evidence and verification results live in `PROJECT_STATUS.md`.
 |---|---|---|
 | 0 — Repository inspection and foundation | ✅ Implementation complete | Toolchain, core architecture, render loop, foundation scene, tests, Pages build; manual browser check pending |
 | 1 — Playable 3D environment | 🟡 Acceptance pending | Deterministic heightfield terrain, gravity/jumping/ground detection, obstacle and terrain collision, slope handling, interaction raycasting with prompt/highlight, real environment. 271 tests pass; manual browser check pending |
-| 2 — Resources and inventory | ◻ Planned | — |
+| 2 — Resources and inventory | 🟡 Acceptance pending | Registry, slots, deposits, gathering and inventory UI implemented; 299 tests pass; browser checks and constrained placement remain |
 | 3 — Building and placement | ◻ Planned | — |
 | 4 — First automated extractor | ◻ Planned | — |
 | 5 — Conveyor foundation | ◻ Planned | — |

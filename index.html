@@ -17,7 +17,7 @@
 
       <div class="hud-brand" aria-hidden="true">
         <span class="hud-brand__name">FACTORY FRONTIER</span>
-        <span class="hud-brand__phase">PHASE 1 · TERRAIN SURVEY</span>
+        <span class="hud-brand__phase">PHASE 2 · RESOURCE SURVEY</span>
       </div>
 
       <div class="crosshair" aria-hidden="true"></div>
@@ -38,8 +38,19 @@
       ></div>
 
       <div class="controls-hint" data-ui="controls-hint" role="status" aria-live="polite">
-        Click to capture mouse · WASD move · Space jump · Shift sprint · E interact
+        Click to capture mouse · WASD move · Space jump · Shift sprint · E interact · Tab inventory
       </div>
+
+      <section class="inventory" data-ui="inventory" role="dialog" aria-modal="true" aria-label="Inventory" hidden>
+        <div class="inventory__panel">
+          <header class="inventory__header"><div><span class="inventory__eyebrow">FIELD OPERATIONS</span><h2>Inventory</h2></div>
+            <button type="button" data-inventory-close aria-label="Close inventory">Close · Esc</button></header>
+          <p class="inventory__intro">Select an item, then another slot to move or merge.</p>
+          <div class="inventory__grid" data-inventory-grid></div>
+          <div class="inventory__footer"><p data-inventory-capacity></p><button type="button" data-inventory-split>Split stack</button></div>
+          <p class="inventory__detail" data-inventory-detail></p>
+        </div>
+      </section>
 
       <pre class="debug-stats is-hidden" data-ui="debug-stats" aria-hidden="true"></pre>
 

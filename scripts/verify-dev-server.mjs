@@ -47,6 +47,10 @@ try {
     '/src/core/GameClock.ts',
     '/src/engine/Engine.ts',
     '/src/input/InputManager.ts',
+    '/src/items/ItemRegistry.ts',
+    '/src/items/Inventory.ts',
+    '/src/resources/ResourceDeposit.ts',
+    '/src/ui/InventoryUI.ts',
     '/src/player/PlayerController.ts',
     '/src/world/World.ts',
     '/src/world/terrain/TerrainHeightfield.ts',
@@ -75,6 +79,7 @@ try {
 
   const mainModule = await fetch(`${origin}/src/main.ts`).then((response) => response.text());
   check('main module keeps the bootstrap logic', mainModule.includes('StatusOverlay'));
+  check('main module wires resources and inventory', mainModule.includes('DepositInteractable') && mainModule.includes('InventoryUI'));
   check(
     'main module wires the Phase 1 systems',
     mainModule.includes('createWorld') &&

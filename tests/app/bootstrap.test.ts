@@ -145,6 +145,48 @@ describe('application bootstrap', () => {
     expect(fakeEngine.renderCalls).toHaveLength(1);
   });
 
+  it('gathers a world deposit and displays the real inventory through the bootstrap', async () => {
+    vi.spyOn(console, 'info').mockImplementation(() => undefined);
+    await import('../../src/main');
+    await vi.waitFor(() => expect(fakeEngine.initCalls).toBe(1));
+    const config = createGameConfig();
+    const world = createWorld(config);
+    const deposit = world.deposits.find((d) => d.itemId === 'iron-ore');
+    if (!deposit) throw new Error('missing starting deposit');
+    const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
+    // Turn the real player towards the deposit through the existing drag-look input.
+    const dx = deposit.x - world.spawn.x, dz = deposit.z - world.spawn.z;
+    const yaw = Math.atan2(-dx, -dz);
+    canvas.dispatchEvent(new MouseEvent('mousedown', { button: 0, clientX: 1000, clientY: 1000 }));
+    window.dispatchEvent(new MouseEvent('mousemove', { clientX: 1000 - yaw / config.controls.lookSensitivity, clientY: 1000 }));
+    runNextFrame(16);
+    window.dispatchEvent(new MouseEvent('mouseup'));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW' }));
+    for (let frame = 1; frame <= 25; frame++) runNextFrame(16 + frame * 50);
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyW' }));
+    expect(document.querySelector('[data-ui="interaction-name"]')?.textContent).toContain('Iron Ore');
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyE' }));
+    runNextFrame(1316);
+    expect(document.querySelector('[data-ui="interaction-feedback"]')?.textContent).toContain('Collected 5 Iron Ore');
+    for (let i = 1; i <= 5; i++) {
+      window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyE', repeat: true }));
+      runNextFrame(1316 + i * 50);
+    }
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab', cancelable: true }));
+    const panel = document.querySelector<HTMLElement>('[data-ui="inventory"]')!;
+    expect(panel.hidden).toBe(false);
+    expect(panel.textContent).toContain('Iron Ore ×5');
+    expect(panel.textContent).toContain('Capacity: 1 / 24');
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyE' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyE' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
+    window.dispatchEvent(new MouseEvent('mousemove', { clientX: 100, clientY: 300 }));
+    runNextFrame(1666);
+    expect(panel.textContent).toContain('Iron Ore ×5');
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape' }));
+    expect(panel.hidden).toBe(true);
+  });
+
   it('disposes the game when the page unloads', async () => {
     vi.spyOn(console, 'info').mockImplementation(() => undefined);
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
