@@ -5,8 +5,9 @@
  */
 
 export const CONTROLS_HINT_UNLOCKED =
-  'Click to capture mouse · WASD move · Shift sprint · Drag to look';
-export const CONTROLS_HINT_LOCKED = 'WASD move · Shift sprint · Esc releases mouse';
+  'Click to capture mouse · WASD move · Space jump · Shift sprint · E interact';
+export const CONTROLS_HINT_LOCKED =
+  'WASD move · Space jump · Shift sprint · E interact · Esc releases mouse';
 
 export class ControlsHint {
   private readonly element: HTMLElement;

@@ -36,6 +36,8 @@ export interface GameEngine {
   resize(width: number, height: number, pixelRatio: number): void;
   /** Apply the current camera pose before rendering. */
   applyView(view: CameraView): void;
+  /** Highlight the interactable with this id (or clear with `null`). */
+  setHighlight?(id: string | null): void;
   /** `alpha` is the interpolation factor for future view-state interpolation. */
   render(alpha: number): void;
   dispose(): void;

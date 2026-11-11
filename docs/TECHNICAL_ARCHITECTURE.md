@@ -699,7 +699,128 @@ phase has started and empty registries would be placeholder systems.
 ## B.7 Deployment constraint
 
 The build is verified under `/factory-frontier/` and served correctly by the
-preview server. GitHub Pages must be configured with **Source: GitHub Actions**;
-the repository's current Pages configuration is a legacy branch deployment, which
-publishes raw sources instead of `dist/`. That is a repository setting, not a build
-configuration defect. See `PROJECT_STATUS.md`.
+preview server. GitHub Pages is configured with **Source: GitHub Actions** and the
+`Deploy GitHub Pages` workflow publishes `dist/`; a deployment is only considered
+successful once the published HTML references `/factory-frontier/assets/*`. See
+`PROJECT_STATUS.md` for the current deployment evidence.
+
+---
+
+# APPENDIX C — PHASE 1 TERRAIN, PHYSICS AND INTERACTION
+
+**Added:** 2026-11-11, with Phase 1 (playable 3D environment).
+**Status:** descriptive. §20–23 remain authoritative; this appendix records the
+decisions made while adding terrain, player physics, collision and the first
+interaction system, and the boundaries that later phases must respect.
+
+## C.1 Module map (additions)
+
+| Module | Layer | Responsibility |
+|---|---|---|
+| `src/world/noise.ts` | gameplay data | seeded value noise + fractal summation (no dependencies) |
+| `src/world/rng.ts` | gameplay data | deterministic mulberry32 generator for world layout |
+| `src/world/terrain/TerrainHeightfield.ts` | gameplay data | authoritative terrain surface: heights, normals, slopes, bounds, render data |
+| `src/world/ObstacleField.ts` | gameplay data | solid obstacle definitions + spatial-hash circle collision |
+| `src/world/World.ts` | gameplay data | world assembly (terrain, obstacles, interactables, spawn) |
+| `src/player/PlayerController.ts` | simulation | first-person physics: gravity, jump, ground following, slopes, collision |
+| `src/interaction/Interactable.ts` | contract | reusable interactable interface |
+| `src/interaction/raycast.ts` | pure maths | ray/sphere intersection and forward-vector construction |
+| `src/interaction/InteractionSystem.ts` | simulation | target selection, edge-triggered execution |
+| `src/interaction/WorldInteractables.ts` | gameplay data | Phase 1 environment interactables (survey beacon, relay mast) |
+| `src/engine/EnvironmentView.ts` | rendering | terrain mesh, sky, instanced rocks, props, highlight toggle |
+| `src/ui/InteractionPrompt.ts` | presentation | prompt + transient feedback rendering |
+
+## C.2 Terrain is data, rendering is a consumer
+
+- `TerrainHeightfield` owns a Float32 grid of heights sampled from seeded fractal
+  noise. It imports nothing from Three.js.
+- `heightAt()` interpolates over **exactly the triangle split** used by
+  `getRenderData()` (`(a,c,b)` and `(b,c,d)` per cell), so the drawn surface and
+  the collision surface cannot diverge. A test asserts every render-buffer vertex
+  agrees with `heightAt` within 1e-4.
+- Normals and slopes are derived analytically from the same triangles; the
+  renderer computes separate smooth vertex normals only for shading.
+- A deterministic relaxation pass (`limitSlopes`) bounds the generated gradient to
+  `GENERATED_MAX_SLOPE_TANGENT` (0.72 ≈ 36°), which guarantees smooth transitions
+  and a traversable surface. It is order-stable, so the same seed still produces
+  the same world.
+- The world is a finite square with a raised boundary ridge. Heights are clamped
+  (never extrapolated) outside the bounds; the player is additionally inset by
+  its collision radius.
+
+**Chunk extensibility:** every terrain value is expressed against an explicit
+`originX/originZ` and a cell size, so Phase 10 can instantiate one heightfield per
+chunk and reuse the same query contract (`TerrainQuery`) unchanged.
+
+## C.3 Player physics and collision
+
+- **Physics runs only on the fixed clock.** `PlayerController.step()` is called
+  from a `SimulationSystem` at 50 ms. Mouse look (`applyLook`) runs per rendered
+  frame; gravity, jumping, ground following and collisions never see a frame
+  delta.
+- **Camera smoothing without touching simulation state.** `viewAt(alpha)` linearly
+  interpolates the last two fixed-step positions; `GameClock.alpha` supplies the
+  factor. The authoritative position is never rewritten for rendering.
+- **Gravity/jump model:** semi-implicit Euler (`v -= g·dt` then `y += v·dt`),
+  edge-triggered jump (`jump` must rise while grounded; holding never repeats),
+  landing snaps to the surface and clears vertical velocity.
+- **Ground following:** when grounded and descending, the player snaps down within
+  `groundSnapDistance`; a drop larger than that becomes a real fall. The player can
+  never end a step below the surface height.
+- **Slope rules:** a movement segment that climbs faster than
+  `tan(maxWalkableSlope)` is rejected (position and velocity rollback). On ground
+  steeper than the limit there is no foothold: braking is skipped and a downhill
+  slide accelerates the player, so steep terrain is exited rather than climbed.
+- **Collision shapes:** obstacles are vertical cylinders for physics regardless of
+  their visual mesh. Circle push-out is stable, cannot trap the player at corners
+  and costs two multiplications. Player/obstacle solutions are iterated, and an
+  obstacle cluster that still overlaps is escaped by a deterministic radial search
+  so the player is never left inside geometry.
+- **Broad phase:** a uniform spatial hash (8 m cells) means a step only tests
+  obstacles near the capsule, not the whole world.
+
+## C.4 Interaction system
+
+- `InteractionSystem` is a `SimulationSystem`: it re-casts the camera ray once per
+  fixed step, so targeting is deterministic and independent of frame rate.
+- Interactables are registered objects implementing `Interactable`
+  (`descriptor`, `isAvailable`, `interact`). Only registered objects can be
+  targeted — decorative meshes are ignored by construction, not by filtering.
+- Selection: nearest ray/sphere hit whose distance is within
+  `min(globalRange, descriptor.range)`. Unavailable objects are skipped.
+- Execution is edge-triggered: `requestInteraction()` sets a flag that the next
+  fixed update consumes exactly once. Holding the key repeats nothing.
+- The system owns no DOM and no Three.js. Presentation polls `target` (prompt and
+  highlight) and `outcomeSequence` (transient feedback).
+
+## C.5 Rendering decisions
+
+- Terrain is one merged mesh with vertex colours derived from height and slope (no
+  textures, one draw call).
+- Rocks and formations share three instanced meshes; instances are placed from the
+  same `ObstacleDefinition` list physics uses.
+- Sky is a vertex-coloured inverted sphere; fog is matched to the horizon band.
+- The shadow-casting key light follows the player so the fixed 120 m shadow camera
+  stays useful across the whole map; no shadow map is re-created.
+- Highlight is a torus ring + emissive boost toggled by id; only a change costs
+  anything per frame.
+
+## C.6 Boundaries preserved
+
+- Gameplay code still has no Three.js imports; `Engine.setHighlight` and
+  `CameraView` remain the only rendering contacts.
+- No inventory, resource, building, machine, power or save code was added
+  (Phases 2–12). World data carries the extension points those phases need:
+  `TerrainQuery` for deposits/placement, `ObstacleField` for solids, `Interactable`
+  for machines/terminals.
+- `VITE_BASE_PATH` and the Pages deployment structure are unchanged.
+
+## C.7 Known technical debt
+
+- Terrain is a single heightfield; no LOD, no chunk streaming, no collision mesh for
+  overhangs/caves (heightfields cannot represent them).
+- Interaction uses spheres only; irregular props need per-shape bounds in a later
+  phase.
+- Rock collision is an inscribed cylinder approximation of the visual mesh; the
+  visual silhouette can extend slightly past the collider.
+- No soft-body/rigid-body physics; the player is the only simulated body.

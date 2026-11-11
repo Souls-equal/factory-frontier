@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { CameraView } from '../../src/engine/types';
+import { createGameConfig } from '../../src/core/Configuration';
+import { createWorld } from '../../src/world/World';
 
 /**
  * Integration test for the real application bootstrap.
@@ -22,6 +24,7 @@ const { fakeEngine, createMock } = vi.hoisted(() => {
     resizeCalls: [] as Array<{ width: number; height: number; pixelRatio: number }>,
     renderCalls: [] as number[],
     viewCalls: [] as CameraView[],
+    highlightCalls: [] as Array<string | null>,
     async init() {
       fakeEngine.initCalls += 1;
     },
@@ -30,6 +33,9 @@ const { fakeEngine, createMock } = vi.hoisted(() => {
     },
     applyView(view: CameraView) {
       fakeEngine.viewCalls.push(view);
+    },
+    setHighlight(id: string | null) {
+      fakeEngine.highlightCalls.push(id);
     },
     render(alpha: number) {
       fakeEngine.renderCalls.push(alpha);
@@ -126,8 +132,16 @@ describe('application bootstrap', () => {
     expect(fakeEngine.renderCalls).toHaveLength(0);
     runNextFrame(16);
     expect(fakeEngine.viewCalls).toHaveLength(1);
-    expect(fakeEngine.viewCalls[0]?.position.y).toBeCloseTo(1.7);
-    expect(fakeEngine.viewCalls[0]?.position.z).toBeCloseTo(18);
+
+    // The camera must sit on the real terrain at the world spawn point.
+    const world = createWorld(createGameConfig());
+    const view = fakeEngine.viewCalls[0];
+    expect(view?.position.z).toBeCloseTo(world.spawn.z, 6);
+    expect(view?.position.y).toBeCloseTo(world.spawn.y + createGameConfig().controls.eyeHeight, 5);
+
+    // Interaction presentation runs every frame and clears the highlight when
+    // nothing is targeted.
+    expect(fakeEngine.highlightCalls.at(-1)).toBeNull();
     expect(fakeEngine.renderCalls).toHaveLength(1);
   });
 

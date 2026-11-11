@@ -34,8 +34,59 @@ export const DEFAULT_CONTROLS_CONFIG = Object.freeze({
   lookSensitivity: 0.0022,
   /** Maximum absolute pitch in radians (± ≈83°). */
   pitchLimit: 1.45,
-  /** Foundation-only safety bound in metres (terrain collision replaces it in Phase 1). */
+  /** Fallback safety bound in metres; terrain bounds and collisions own movement. */
   playAreaRadius: 120,
+});
+
+/**
+ * Deterministic world generation parameters (Phase 1).
+ *
+ * The same seed and generation parameters always produce the same terrain,
+ * obstacle layout and spawn point.
+ */
+export const DEFAULT_WORLD_CONFIG = Object.freeze({
+  /** World seed. */
+  seed: 20261111,
+  /** Finite square exploration area, in metres. */
+  sizeMeters: 240,
+  /** Number of terrain cells per side (vertices = resolution + 1). */
+  resolution: 120,
+  /** Peak-to-trough terrain amplitude in metres. */
+  heightScale: 13,
+  /** Radius around the spawn point that is flattened for a readable start. */
+  spawnFlatRadius: 16,
+  /** Height of the boundary ridge that closes the finite area, in metres. */
+  rimHeight: 24,
+  /** Number of rock/formation obstacles scattered over the terrain. */
+  obstacleCount: 46,
+});
+
+export const DEFAULT_PLAYER_CONFIG = Object.freeze({
+  /** Downward acceleration in metres per second squared. */
+  gravity: 24,
+  /** Initial upward speed of a jump in metres per second. */
+  jumpSpeed: 7.2,
+  /** Horizontal collision radius of the player capsule, in metres. */
+  radius: 0.4,
+  /** Total player height in metres (eye height is configured separately). */
+  height: 1.8,
+  /** Maximum walkable slope in radians (≈ 42°). */
+  maxWalkableSlope: 0.73,
+  /** How far the player snaps down to the ground while walking, in metres. */
+  groundSnapDistance: 0.45,
+  /** Largest height gain a single horizontal move may climb, in metres. */
+  maxStepHeight: 0.6,
+  /** Speed retained by air control relative to ground acceleration (0–1). */
+  airControl: 0.35,
+  /** Downhill acceleration applied on terrain steeper than the walkable limit. */
+  slideAcceleration: 11,
+});
+
+export const DEFAULT_INTERACTION_CONFIG = Object.freeze({
+  /** Default camera-ray reach in metres. */
+  range: 3.6,
+  /** Radius of the interaction volume around an interactable anchor, in metres. */
+  targetRadius: 1.1,
 });
 
 export const DEFAULT_RENDER_CONFIG = Object.freeze({
@@ -46,8 +97,14 @@ export const DEFAULT_RENDER_CONFIG = Object.freeze({
   fov: 60,
   near: 0.1,
   far: 600,
-  /** Scene background / fog color (deep twilight blue). */
+  /** Scene clear color (deep twilight blue). */
   backgroundColor: 0x0b1522,
+  /** Fog colour, matched to the sky horizon band. */
+  fogColor: 0x163039,
+  /** Distance at which atmospheric fog starts, in metres. */
+  fogNear: 55,
+  /** Distance at which fog is fully opaque, in metres. */
+  fogFar: 265,
   /** Construction grid color (cyan survey lines). */
   gridColor: 0x2f6f7a,
 });
@@ -76,7 +133,37 @@ export interface RenderConfig {
   readonly near: number;
   readonly far: number;
   readonly backgroundColor: number;
+  readonly fogColor: number;
+  readonly fogNear: number;
+  readonly fogFar: number;
   readonly gridColor: number;
+}
+
+export interface WorldConfig {
+  readonly seed: number;
+  readonly sizeMeters: number;
+  readonly resolution: number;
+  readonly heightScale: number;
+  readonly spawnFlatRadius: number;
+  readonly rimHeight: number;
+  readonly obstacleCount: number;
+}
+
+export interface PlayerConfig {
+  readonly gravity: number;
+  readonly jumpSpeed: number;
+  readonly radius: number;
+  readonly height: number;
+  readonly maxWalkableSlope: number;
+  readonly groundSnapDistance: number;
+  readonly maxStepHeight: number;
+  readonly airControl: number;
+  readonly slideAcceleration: number;
+}
+
+export interface InteractionConfig {
+  readonly range: number;
+  readonly targetRadius: number;
 }
 
 export interface GameConfig {
@@ -87,6 +174,9 @@ export interface GameConfig {
   readonly simulation: SimulationConfig;
   readonly render: RenderConfig;
   readonly controls: ControlsConfig;
+  readonly world: WorldConfig;
+  readonly player: PlayerConfig;
+  readonly interaction: InteractionConfig;
 }
 
 export interface GameConfigOverrides {
@@ -97,6 +187,9 @@ export interface GameConfigOverrides {
   readonly simulation?: Partial<SimulationConfig>;
   readonly render?: Partial<RenderConfig>;
   readonly controls?: Partial<ControlsConfig>;
+  readonly world?: Partial<WorldConfig>;
+  readonly player?: Partial<PlayerConfig>;
+  readonly interaction?: Partial<InteractionConfig>;
 }
 
 export class ConfigurationError extends Error {
@@ -108,12 +201,15 @@ export class ConfigurationError extends Error {
 
 export const DEFAULT_GAME_CONFIG: GameConfig = Object.freeze({
   appName: 'Factory Frontier',
-  version: '0.2.0',
+  version: '0.3.0',
   basePath: '/',
   debug: false,
   simulation: DEFAULT_SIMULATION_CONFIG,
   render: DEFAULT_RENDER_CONFIG,
   controls: DEFAULT_CONTROLS_CONFIG,
+  world: DEFAULT_WORLD_CONFIG,
+  player: DEFAULT_PLAYER_CONFIG,
+  interaction: DEFAULT_INTERACTION_CONFIG,
 });
 
 /**
@@ -157,6 +253,21 @@ export function createGameConfig(overrides: GameConfigOverrides = {}): GameConfi
     ...overrides.controls,
   });
 
+  const world: WorldConfig = Object.freeze({
+    ...DEFAULT_WORLD_CONFIG,
+    ...overrides.world,
+  });
+
+  const player: PlayerConfig = Object.freeze({
+    ...DEFAULT_PLAYER_CONFIG,
+    ...overrides.player,
+  });
+
+  const interaction: InteractionConfig = Object.freeze({
+    ...DEFAULT_INTERACTION_CONFIG,
+    ...overrides.interaction,
+  });
+
   const config: GameConfig = Object.freeze({
     appName: overrides.appName ?? DEFAULT_GAME_CONFIG.appName,
     version: overrides.version ?? DEFAULT_GAME_CONFIG.version,
@@ -165,6 +276,9 @@ export function createGameConfig(overrides: GameConfigOverrides = {}): GameConfi
     simulation,
     render,
     controls,
+    world,
+    player,
+    interaction,
   });
 
   validateGameConfig(config);
@@ -198,6 +312,9 @@ export function validateGameConfig(config: GameConfig): void {
   assertNumberInRange(config.render.far, 'render.far', config.render.near + 1, 100_000);
   assertIntegerInRange(config.render.backgroundColor, 'render.backgroundColor', 0, 0xffffff);
   assertIntegerInRange(config.render.gridColor, 'render.gridColor', 0, 0xffffff);
+  assertIntegerInRange(config.render.fogColor, 'render.fogColor', 0, 0xffffff);
+  assertNumberInRange(config.render.fogNear, 'render.fogNear', 0, 1000);
+  assertNumberInRange(config.render.fogFar, 'render.fogFar', config.render.fogNear + 1, 5000);
 
   assertNumberInRange(config.controls.eyeHeight, 'controls.eyeHeight', 0.5, 5);
   assertNumberInRange(config.controls.moveSpeed, 'controls.moveSpeed', 0.5, 20);
@@ -206,6 +323,33 @@ export function validateGameConfig(config: GameConfig): void {
   assertNumberInRange(config.controls.lookSensitivity, 'controls.lookSensitivity', 0.0001, 0.02);
   assertNumberInRange(config.controls.pitchLimit, 'controls.pitchLimit', 0.1, 1.5);
   assertNumberInRange(config.controls.playAreaRadius, 'controls.playAreaRadius', 5, 150);
+
+  assertIntegerInRange(config.world.seed, 'world.seed', 0, 2 ** 31 - 1);
+  assertNumberInRange(config.world.sizeMeters, 'world.sizeMeters', 40, 2000);
+  assertIntegerInRange(config.world.resolution, 'world.resolution', 8, 512);
+  assertNumberInRange(config.world.heightScale, 'world.heightScale', 0, 200);
+  assertNumberInRange(config.world.spawnFlatRadius, 'world.spawnFlatRadius', 2, 120);
+  assertNumberInRange(config.world.rimHeight, 'world.rimHeight', 0, 200);
+  assertIntegerInRange(config.world.obstacleCount, 'world.obstacleCount', 0, 400);
+
+  assertNumberInRange(config.player.gravity, 'player.gravity', 1, 100);
+  assertNumberInRange(config.player.jumpSpeed, 'player.jumpSpeed', 0.5, 40);
+  assertNumberInRange(config.player.radius, 'player.radius', 0.1, 2);
+  assertNumberInRange(config.player.height, 'player.height', 0.5, 4);
+  assertNumberInRange(config.player.maxWalkableSlope, 'player.maxWalkableSlope', 0.05, 1.45);
+  assertNumberInRange(config.player.groundSnapDistance, 'player.groundSnapDistance', 0.01, 3);
+  assertNumberInRange(config.player.maxStepHeight, 'player.maxStepHeight', 0.05, 3);
+  assertNumberInRange(config.player.airControl, 'player.airControl', 0, 1);
+  assertNumberInRange(config.player.slideAcceleration, 'player.slideAcceleration', 0, 60);
+
+  assertNumberInRange(config.interaction.range, 'interaction.range', 0.5, 20);
+  assertNumberInRange(config.interaction.targetRadius, 'interaction.targetRadius', 0.1, 5);
+
+  if (config.player.height < config.controls.eyeHeight) {
+    throw new ConfigurationError(
+      `player.height (${config.player.height}) must be at least controls.eyeHeight (${config.controls.eyeHeight}).`,
+    );
+  }
 }
 
 function assertNumberInRange(value: number, field: string, min: number, max: number): void {

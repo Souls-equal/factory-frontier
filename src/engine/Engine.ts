@@ -3,11 +3,14 @@ import { CameraManager } from './CameraManager';
 import { LightingManager } from './LightingManager';
 import { Renderer } from './Renderer';
 import { SceneManager } from './SceneManager';
+import type { World } from '../world/World';
 import type { CameraView, GameEngine, RenderBackend, RendererStats } from './types';
 
 export interface EngineOptions {
   readonly config: GameConfig;
   readonly renderer: RenderBackend;
+  /** Gameplay world data; the scene is built from it (never the reverse). */
+  readonly world: World;
 }
 
 /**
@@ -27,15 +30,15 @@ export class Engine implements GameEngine {
   constructor(options: EngineOptions) {
     this.config = options.config;
     this.renderer = options.renderer;
-    this.sceneManager = new SceneManager(options.config.render);
+    this.sceneManager = new SceneManager(options.config.render, options.world);
     this.cameraManager = new CameraManager(options.config.render);
     this.lightingManager = new LightingManager({ shadows: options.config.render.shadows });
   }
 
   /** Production factory: creates the real WebGL renderer for a canvas. */
-  static create(canvas: HTMLCanvasElement, config: GameConfig): Engine {
+  static create(canvas: HTMLCanvasElement, config: GameConfig, world: World): Engine {
     const renderer = new Renderer(canvas, config.render);
-    return new Engine({ config, renderer });
+    return new Engine({ config, renderer, world });
   }
 
   init(): void {
@@ -67,6 +70,15 @@ export class Engine implements GameEngine {
       return;
     }
     this.cameraManager.applyView(view);
+    // Shadows follow the player so the fixed-size shadow map stays useful.
+    this.lightingManager.setFocus(view.position.x, view.position.z);
+  }
+
+  setHighlight(id: string | null): void {
+    if (this.disposed) {
+      return;
+    }
+    this.sceneManager.setHighlight(id);
   }
 
   render(_alpha: number): void {

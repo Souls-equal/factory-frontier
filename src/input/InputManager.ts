@@ -31,6 +31,8 @@ const BACKWARD_CODES = new Set(['KeyS']);
 const LEFT_CODES = new Set(['KeyA']);
 const RIGHT_CODES = new Set(['KeyD']);
 const SPRINT_CODES = new Set(['ShiftLeft', 'ShiftRight']);
+const JUMP_CODES = new Set(['Space']);
+const INTERACT_CODES = new Set(['KeyE']);
 
 export class InputManager {
   private readonly element: HTMLElement;
@@ -45,6 +47,8 @@ export class InputManager {
   private lastPointerY = 0;
   private lookX = 0;
   private lookY = 0;
+  private jumpQueued = false;
+  private interactQueued = false;
 
   constructor(element: HTMLElement, options: InputManagerOptions = {}) {
     const view = element.ownerDocument.defaultView;
@@ -78,6 +82,25 @@ export class InputManager {
       forward: Number(this.isHeld(FORWARD_CODES)) - Number(this.isHeld(BACKWARD_CODES)),
       sprint: this.isHeld(SPRINT_CODES),
     };
+  }
+
+  /**
+   * Consume a queued jump press.
+   *
+   * Jump is edge-triggered: holding the key does not queue repeatedly, and the
+   * simulation consumes the flag exactly once.
+   */
+  consumeJump(): boolean {
+    const queued = this.jumpQueued;
+    this.jumpQueued = false;
+    return queued;
+  }
+
+  /** Consume a queued interact press (edge-triggered, exactly once). */
+  consumeInteract(): boolean {
+    const queued = this.interactQueued;
+    this.interactQueued = false;
+    return queued;
   }
 
   /** Return the accumulated mouse delta since the last call and reset it. */
@@ -128,6 +151,8 @@ export class InputManager {
     this.dragging = false;
     this.lookX = 0;
     this.lookY = 0;
+    this.jumpQueued = false;
+    this.interactQueued = false;
 
     if (this.document.pointerLockElement === this.element) {
       try {
@@ -184,9 +209,26 @@ export class InputManager {
     if (isTypingTarget(event.target)) {
       return;
     }
-    if (this.isHandledCode(event.code)) {
-      this.keys.add(event.code);
+    if (!this.isHandledCode(event.code)) {
+      return;
     }
+
+    // Space would scroll the page in a browser without a focused control.
+    if (JUMP_CODES.has(event.code)) {
+      event.preventDefault();
+    }
+
+    // `event.repeat` filters OS key-repeat so edge-triggered actions fire once.
+    if (!event.repeat) {
+      if (JUMP_CODES.has(event.code)) {
+        this.jumpQueued = true;
+      }
+      if (INTERACT_CODES.has(event.code)) {
+        this.interactQueued = true;
+      }
+    }
+
+    this.keys.add(event.code);
   };
 
   private readonly handleKeyUp = (event: KeyboardEvent): void => {
@@ -196,12 +238,16 @@ export class InputManager {
   private readonly handleBlur = (): void => {
     this.keys.clear();
     this.dragging = false;
+    this.jumpQueued = false;
+    this.interactQueued = false;
   };
 
   private readonly handleVisibilityChange = (): void => {
     if (this.document.visibilityState === 'hidden') {
       this.keys.clear();
       this.dragging = false;
+      this.jumpQueued = false;
+      this.interactQueued = false;
     }
   };
 
@@ -219,7 +265,9 @@ export class InputManager {
       BACKWARD_CODES.has(code) ||
       LEFT_CODES.has(code) ||
       RIGHT_CODES.has(code) ||
-      SPRINT_CODES.has(code)
+      SPRINT_CODES.has(code) ||
+      JUMP_CODES.has(code) ||
+      INTERACT_CODES.has(code)
     );
   }
 }

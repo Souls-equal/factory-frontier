@@ -14,6 +14,8 @@ export interface LightingOptions {
 export class LightingManager {
   readonly group: Group;
   private readonly keyLight: DirectionalLight;
+  private focusX = Number.NaN;
+  private focusZ = Number.NaN;
 
   constructor(options: LightingOptions) {
     this.group = new Group();
@@ -43,6 +45,28 @@ export class LightingManager {
     }
 
     this.group.add(hemisphere, ambient, this.keyLight, this.keyLight.target);
+  }
+
+  /**
+   * Move the shadow-casting key light with the player.
+   *
+   * The shadow camera covers 120 m around its target, so following the player
+   * keeps crisp shadows everywhere in the finite world without enlarging the
+   * shadow map (and without re-allocating anything).
+   */
+  setFocus(x: number, z: number): void {
+    if (!Number.isFinite(x) || !Number.isFinite(z)) {
+      return;
+    }
+    if (x === this.focusX && z === this.focusZ) {
+      return;
+    }
+    this.focusX = x;
+    this.focusZ = z;
+
+    this.keyLight.position.set(x + 38, 52, z + 24);
+    this.keyLight.target.position.set(x, 0, z);
+    this.keyLight.target.updateMatrixWorld();
   }
 
   dispose(): void {

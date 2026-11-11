@@ -59,6 +59,14 @@ check(
   html.includes('data-ui="controls-hint"'),
 );
 check(
+  'entry HTML contains the interaction prompt',
+  html.includes('data-ui="interaction-prompt"') && html.includes('data-ui="interaction-name"'),
+);
+check(
+  'entry HTML contains the interaction feedback slot',
+  html.includes('data-ui="interaction-feedback"'),
+);
+check(
   'favicon is referenced under the base path',
   html.includes(`${expectedBase}favicon.svg`),
   'favicon URL does not use the configured base path',
