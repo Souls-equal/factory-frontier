@@ -21,9 +21,10 @@ interaction raycasting
 - **Missing by design:** terrain/physics/raycasting (Phase 1), inventory and
   factories (Phases 2–9), save code (Phase 12), data registries (Phases 2–7).
   Designs for save/data are documented rather than stubbed.
-- **External technical issue:** the repository's GitHub Pages source is a legacy
-  branch deployment, so the live site publishes raw sources instead of `dist/`.
-  The build/workflow are correct; the repository setting needs changing.
+- **External technical issue (now resolved in the repository setting):** Pages is
+  configured for GitHub Actions (`build_type: workflow`). The *published* content
+  is still the last legacy branch build, which serves raw sources instead of
+  `dist/`; it is replaced by the next successful workflow deployment.
 
 ---
 
@@ -150,7 +151,7 @@ dist/favicon.svg                    395 B
 | Dev server starts | ✅ Passed | `verify:dev` + live server HTTP 200 check |
 | Basic scene / ground / lighting | ✅ Constructed and tested | Scene graph, lights, render delegation; real rasterization pending browser |
 | Controllable first-person camera | ✅ Logic verified | 35+ player/input/camera assertions; real pointer lock pending browser |
-| GitHub Pages configuration coherent | ✅ Build / ⚠️ site setting | Artifacts and base path verified; repository Pages source is still legacy |
+| GitHub Pages configuration coherent | ✅ Build / ⏳ deploy | Artifacts and base path verified; Pages uses GitHub Actions; deployment verification pending |
 | Application renders correctly in a browser | ⚠️ Not executed | No browser binary in sandbox; manual check required |
 
 **Manual browser check still required:** open the live preview, click to capture
@@ -159,13 +160,49 @@ no console errors, then record the result here.
 
 ---
 
+## Infrastructure — GitHub Actions and Pages (repaired this task)
+
+Audit of the run history (2026-11-11):
+
+| Run window | Result | Interpretation |
+|---|---|---|
+| 19:58 – 20:12 | CI and Deploy runs `success` (e.g. `43094267705`) | Pipeline itself worked; the deploy job completed |
+| 20:15 | `pages-build-deployment` `success` from branch `arena/f9c37f65-…` | **Legacy branch build published raw sources**, overwriting the workflow deployment |
+| 20:25 – 20:45 | 4 runs stuck `queued`, 1 `startup_failure` with zero jobs, 1 `failure` whose build job never executed a step | **GitHub incident `dvy0t3mvh1lg`** — Actions and Pages reported `major_outage` from 20:48Z; the job queue stopped dispatching |
+
+Root causes: (a) the outage blocked runners, so queue/`startup_failure` symptoms were
+infrastructure, not our YAML; (b) duplicated validation — `ci.yml` ran on both `push`
+and `pull_request`, producing two identical runs per PR update and a second full
+pipeline on every `main` push; (c) `ci.yml` lacked any concurrency group, so obsolete
+runs piled up; (d) `deploy-pages.yml` used a single workflow-wide `pages` group, which
+serialised builds behind deployments; (e) the live site was stale because a legacy
+branch build outranked the workflow deployment; (f) documentation still described
+Pages as using branch deployment.
+
+Changes: `ci.yml` now runs only on `pull_request`/`workflow_dispatch` with
+`concurrency: ci-${{ github.ref }}` and `cancel-in-progress: true`; `deploy-pages.yml`
+runs on `push` to `main`/`workflow_dispatch`, splits build (`pages-build-…`,
+`cancel-in-progress: true`) from deploy (`pages-deploy`, `cancel-in-progress: false`),
+and uses maintained action majors (checkout v7, setup-node v7, configure-pages v6,
+upload-pages-artifact v5, deploy-pages v5) with `timeout-minutes` on both jobs. Vite
+base-path handling, `dist/` output and `VITE_BASE_PATH` override were left untouched.
+
+Local validation of this change: `npm ci`, `npm run typecheck`, `npm test`
+(158/158), `npm run build`, `verify:build` (23/23), `verify:preview`, `verify:dev`
+all pass; both workflow files parse as valid YAML. Deployment confirmation: see the
+line below — it is only recorded once a real deployment succeeded.
+
+- **Live Pages deployment:** ⏳ not yet confirmed after the rework.
+
+---
+
 ## Known Issues and Limitations
 
-1. **GitHub Pages source is configured as legacy branch deployment** (`main` / root),
-   not GitHub Actions. The deployment workflow succeeds and uploads `dist/`, but
-   the live site publishes raw source files. The sandbox token cannot change Pages
-   settings (`403 Resource not accessible by integration`). Fix: Settings → Pages →
-   Build and deployment → Source = **GitHub Actions**, then re-run the workflow.
+1. **The published Pages site is stale (legacy branch build).** Pages itself is
+   configured for GitHub Actions (`build_type: workflow`), but the most recent
+   deployment (2026-11-11T20:15Z) came from the **legacy branch build** of an old
+   feature branch, so it publishes raw sources instead of `dist/`. It is replaced by
+   the next successful workflow deployment; no repository setting change is needed.
 2. **No real-browser verification in this environment.** WebGL rasterization,
    pointer lock and browser console output were not executed. Unit/integration
    tests and HTTP serving checks pass, but visual confirmation is pending.
@@ -222,7 +259,8 @@ gameplay balance values were encoded.
    - interaction raycasting and contextual prompts,
    - basic environment placement that does not interfere with construction,
    - movement/collision/raycast tests and update of Phase 1 acceptance evidence.
-3. Fix the GitHub Pages source setting before relying on the live deployment.
+3. Re-run the Pages deployment once CI infrastructure is healthy and confirm the
+   live site serves `/factory-frontier/assets/*.js` (not raw sources).
 
 ---
 
