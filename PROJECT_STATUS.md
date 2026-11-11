@@ -2,10 +2,51 @@
 
 **Project:** Factory Frontier
 **Version:** 0.3.0
-**Current Phase:** Phase 3 — Building and placement
+**Current Phase:** Phase 4 — First automated extractor
 **Phase Status:** 🟡 Implemented and automated tests passed; browser acceptance pending
-**Next Recommended Task:** Browser acceptance of construction, demolition and Phase 2.1 inventory UX
+**Next Recommended Task:** Browser acceptance of Miner Mk.1; await authorization before Phase 5
 **Last Updated:** 2026-11-11
+
+---
+
+## Phase 4 — Miner Mk.1 (2026-11-11)
+
+- The user reports Phase 3 construction, preview and demolition were manually
+  tested. This is a user report, not an agent-run browser acceptance.
+- The construction menu includes Miner Mk.1 (20 iron ore, 10 stone, 10 wood).
+  Its 2 × 2 m default footprint snaps to the construction grid. Preview and
+  placement use the same terrain, slope, bounds, player, obstacle and cost
+  validator, additionally requiring exactly one compatible deposit centre inside
+  the footprint. Only that deposit's collider is exempt. Assignment is by stable
+  session ID; a second miner cannot claim it. Placement pays atomically.
+- Fixed-step extraction is 30 items/min at normal purity; existing purity
+  multipliers 0.5/1/2 give 15/30/60 by default. Deposits are infinite. Each miner
+  owns a configurable slot inventory (one 100-item raw-resource stack by default).
+  Capacity blocks production without accumulating blocked work; fractions survive
+  disable, unavailable deposit and existing full output. A partial retrieval moves
+  only what fits. Demolition is refused until output is empty, and then refunds
+  the entire construction cost or fails if that refund cannot fit.
+- Machine inspection via E displays actual state, purity, output, capacity, rate,
+  progress and temporary power policy. Enable/disable and retrieve act on the
+  logical machine. All modal panels suspend gameplay and production; closing tries
+  the existing pointer-lock restoration. Extraction uses fixed simulated time,
+  not wall-clock catch-up; an explicitly paused game does not produce. Hidden-tab
+  behavior follows the browser scheduler and the existing bounded catch-up policy.
+- Temporary power policy: electricity is **not required** in Phase 4. NO_POWER is
+  reserved for future power integration; no free power network is simulated.
+  The state-driven procedural indicator distinguishes running, idle, disabled,
+  full, missing input and error. The machine and preview rendering are separate
+  from logical state and dispose their resources when removed.
+- Tests exercise purity/rates, fractional progress, capacity and recovery,
+  transfer conservation, shared validation, generated-deposit placement,
+  demolition, real fixed-step frame partitioning/pause, UI and bootstrap flow.
+  Bootstrap coverage uses a mocked renderer, not WebGL.
+- `npm run typecheck`, `npm test`, `npm run build` and `npm run verify` passed:
+  **353 tests in 39 files**, plus build, preview and dev-server checks.
+- **Browser acceptance remains pending.** The earlier Chromium attempt failed on
+  missing NSS/NSPR libraries; no browser executable is presently available here.
+  WebGL, native pointer lock and physical usability have not been agent-verified.
+  No conveyors, recipes, power network, saves or Phase 5 work are included.
 
 ---
 
@@ -44,7 +85,7 @@
 - **Browser acceptance remains pending.** The previous isolated Chromium launch
   failed due to missing NSS/NSPR libraries; this continuation did not repeat the
   unchanged launch. The agent did not verify WebGL, pointer lock, or Phase 2.1 UX
-  in a real browser. No Phase 4 work was begun.
+  in a real browser. This was the historical Phase 3 status.
 
 ---
 

@@ -17,7 +17,7 @@
 
       <div class="hud-brand" aria-hidden="true">
         <span class="hud-brand__name">FACTORY FRONTIER</span>
-        <span class="hud-brand__phase">PHASE 3 · CONSTRUCTION</span>
+        <span class="hud-brand__phase">PHASE 4 · EXTRACTION</span>
       </div>
 
       <div class="crosshair" aria-hidden="true"></div>
@@ -61,6 +61,16 @@
         </div>
       </section>
       <div class="construction-status" data-ui="construction-status" role="status" aria-live="polite" hidden></div>
+
+      <section class="inventory" data-ui="machine" role="dialog" aria-modal="true" aria-label="Miner Mk.1" hidden>
+        <div class="inventory__panel">
+          <header class="inventory__header"><div><span class="inventory__eyebrow">EXTRACTION</span><h2>Miner Mk.1</h2></div>
+            <button type="button" data-machine-close>Close · Esc</button></header>
+          <p class="inventory__detail" data-machine-details></p>
+          <div class="inventory__footer"><button type="button" data-machine-toggle>Disable</button><button type="button" data-machine-retrieve>Retrieve output</button></div>
+          <p data-machine-notice role="status" aria-live="polite"></p>
+        </div>
+      </section>
 
       <pre class="debug-stats is-hidden" data-ui="debug-stats" aria-hidden="true"></pre>
 

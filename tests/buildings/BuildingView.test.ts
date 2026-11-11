@@ -26,3 +26,17 @@ describe('building rendering consumer', () => {
     view.dispose();
   });
 });
+
+describe('machine rendering', () => {
+  it('creates a drill and updates the status indicator from logical state', () => {
+    const registry = createDefaultBuildingRegistry(createDefaultItemRegistry()); const view = new BuildingView(registry, 1);
+    const transform = snapFootprint(registry.get('miner-mk1'), 0, 0, 0, 1);
+    view.sync([{ id: 'machine', typeId: 'miner-mk1', transform }]);
+    expect(view.group.getObjectByName('miner-drill')).toBeDefined();
+    const lamp = view.group.getObjectByName('machine-indicator') as Mesh;
+    const material = lamp.material as import('three').MeshStandardMaterial;
+    view.setMachineStates([{ id: 'machine', state: 'RUNNING' }]); expect(material.color.getHex()).toBe(0x38ed8c);
+    view.setMachineStates([{ id: 'machine', state: 'OUTPUT_FULL' }]); expect(material.color.getHex()).toBe(0xffd436);
+    const dispose = vi.spyOn(lamp.geometry, 'dispose'); view.sync([]); expect(dispose).toHaveBeenCalledOnce(); view.dispose();
+  });
+});
