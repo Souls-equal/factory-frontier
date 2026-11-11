@@ -1,0 +1,104 @@
+import { describe, expect, it } from 'vitest';
+import { BuildingSystem } from '../../src/buildings/BuildingSystem';
+import { BuildingTerrain } from '../../src/buildings/BuildingTerrain';
+import { BuildingCollision } from '../../src/buildings/BuildingCollision';
+import { ConstructionController } from '../../src/buildings/ConstructionController';
+import { createDefaultBuildingRegistry } from '../../src/buildings/BuildingRegistry';
+import { Inventory } from '../../src/items/Inventory';
+import { createDefaultItemRegistry } from '../../src/items/ItemRegistry';
+import { ObstacleField } from '../../src/world/ObstacleField';
+import type { TerrainQuery } from '../../src/world/terrain/TerrainHeightfield';
+
+const terrain: TerrainQuery = { bounds: { minX: -50, maxX: 50, minZ: -50, maxZ: 50 }, size: 100, resolution: 50, cellSize: 2,
+  contains: (x,z) => Math.abs(x) <= 50 && Math.abs(z) <= 50, clampXZ: (x,z) => ({x,z}), heightAt: () => 0,
+  slopeAt: () => 0, normalAt: () => ({ x: 0, y: 1, z: 0 }) };
+function setup() {
+  const inventory = new Inventory(createDefaultItemRegistry(), 3);
+  inventory.addItem('stone', 20); inventory.addItem('wood', 10);
+  const world = new ObstacleField([]);
+  const system = new BuildingSystem(createDefaultBuildingRegistry(inventory.registry), inventory, terrain, world.definitions, 1, 40);
+  const controller = new ConstructionController(system, terrain);
+  const collision = new BuildingCollision(world, system);
+  const player = { x: 0, z: 4, radius: 0.4 };
+  const view = { position: { x: 0, y: 1.7, z: 4 }, yaw: 0, pitch: -Math.PI / 4 };
+  return { inventory, system, controller, collision, player, view };
+}
+describe('construction flow', () => {
+  it('previews, rotates, places, blocks movement, targets and demolishes with full refund', () => {
+    const { inventory, system, controller, collision, player, view } = setup();
+    controller.select('foundation');
+    const preview = controller.preview(view, player)!;
+    expect(preview.reason).toBe('valid');
+    expect(system.all()).toHaveLength(0);
+    controller.rotate();
+    const rotated = controller.preview(view, player)!; expect(rotated.transform.rotation).toBe(1);
+    const result = controller.confirm(view, player)!;
+    expect(result.transform).toEqual(rotated.transform); expect(result.reason).toBe('valid');
+    expect(controller.active).toBe(false); expect(system.all()).toHaveLength(1);
+    expect(inventory.getItemCount('stone')).toBe(10); expect(inventory.getItemCount('wood')).toBe(5);
+    const surface = new BuildingTerrain(terrain, system);
+    expect(surface.heightAt(result.transform.x, result.transform.z)).toBeCloseTo(0.4);
+    const blocked = collision.moveCircle(0, 4, 0, -5, 0.4, 0, 1.8);
+    expect(blocked.collided).toBe(true); expect(blocked.z).toBeGreaterThan(result.transform.footprint.maxZ);
+    const target = controller.target(view); expect(target).toBe(result.building?.id);
+    expect(system.demolish(target!)).toBe('removed'); expect(system.all()).toHaveLength(0);
+    expect(inventory.getItemCount('stone')).toBe(20); expect(inventory.getItemCount('wood')).toBe(10);
+    expect(collision.moveCircle(0, 4, 0, -5, 0.4, 0, 1.8).z).toBeCloseTo(-1);
+    expect(surface.heightAt(result.transform.x, result.transform.z)).toBe(0);
+    expect(system.demolish(target!)).toBe('unknown building');
+    expect(inventory.getItemCount('stone')).toBe(20);
+  });
+  it('cancels without mutations and rejects a duplicate placement', () => {
+    const { inventory, system, controller, player, view } = setup();
+    const initial = inventory.snapshot(); controller.select('foundation'); controller.cancel();
+    expect(controller.preview(view, player)).toBeNull(); expect(inventory.snapshot()).toEqual(initial);
+    controller.select('foundation'); controller.confirm(view, player);
+    const after = inventory.snapshot(); controller.select('foundation');
+    expect(controller.confirm(view, player)?.reason).toBe('occupied space');
+    expect(controller.active).toBe(true); expect(system.all()).toHaveLength(1); expect(inventory.snapshot()).toEqual(after);
+  });
+});
+
+describe('building collision regressions', () => {
+  it('does not alter natural obstacle movement when no buildings exist', () => {
+    const { system } = setup();
+    const natural = new ObstacleField([{ id: 'rock', kind: 'boulder', x: 0, y: 0, z: 0, radius: 1, height: 2, yaw: 0, variant: 0 }]);
+    const combined = new BuildingCollision(natural, system);
+    const result = natural.moveCircle(-3, -0.5, 5, 1, 0.4, 0, 1.8);
+    expect(result.collided).toBe(true);
+    expect(combined.moveCircle(-3, -0.5, 5, 1, 0.4, 0, 1.8)).toEqual(result);
+  });
+  it('allows movement across the top surface when the player is above a foundation', () => {
+    const { system, controller, collision, player, view } = setup();
+    controller.select('foundation'); const placed = controller.confirm(view, player)!;
+    const f = placed.transform.footprint;
+    const movement = collision.moveCircle(0, f.maxZ + 1, 0, -4, .4, .4, 2.2);
+    expect(movement.collided).toBe(false);
+    expect(movement.z).toBeCloseTo(f.maxZ - 3);
+    expect(system.all()).toHaveLength(1);
+  });
+});
+
+describe('building/player integration', () => {
+  it('blocks sustained walking, permits jumping onto a foundation and releases after demolition', async () => {
+    const { createGameConfig } = await import('../../src/core/Configuration');
+    const { PlayerController } = await import('../../src/player/PlayerController');
+    const { system, controller, collision, player: footprint, view } = setup();
+    controller.select('foundation'); const result = controller.confirm(view, footprint)!;
+    const config = createGameConfig();
+    const player = new PlayerController({ controls: config.controls, player: config.player,
+      terrain: new BuildingTerrain(terrain, system), obstacles: collision, spawn: { x: 0, y: 0, z: 4, yaw: 0 } });
+    for (let i = 0; i < 60; i++) player.step(.05, { moveX: 0, moveZ: 1, sprint: false, lookDeltaX: 0, lookDeltaY: 0 });
+    expect(player.position.z).toBeGreaterThanOrEqual(result.transform.footprint.maxZ + config.player.radius - .001);
+    expect(Math.abs(player.verticalSpeed)).toBeLessThan(1);
+    player.step(.05, { moveX: 0, moveZ: 1, sprint: false, lookDeltaX: 0, lookDeltaY: 0, jump: true });
+    let onTop = false;
+    for (let i = 0; i < 20; i++) {
+      player.step(.05, { moveX: 0, moveZ: i < 6 ? 1 : 0, sprint: false, lookDeltaX: 0, lookDeltaY: 0 });
+      if (player.position.z < result.transform.footprint.maxZ && Math.abs(player.position.y - .4) < .01 && player.isGrounded) onTop = true;
+    }
+    expect(onTop).toBe(true);
+    expect(system.demolish(result.building!.id)).toBe('removed');
+    expect(new BuildingTerrain(terrain, system).heightAt(0, 2)).toBe(0);
+  });
+});

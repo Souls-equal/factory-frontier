@@ -375,6 +375,13 @@ export class PlayerController {
     }
   }
 
+  /** Stop horizontal drift when a modal takes control of gameplay input. */
+  stopHorizontalMotion(): void {
+    this.velocityX = 0; this.velocityZ = 0;
+    // Modal pauses freeze simulation; do not interpolate a stale last step.
+    this.previousX = this.x; this.previousY = this.y; this.previousZ = this.z;
+  }
+
   /** Reset to the spawn pose and remove all momentum. */
   reset(): void {
     this.x = this.spawn.x;

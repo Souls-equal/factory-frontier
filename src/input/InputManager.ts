@@ -26,6 +26,7 @@ export interface InputManagerOptions {
   readonly onPointerLockChange?: (locked: boolean) => void;
   readonly onInventoryToggle?: () => void;
   readonly onInventoryClose?: () => void;
+  readonly onConstructionKey?: (code: string) => boolean;
 }
 
 const FORWARD_CODES = new Set(['KeyW']);
@@ -44,6 +45,7 @@ export class InputManager {
   private readonly onPointerLockChange: ((locked: boolean) => void) | undefined;
   private readonly onInventoryToggle: (() => void) | undefined;
   private readonly onInventoryClose: (() => void) | undefined;
+  private readonly onConstructionKey: ((code: string) => boolean) | undefined;
   private gameplayEnabled = true;
   private restorePointerLockAfterModal = false;
 
@@ -68,6 +70,7 @@ export class InputManager {
     this.onPointerLockChange = options.onPointerLockChange;
     this.onInventoryToggle = options.onInventoryToggle;
     this.onInventoryClose = options.onInventoryClose;
+    this.onConstructionKey = options.onConstructionKey;
 
     this.element.addEventListener('mousedown', this.handleMouseDown);
     this.view.addEventListener('keydown', this.handleKeyDown);
@@ -245,6 +248,10 @@ export class InputManager {
   private readonly handleKeyDown = (event: KeyboardEvent): void => {
     if (isTypingTarget(event.target)) {
       return;
+    }
+    if (this.onConstructionKey && ['KeyQ', 'KeyR', 'KeyC', 'KeyF', 'Escape'].includes(event.code)) {
+      if (!event.repeat && this.onConstructionKey(event.code)) { event.preventDefault(); return; }
+      if (event.repeat && ['KeyQ', 'KeyR', 'KeyC', 'KeyF'].includes(event.code)) { event.preventDefault(); return; }
     }
     if (event.code === 'Tab' && this.onInventoryToggle) {
       event.preventDefault();

@@ -2,10 +2,49 @@
 
 **Project:** Factory Frontier
 **Version:** 0.3.0
-**Current Phase:** Phase 2.1 — Inventory UX Improvements
-**Phase Status:** 🟡 Improvements implemented and automatically tested; browser verification pending
-**Next Recommended Task:** Browser-check drag-and-drop, pointer-lock restoration and full inventory
+**Current Phase:** Phase 3 — Building and placement
+**Phase Status:** 🟡 Implemented and automated tests passed; browser acceptance pending
+**Next Recommended Task:** Browser acceptance of construction, demolition and Phase 2.1 inventory UX
 **Last Updated:** 2026-11-11
+
+---
+
+## Phase 3 — Building and placement (2026-11-11)
+
+- The continuation began with a standalone registry, grid transform, building
+  model, inventory exchange and rendering consumer; none was connected to play.
+  The baseline passed 324 tests in 30 files.
+- `World` owns the building model using the player's inventory. The initial
+  structural foundation is 2 × 2 one-metre grid cells, 0.4 m tall and costs 10
+  stone and 5 wood. IDs are unique for the world session, not saved on reload.
+- Q opens the construction menu. Selecting an affordable foundation enters
+  placement; aim at ground within 6 m, R rotates 90°, C confirms, Escape cancels.
+  F demolishes a targeted registered building. Menus suspend gameplay input and
+  pause player physics; opening a menu also clears horizontal momentum.
+- Preview and confirmation share snapped transforms and the same validation:
+  full terrain/circular world bounds, terrain support and slope, natural obstacle
+  and deposit collision, other buildings, player footprint and resources. The
+  production heightfield is checked by clipping all intersecting triangles; generic
+  `TerrainQuery` implementations fall back to finite samples. Terrain variation
+  is limited to 0.12 m; the base is at the minimum, so up to 0.12 m may be buried.
+- The fixed-step stage consumes queued placement/demolition presses. Inventory
+  exchange is all-or-nothing. Demolition refunds all original materials or fails
+  without removing the building if they cannot all fit. Rendering and collision
+  consume the logical registry; removed buildings disappear on the next frame and
+  immediately leave collision/ground queries. Preview meshes are separate.
+- Building collision uses conservative capsule-expanded rectangles (square
+  corners), composed with the existing natural-obstacle sweep. Foundation tops
+  supply player ground. Extremely complex intersecting contacts can conservatively
+  stop movement. Demolition ray targeting does not test terrain/prop occlusion,
+  consistent with the existing interaction system's known limitation.
+- `npm run typecheck`, `npm test`, `npm run build` and `npm run verify` passed;
+  **335 tests across 34 files**, plus build, preview and dev-server checks. The mocked-renderer bootstrap
+  test exercises menu, selection, rotation, placement, demolition and refund; it
+  is not a real browser/WebGL test.
+- **Browser acceptance remains pending.** The previous isolated Chromium launch
+  failed due to missing NSS/NSPR libraries; this continuation did not repeat the
+  unchanged launch. The agent did not verify WebGL, pointer lock, or Phase 2.1 UX
+  in a real browser. No Phase 4 work was begun.
 
 ---
 
@@ -253,7 +292,7 @@ This task's merge is deployed by the same pipeline; the result is recorded below
 6. **Two interactable props exist as environment content.** They demonstrate the
    interaction contract (ping log, relay channel) and are not resource/gameplay
    systems.
-7. **No save system, building, machines or power** — by design. Inventory exists in memory only.
+7. **No save system, machines or power** — by design. Buildings and inventory exist in memory only.
 8. **Source maps (~3.11 MB) ship with the production build** for debuggability.
 9. **Collision bounds:** a deeply embedded spawn or pathological intersecting
    cylinder cluster may need a noticeable depenetration correction or remain
@@ -267,7 +306,7 @@ This task's merge is deployed by the same pipeline; the result is recorded below
 
 ## Next Recommended Task
 
-1. Perform and record the remaining Phase 2.1 browser checks above; investigate any failures.
+1. Perform and record browser checks for Phase 3 and the remaining Phase 2.1 UX; investigate any failures.
 2. Address any constrained-generation or reachability issues discovered during
    testing. Do not start Phase 3 without explicit authorization and validated
    Phase 2 acceptance.

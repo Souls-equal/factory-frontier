@@ -89,6 +89,9 @@ export const DEFAULT_INTERACTION_CONFIG = Object.freeze({
   targetRadius: 1.1,
 });
 
+export const DEFAULT_CONSTRUCTION_CONFIG = Object.freeze({ gridSize: 1, reach: 6 });
+export interface ConstructionConfig { readonly gridSize: number; readonly reach: number }
+
 export const DEFAULT_RESOURCE_CONFIG = Object.freeze({
   inventorySlots: 24,
   gatherQuantity: 5,
@@ -196,6 +199,7 @@ export interface GameConfig {
   readonly player: PlayerConfig;
   readonly interaction: InteractionConfig;
   readonly resources: ResourceConfig;
+  readonly construction: ConstructionConfig;
 }
 
 export interface GameConfigOverrides {
@@ -210,6 +214,7 @@ export interface GameConfigOverrides {
   readonly player?: Partial<PlayerConfig>;
   readonly interaction?: Partial<InteractionConfig>;
   readonly resources?: Partial<ResourceConfig>;
+  readonly construction?: Partial<ConstructionConfig>;
 }
 
 export class ConfigurationError extends Error {
@@ -231,6 +236,7 @@ export const DEFAULT_GAME_CONFIG: GameConfig = Object.freeze({
   player: DEFAULT_PLAYER_CONFIG,
   interaction: DEFAULT_INTERACTION_CONFIG,
   resources: DEFAULT_RESOURCE_CONFIG,
+  construction: DEFAULT_CONSTRUCTION_CONFIG,
 });
 
 /**
@@ -303,6 +309,7 @@ export function createGameConfig(overrides: GameConfigOverrides = {}): GameConfi
     player,
     interaction,
     resources,
+    construction: Object.freeze({ ...DEFAULT_CONSTRUCTION_CONFIG, ...overrides.construction }),
   });
 
   validateGameConfig(config);
@@ -368,6 +375,9 @@ export function validateGameConfig(config: GameConfig): void {
 
   assertNumberInRange(config.interaction.range, 'interaction.range', 0.5, 20);
   assertNumberInRange(config.interaction.targetRadius, 'interaction.targetRadius', 0.1, 5);
+
+  assertNumberInRange(config.construction.gridSize, 'construction.gridSize', 0.25, 10);
+  assertNumberInRange(config.construction.reach, 'construction.reach', 1, 20);
 
   assertIntegerInRange(config.resources.inventorySlots, 'resources.inventorySlots', 1, 200);
   assertIntegerInRange(config.resources.gatherQuantity, 'resources.gatherQuantity', 1, 10000);

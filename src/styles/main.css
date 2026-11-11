@@ -462,3 +462,8 @@ body {
 .inventory__slot.is-dragging { opacity: .45; cursor: grabbing; }
 .inventory__slot { min-height: 58px; text-align: left; overflow-wrap: anywhere; font: 11px var(--ff-mono); }
 @media (max-width: 650px) { .inventory__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+.construction__list { display: grid; gap: .65rem; }
+.construction__entry { display: grid; gap: .35rem; text-align: left; padding: 1rem; color: #d7eef0; background: #152933; border: 1px solid #57818b; border-radius: .3rem; cursor: pointer; }
+.construction__entry:disabled { opacity: .55; cursor: not-allowed; }
+.construction-status { position: absolute; bottom: 5rem; left: 50%; transform: translateX(-50%); padding: .6rem .9rem; color: #e7f5f5; background: rgba(6,20,28,.88); border: 1px solid #5a8790; border-radius: .3rem; pointer-events: none; }

@@ -17,7 +17,7 @@
 
       <div class="hud-brand" aria-hidden="true">
         <span class="hud-brand__name">FACTORY FRONTIER</span>
-        <span class="hud-brand__phase">PHASE 2 · RESOURCE SURVEY</span>
+        <span class="hud-brand__phase">PHASE 3 · CONSTRUCTION</span>
       </div>
 
       <div class="crosshair" aria-hidden="true"></div>
@@ -51,6 +51,16 @@
           <p class="inventory__detail" data-inventory-detail></p>
         </div>
       </section>
+
+      <section class="inventory" data-ui="construction" role="dialog" aria-modal="true" aria-label="Construction menu" hidden>
+        <div class="inventory__panel">
+          <header class="inventory__header"><div><span class="inventory__eyebrow">FIELD OPERATIONS</span><h2>Construction</h2></div>
+            <button type="button" data-construction-close>Close · Esc</button></header>
+          <p class="inventory__intro">Select a building, aim at nearby ground, rotate with R and place with C.</p>
+          <div class="construction__list" data-construction-list></div>
+        </div>
+      </section>
+      <div class="construction-status" data-ui="construction-status" role="status" aria-live="polite" hidden></div>
 
       <pre class="debug-stats is-hidden" data-ui="debug-stats" aria-hidden="true"></pre>
 
