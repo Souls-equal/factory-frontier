@@ -138,6 +138,87 @@ describe('Game simulation systems', () => {
     expect(game.stats.simulationTimeMs).toBe(100);
   });
 
+  it('drives presentation frame systems before rendering', async () => {
+    const { game, engine, scheduler } = createHarness();
+    const frames: number[] = [];
+    const order: string[] = [];
+    const originalRender = engine.render.bind(engine);
+
+    const renderSpy = vi.spyOn(engine, 'render').mockImplementation((alpha) => {
+      order.push('render');
+      originalRender(alpha);
+    });
+
+    game.registerFrameSystem({
+      id: 'view',
+      update: (frameDeltaMs) => {
+        frames.push(frameDeltaMs);
+        order.push('frame');
+      },
+    });
+
+    await game.init();
+    game.start();
+    scheduler.advance(16);
+
+    // The first frame renders without simulation but still updates the view.
+    expect(frames).toEqual([0]);
+    expect(order).toEqual(['frame', 'render']);
+
+    scheduler.advance(100);
+    expect(frames).toEqual([0, 100]);
+    expect(order).toEqual(['frame', 'render', 'frame', 'render']);
+    expect(renderSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('unregisters frame systems through the returned disposer', async () => {
+    const { game, scheduler } = createHarness();
+    const update = vi.fn();
+    const unregister = game.registerFrameSystem({ id: 'removable-frame', update });
+
+    expect(game.stats.frameSystems).toBe(1);
+    unregister();
+    unregister();
+    expect(game.stats.frameSystems).toBe(0);
+
+    await game.init();
+    game.start();
+    scheduler.advance(16);
+
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('prevents duplicate ids across simulation and frame systems', async () => {
+    const { game } = createHarness();
+    game.registerSystem({ id: 'shared', fixedUpdate: () => undefined });
+
+    expect(() => game.registerFrameSystem({ id: 'shared', update: () => undefined })).toThrow(
+      /already registered/,
+    );
+    expect(() => game.registerFrameSystem({ id: ' ', update: () => undefined })).toThrow(
+      /must not be empty/,
+    );
+  });
+
+  it('stops the game when a frame system throws', async () => {
+    const onError = vi.fn();
+    const { game, scheduler } = createHarness({ onError });
+    game.registerFrameSystem({
+      id: 'broken-frame',
+      update: () => {
+        throw new Error('view failure');
+      },
+    });
+
+    await game.init();
+    game.start();
+    scheduler.advance(16);
+
+    expect(game.status).toBe(GameStatus.Stopped);
+    expect(onError).toHaveBeenCalledOnce();
+    expect(scheduler.pendingCount).toBe(0);
+  });
+
   it('passes the interpolation alpha to the engine renderer', async () => {
     const { game, engine, scheduler } = createHarness();
     await game.init();
@@ -241,6 +322,7 @@ describe('Game sizing and statistics', () => {
 
     expect(stats.status).toBe(GameStatus.Initialized);
     expect(stats.systems).toBe(0);
+    expect(stats.frameSystems).toBe(0);
     expect(stats.drawCalls).toBe(7);
     expect(stats.triangles).toBe(1200);
   });
@@ -265,6 +347,7 @@ describe('Game disposal', () => {
     expect(disposed).toHaveBeenCalledOnce();
     expect(game.eventBus.listenerCount('game:started')).toBe(0);
     expect(game.stats.drawCalls).toBe(0);
+    expect(game.stats.frameSystems).toBe(0);
   });
 
   it('is idempotent', async () => {
@@ -283,6 +366,9 @@ describe('Game disposal', () => {
     game.dispose();
 
     expect(() => game.registerSystem({ id: 'late', fixedUpdate: () => undefined })).toThrow(/disposed/);
+    expect(() => game.registerFrameSystem({ id: 'late-frame', update: () => undefined })).toThrow(
+      /disposed/,
+    );
   });
 
   it('ignores resize after disposal', async () => {

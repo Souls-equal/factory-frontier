@@ -46,6 +46,9 @@ try {
     '/src/core/Game.ts',
     '/src/core/GameClock.ts',
     '/src/engine/Engine.ts',
+    '/src/input/InputManager.ts',
+    '/src/player/PlayerController.ts',
+    '/src/ui/ControlsHint.ts',
     '/src/ui/StatusOverlay.ts',
   ];
 

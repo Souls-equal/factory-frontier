@@ -41,6 +41,36 @@ describe('CameraManager', () => {
     expect(manager.camera.aspect).toBe(1.5);
   });
 
+  it('applies a first-person camera pose with YXZ rotation order', () => {
+    const manager = new CameraManager(config);
+
+    manager.applyView({
+      position: { x: 2, y: 1.7, z: -4 },
+      yaw: 0.5,
+      pitch: -0.25,
+    });
+
+    expect(manager.camera.position.x).toBe(2);
+    expect(manager.camera.position.y).toBe(1.7);
+    expect(manager.camera.position.z).toBe(-4);
+    expect(manager.camera.rotation.order).toBe('YXZ');
+    expect(manager.camera.rotation.y).toBeCloseTo(0.5);
+    expect(manager.camera.rotation.x).toBeCloseTo(-0.25);
+    expect(manager.camera.rotation.z).toBe(0);
+  });
+
+  it('rejects non-finite camera views', () => {
+    const manager = new CameraManager(config);
+
+    expect(() =>
+      manager.applyView({
+        position: { x: Number.NaN, y: 1.7, z: 0 },
+        yaw: 0,
+        pitch: 0,
+      }),
+    ).toThrow(RangeError);
+  });
+
   it('rejects invalid aspect ratios', () => {
     const manager = new CameraManager(config);
     expect(() => manager.setAspectRatio(0)).toThrow(RangeError);

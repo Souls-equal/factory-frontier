@@ -1,5 +1,14 @@
 import type { Camera, Scene } from 'three';
 
+/** World-space camera pose produced by the player layer. */
+export interface CameraView {
+  readonly position: { readonly x: number; readonly y: number; readonly z: number };
+  /** Rotation around the world Y axis, in radians. */
+  readonly yaw: number;
+  /** Rotation around the camera's local X axis, in radians. */
+  readonly pitch: number;
+}
+
 /** Read-only rendering statistics exposed to the game and debug UI. */
 export interface RendererStats {
   readonly drawCalls: number;
@@ -25,6 +34,8 @@ export interface RenderBackend {
 export interface GameEngine {
   init(): void | Promise<void>;
   resize(width: number, height: number, pixelRatio: number): void;
+  /** Apply the current camera pose before rendering. */
+  applyView(view: CameraView): void;
   /** `alpha` is the interpolation factor for future view-state interpolation. */
   render(alpha: number): void;
   dispose(): void;

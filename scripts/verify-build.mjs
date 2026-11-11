@@ -53,6 +53,11 @@ check(
 check('entry HTML no longer references raw /src/main.ts', !/src="\/src\/main\.ts"/.test(html));
 check('entry HTML contains the canvas mount point', html.includes('id="game-canvas"'));
 check('entry HTML contains the boot overlay', html.includes('data-ui="boot"'));
+check('entry HTML contains the crosshair', html.includes('class="crosshair"'));
+check(
+  'entry HTML contains the controls hint',
+  html.includes('data-ui="controls-hint"'),
+);
 check(
   'favicon is referenced under the base path',
   html.includes(`${expectedBase}favicon.svg`),

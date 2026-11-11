@@ -52,6 +52,31 @@ describe('Engine', () => {
     expect(backend.renderCalls[0]?.camera).toBe(engine.camera);
   });
 
+  it('applies camera views from the player layer', () => {
+    const { engine } = createHarness();
+    engine.init();
+
+    engine.applyView({ position: { x: 1, y: 1.7, z: 2 }, yaw: 0.25, pitch: -0.1 });
+
+    expect(engine.camera.position.x).toBe(1);
+    expect(engine.camera.position.y).toBe(1.7);
+    expect(engine.camera.position.z).toBe(2);
+    expect(engine.camera.rotation.order).toBe('YXZ');
+    expect(engine.camera.rotation.y).toBeCloseTo(0.25);
+    expect(engine.camera.rotation.x).toBeCloseTo(-0.1);
+  });
+
+  it('ignores camera views after disposal', () => {
+    const { engine } = createHarness();
+    engine.init();
+    engine.dispose();
+
+    const positionBefore = engine.camera.position.clone();
+    engine.applyView({ position: { x: 9, y: 9, z: 9 }, yaw: 1, pitch: 1 });
+
+    expect(engine.camera.position.equals(positionBefore)).toBe(true);
+  });
+
   it('propagates resize to the backend and camera', () => {
     const { engine, backend } = createHarness();
     engine.init();

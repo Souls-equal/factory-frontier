@@ -541,3 +541,165 @@ registration seam exists for Phase 1.
   a testable controller driven by fixed updates or per-frame input sampling.
 - Extend `SceneManager` with chunk groups and use `Engine.render(alpha)` for view
   interpolation. Do not put gameplay state in Three.js objects.
+
+---
+
+# APPENDIX B — FOUNDATION CAMERA, INPUT AND PERSISTENCE BASELINE
+
+**Added:** 2026-11-11, with the first-person foundation increment.
+**Status:** descriptive. §20–23 remain authoritative; this appendix records the
+decisions made while adding a controllable camera and documents designs that are
+deliberately **not implemented yet**.
+
+## B.1 Two update stages
+
+The game now distinguishes two execution stages:
+
+| Stage | Driver | Frequency | Content |
+|---|---|---|---|
+| `SimulationSystem.fixedUpdate` | `GameClock` | fixed 50 ms (20 Hz) | industrial simulation: extraction, production, logistics, power (future phases) |
+| `FrameSystem.update` | render loop | display refresh rate | presentation/input: camera pose applied before rendering |
+
+Rules:
+
+- Frame systems run once per rendered frame, after fixed simulation steps and
+  immediately before `engine.render(alpha)`.
+- Frame systems must not mutate state owned by the deterministic simulation.
+- A frame system error is fail-fast: the loop stops, the game transitions to
+  `stopped`, `game:error` is emitted and the fatal UI is shown.
+- The first frame after `start()` runs frame systems with a 0 ms delta so the
+  view is correct before the first render.
+- System ids are unique across both stages; registration throws on duplicates.
+
+**Rationale:** mouse look must be smooth at display rate, while industrial
+production must remain deterministic and frame-rate independent. Mixing the two
+would either stutter the view at 20 Hz or make production depend on FPS.
+
+**Trade-off:** camera translation is currently presentation-stage movement with a
+frame delta clamped to 250 ms. It is not physics. Phase 1 must move terrain
+following, gravity and collision into a deterministic player simulation with
+interpolation, replacing the flat-ground assumptions.
+
+## B.2 Player/view boundary
+
+- `src/player/PlayerController.ts` contains plain numbers only — no Three.js, no
+  DOM. It owns position, yaw, pitch and horizontal velocity.
+- It emits a `CameraView` (`position`, `yaw`, `pitch`) through `engine/types.ts`.
+- `Engine.applyView(view)` forwards to `CameraManager.applyView`, which validates
+  finite values and writes position plus a `YXZ` Euler rotation (no roll).
+- `main.ts` wires a single `FrameSystem` that reads input, advances the player and
+  applies the view before each render.
+
+Foundation movement behaviour:
+
+- WASD relative to yaw, accelerated/braked at 28 m/s².
+- Shift sprint multiplier (1.8× default).
+- Pitch clamped to ±1.45 rad; yaw normalized to (−π, π].
+- Circular safety bound (120 m default) so the player cannot leave the foundation
+  plane. This is **not** collision detection and will be replaced in Phase 1.
+
+Not implemented: terrain height sampling, gravity, jumping, collision, slope
+handling, interaction raycasting. All belong to Phase 1.
+
+## B.3 Input layer
+
+`src/input/InputManager.ts` is DOM-only and translates events into axes/deltas:
+
+- WASD (`KeyboardEvent.code`) and Shift sprint.
+- Pointer lock requested on primary click; **click-drag look** remains available
+  as a fallback when pointer lock is unavailable or rejected.
+- Pointer-lock state is the source of truth for the control hint.
+- Held keys are cleared on window blur and when the document becomes hidden.
+- Key events targeting inputs/textareas/selects/contenteditable are ignored, so a
+  future settings UI will not move the player.
+- `dispose()` removes every listener, clears state and releases pointer lock.
+
+No gameplay logic lives in the input layer.
+
+## B.4 Control configuration
+
+`GameConfig.controls` is validated at startup and immutable:
+
+| Field | Default | Validation |
+|---|---:|---|
+| `eyeHeight` | 1.7 m | 0.5–5 |
+| `moveSpeed` | 5.5 m/s | 0.5–20 |
+| `sprintMultiplier` | 1.8 | 1–5 |
+| `acceleration` | 28 m/s² | 1–200 |
+| `lookSensitivity` | 0.0022 rad/px | 0.0001–0.02 |
+| `pitchLimit` | 1.45 rad | 0.1–1.5 |
+| `playAreaRadius` | 120 m | 5–150 (inside the 320 m ground plane) |
+
+These are presentation/control tuning values, not gameplay balance decisions.
+
+## B.5 Persistence design baseline (Phase 12 — not implemented)
+
+No save code exists yet. The design baseline to implement in Phase 12:
+
+- **Storage:** IndexedDB database `factory-frontier`, object store `saves`, keyed
+  by slot id (`autosave`, `manual-1`, …). No localStorage for game state.
+- **Envelope:** versioned, JSON-serializable, contains only logical state:
+
+  ```json
+  {
+    "saveVersion": 1,
+    "createdAt": "ISO-8601",
+    "updatedAt": "ISO-8601",
+    "meta": { "seed": 123456, "playTimeMs": 0, "gameVersion": "0.2.0" },
+    "world": { "seed": 123456, "modifications": [] },
+    "player": { "position": [0, 1.7, 18], "yaw": 0, "pitch": 0, "inventory": [] },
+    "buildings": [],
+    "logistics": [],
+    "powerNetworks": [],
+    "progression": {}
+  }
+  ```
+
+- **Versioning:** integer `saveVersion`; a chain of explicit migration functions;
+  unknown/future versions are rejected with a user-visible error rather than
+  guessed.
+- **Validation:** schema validation before write and after read; reject invalid
+  quantities, unknown item/building ids and dangling connections.
+- **Atomicity:** write to a temporary record, validate, then commit the slot key;
+  keep the previous successful save until the new one is complete.
+- **Exclusions:** never serialize Three.js objects, meshes, materials, DOM nodes,
+  rendered item instances or frame statistics.
+- **Planned modules:** `save/SaveManager.ts`, `SaveSerializer.ts`,
+  `SaveValidator.ts`, `SaveMigration.ts`, `IndexedDbStorage.ts` (Phase 12).
+
+Until Phase 12 there is no autosave, no save slots and no persistence claims.
+
+## B.6 Data-driven definitions baseline (Phases 2–7 — not implemented)
+
+Machine, recipe, item and resource data will be immutable definitions loaded from
+validated data modules, with registries owning lookup and referential integrity:
+
+```ts
+interface ItemDefinition { id: string; displayName: string; category: ItemCategory; stackSize: number; }
+interface RecipeDefinition {
+  id: string;
+  machine: MachineId;
+  durationMs: number;
+  inputs: ReadonlyArray<{ item: ItemId; amount: number }>;
+  outputs: ReadonlyArray<{ item: ItemId; amount: number }>;
+}
+interface MachineDefinition { id: string; category: MachineCategory; powerConsumptionKw: number; recipeIds: readonly string[]; }
+```
+
+Rules to enforce when implemented:
+
+- ids are stable, unique and used in saves (never display names),
+- amounts are positive integers unless a resource is explicitly fractional,
+- registry validation runs once at boot and fails fast on dangling references,
+- UI reads definitions; it does not hardcode machine behaviour.
+
+No registries or sample gameplay definitions are created yet, because no gameplay
+phase has started and empty registries would be placeholder systems.
+
+## B.7 Deployment constraint
+
+The build is verified under `/factory-frontier/` and served correctly by the
+preview server. GitHub Pages must be configured with **Source: GitHub Actions**;
+the repository's current Pages configuration is a legacy branch deployment, which
+publishes raw sources instead of `dist/`. That is a repository setting, not a build
+configuration defect. See `PROJECT_STATUS.md`.

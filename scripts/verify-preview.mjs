@@ -53,6 +53,7 @@ try {
   check('entry page is HTML', (pageResponse.headers.get('content-type') ?? '').includes('text/html'));
   check('entry page includes the game canvas', html.includes('id="game-canvas"'));
   check('entry page includes the boot overlay', html.includes('data-ui="boot"'));
+  check('entry page includes the controls hint', html.includes('data-ui="controls-hint"'));
 
   const assetUrls = [...html.matchAll(/(?:src|href)="([^"]+\.(?:js|css))"/g)].map((match) => match[1]);
   check('entry page references at least one JS and one CSS asset', assetUrls.length >= 2);

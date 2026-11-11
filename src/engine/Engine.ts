@@ -3,7 +3,7 @@ import { CameraManager } from './CameraManager';
 import { LightingManager } from './LightingManager';
 import { Renderer } from './Renderer';
 import { SceneManager } from './SceneManager';
-import type { GameEngine, RenderBackend, RendererStats } from './types';
+import type { CameraView, GameEngine, RenderBackend, RendererStats } from './types';
 
 export interface EngineOptions {
   readonly config: GameConfig;
@@ -60,6 +60,13 @@ export class Engine implements GameEngine {
 
     this.renderer.resize(width, height, pixelRatio);
     this.cameraManager.resize(width, height);
+  }
+
+  applyView(view: CameraView): void {
+    if (this.disposed) {
+      return;
+    }
+    this.cameraManager.applyView(view);
   }
 
   render(_alpha: number): void {

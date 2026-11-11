@@ -1,6 +1,7 @@
 import { PerspectiveCamera } from 'three';
 
 import type { RenderConfig } from '../core/Configuration';
+import type { CameraView } from './types';
 
 /**
  * Owns the perspective camera.
@@ -32,5 +33,21 @@ export class CameraManager {
       return;
     }
     this.setAspectRatio(width / height);
+  }
+
+  /**
+   * Apply a first-person camera pose. Yaw is applied around world Y, pitch
+   * around the camera's local X (Euler order YXZ), with no roll.
+   */
+  applyView(view: CameraView): void {
+    const { position, yaw, pitch } = view;
+    const values = [position.x, position.y, position.z, yaw, pitch];
+
+    if (!values.every((value) => Number.isFinite(value))) {
+      throw new RangeError('Camera view contains non-finite values.');
+    }
+
+    this.camera.position.set(position.x, position.y, position.z);
+    this.camera.rotation.set(pitch, yaw, 0, 'YXZ');
   }
 }
