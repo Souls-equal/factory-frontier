@@ -226,3 +226,54 @@ describe('InputManager disposal', () => {
     expect(() => input?.dispose()).not.toThrow();
   });
 });
+
+describe('InputManager action edges', () => {
+  it('queues a jump press exactly once per key press', () => {
+    input = new InputManager(canvas);
+
+    keyDown('Space');
+    expect(input.consumeJump()).toBe(true);
+    expect(input.consumeJump()).toBe(false);
+  });
+
+  it('ignores key auto-repeat for edge-triggered actions', () => {
+    input = new InputManager(canvas);
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', repeat: true, bubbles: true }));
+    expect(input.consumeJump()).toBe(false);
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyE', repeat: true, bubbles: true }));
+    expect(input.consumeInteract()).toBe(false);
+  });
+
+  it('queues an interact press exactly once per key press', () => {
+    input = new InputManager(canvas);
+
+    keyDown('KeyE');
+    expect(input.consumeInteract()).toBe(true);
+    expect(input.consumeInteract()).toBe(false);
+  });
+
+  it('clears queued actions on window blur', () => {
+    input = new InputManager(canvas);
+
+    keyDown('Space');
+    keyDown('KeyE');
+    window.dispatchEvent(new Event('blur'));
+
+    expect(input.consumeJump()).toBe(false);
+    expect(input.consumeInteract()).toBe(false);
+  });
+
+  it('ignores action keys typed into an input field', () => {
+    input = new InputManager(canvas);
+    const field = document.createElement('input');
+    document.body.append(field);
+
+    field.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', bubbles: true }));
+    field.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyE', bubbles: true }));
+
+    expect(input.consumeJump()).toBe(false);
+    expect(input.consumeInteract()).toBe(false);
+  });
+});

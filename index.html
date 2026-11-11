@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Factory Frontier — a browser-based 3D factory automation game. Foundation build."
+      content="Factory Frontier — a browser-based 3D factory automation game. Phase 1 terrain survey."
     />
     <meta name="theme-color" content="#050a10" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -17,13 +17,28 @@
 
       <div class="hud-brand" aria-hidden="true">
         <span class="hud-brand__name">FACTORY FRONTIER</span>
-        <span class="hud-brand__phase">FOUNDATION BUILD · FIRST PERSON</span>
+        <span class="hud-brand__phase">PHASE 1 · TERRAIN SURVEY</span>
       </div>
 
       <div class="crosshair" aria-hidden="true"></div>
 
+      <div class="interaction-prompt is-hidden" data-ui="interaction-prompt" aria-hidden="true">
+        <span class="interaction-prompt__key">E</span>
+        <span class="interaction-prompt__body">
+          <span class="interaction-prompt__name" data-ui="interaction-name"></span>
+          <span class="interaction-prompt__hint" data-ui="interaction-hint"></span>
+        </span>
+      </div>
+
+      <div
+        class="interaction-feedback is-hidden"
+        data-ui="interaction-feedback"
+        role="status"
+        aria-live="polite"
+      ></div>
+
       <div class="controls-hint" data-ui="controls-hint" role="status" aria-live="polite">
-        Click to capture mouse · WASD move · Shift sprint · Drag to look
+        Click to capture mouse · WASD move · Space jump · Shift sprint · E interact
       </div>
 
       <pre class="debug-stats is-hidden" data-ui="debug-stats" aria-hidden="true"></pre>
@@ -31,8 +46,8 @@
       <div class="boot" data-ui="boot">
         <div class="boot__panel">
           <p class="boot__eyebrow">FACTORY FRONTIER</p>
-          <h1 class="boot__title">Foundation</h1>
-          <p class="boot__tagline">Rendering pipeline, deterministic simulation core and first-person camera</p>
+          <h1 class="boot__title">Terrain Survey</h1>
+          <p class="boot__tagline">Procedural terrain, deterministic player physics and interaction system</p>
           <div class="boot__progress" aria-hidden="true"><span></span></div>
           <p class="boot__status" data-ui="boot-status" role="status" aria-live="polite">
             Initializing…

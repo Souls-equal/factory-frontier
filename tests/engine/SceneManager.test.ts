@@ -1,82 +1,133 @@
 import { describe, expect, it, vi } from 'vitest';
-import {
-  Color,
-  Fog,
-  GridHelper,
-  Group,
-  InstancedMesh,
-  Mesh,
-  PlaneGeometry,
-} from 'three';
+import { Color, Fog, InstancedMesh, Mesh, MeshStandardMaterial } from 'three';
 
 import { createGameConfig } from '../../src/core/Configuration';
 import { SceneManager } from '../../src/engine/SceneManager';
+import { createWorld } from '../../src/world/World';
+import type { World } from '../../src/world/World';
 
-const config = createGameConfig().render;
+function createHarness(overrides: Parameters<typeof createGameConfig>[0] = {}) {
+  const config = createGameConfig({
+    world: { resolution: 24, obstacleCount: 10, sizeMeters: 80 },
+    ...overrides,
+  });
+  const world = createWorld(config);
+  const manager = new SceneManager(config.render, world);
+  return { manager, world, config };
+}
 
-function findObject<T>(sceneManager: SceneManager, name: string): T {
-  const object = sceneManager.scene.getObjectByName(name);
+function findObject<T>(manager: SceneManager, name: string): T {
+  const object = manager.scene.getObjectByName(name);
   expect(object, `object "${name}" should exist`).toBeDefined();
   return object as T;
 }
 
 describe('SceneManager', () => {
-  it('builds the foundation scene graph', () => {
-    const manager = new SceneManager(config);
+  it('builds the Phase 1 environment from world data', () => {
+    const { manager } = createHarness();
 
-    expect(manager.scene.children).toHaveLength(5);
-    expect(findObject<Mesh>(manager, 'foundation:ground')).toBeInstanceOf(Mesh);
-    expect(findObject<GridHelper>(manager, 'foundation:grid')).toBeInstanceOf(GridHelper);
-    expect(findObject<Mesh>(manager, 'foundation:origin-pad')).toBeInstanceOf(Mesh);
-    expect(findObject<Group>(manager, 'foundation:beacon')).toBeInstanceOf(Group);
-    expect(findObject<InstancedMesh>(manager, 'foundation:boundary-stakes')).toBeInstanceOf(InstancedMesh);
+    expect(manager.scene.children).toHaveLength(1);
+    expect(findObject<Mesh>(manager, 'environment:terrain')).toBeInstanceOf(Mesh);
+    expect(findObject<Mesh>(manager, 'environment:sky')).toBeInstanceOf(Mesh);
+    expect(manager.scene.getObjectByName('environment:rocks')).toBeDefined();
+    expect(manager.scene.getObjectByName('environment:props')).toBeDefined();
   });
 
-  it('configures background, fog and a translucent construction grid', () => {
-    const manager = new SceneManager(config);
-    const grid = findObject<GridHelper>(manager, 'foundation:grid');
+  it('builds the terrain mesh from the same height data physics uses', () => {
+    const { manager, world } = createHarness();
+    const terrain = findObject<Mesh>(manager, 'environment:terrain');
+    const data = world.terrain.getRenderData();
+
+    const position = terrain.geometry.getAttribute('position');
+    expect(position.count).toBe(data.vertexCount);
+    expect(terrain.geometry.getIndex()?.count).toBe(data.triangleCount * 3);
+
+    // A rendered vertex must sit exactly on the collision surface.
+    const sample = Math.floor(data.vertexCount / 2);
+    expect(position.getY(sample)).toBeCloseTo(data.positions[sample * 3 + 1] ?? Number.NaN, 6);
+  });
+
+  it('shades terrain with vertex colours and receives shadows', () => {
+    const { manager } = createHarness();
+    const terrain = findObject<Mesh>(manager, 'environment:terrain');
+    const material = terrain.material as MeshStandardMaterial;
+
+    expect(terrain.geometry.getAttribute('color')).toBeDefined();
+    expect(terrain.receiveShadow).toBe(true);
+    expect(material.vertexColors).toBe(true);
+  });
+
+  it('renders every solid obstacle with instancing instead of one mesh each', () => {
+    const { manager, world } = createHarness();
+    const rockGroup = manager.scene.getObjectByName('environment:rocks');
+    expect(rockGroup).toBeDefined();
+
+    const instanced = (rockGroup?.children ?? []).filter(
+      (child): child is InstancedMesh => child instanceof InstancedMesh,
+    );
+    const totalInstances = instanced.reduce((sum, mesh) => sum + mesh.count, 0);
+    const solidCount = world.obstacleDefinitions.filter((obstacle) => obstacle.kind !== 'prop').length;
+
+    expect(solidCount).toBeGreaterThan(0);
+    expect(totalInstances).toBe(solidCount);
+    expect(instanced.length).toBeLessThanOrEqual(3);
+  });
+
+  it('places interactable props on the terrain with a hidden highlight ring', () => {
+    const { manager } = createHarness();
+    const beacon = manager.scene.getObjectByName('environment:prop:survey-beacon');
+    const ring = manager.scene.getObjectByName('environment:prop:survey-beacon:highlight-ring');
+
+    expect(beacon).toBeDefined();
+    expect(ring?.visible).toBe(false);
+  });
+
+  it('toggles the highlight only for the targeted interactable', () => {
+    const { manager } = createHarness();
+    const beaconRing = manager.scene.getObjectByName('environment:prop:survey-beacon:highlight-ring');
+    const relayRing = manager.scene.getObjectByName('environment:prop:relay-mast:highlight-ring');
+
+    manager.setHighlight('relay-mast');
+    expect(relayRing?.visible).toBe(true);
+    expect(beaconRing?.visible).toBe(false);
+    expect(manager.environment.highlighted).toBe('relay-mast');
+
+    manager.setHighlight(null);
+    expect(relayRing?.visible).toBe(false);
+  });
+
+  it('configures background and fog from the render config', () => {
+    const { manager, config } = createHarness({ render: { backgroundColor: 0x123456, fogColor: 0x654321 } });
 
     expect(manager.scene.background).toBeInstanceOf(Color);
-    expect((manager.scene.background as Color).getHex()).toBe(config.backgroundColor);
+    expect((manager.scene.background as Color).getHex()).toBe(0x123456);
     expect(manager.scene.fog).toBeInstanceOf(Fog);
-    expect(grid.material.transparent).toBe(true);
-    expect(grid.material.opacity).toBeCloseTo(0.55);
-    expect(grid.geometry.getAttribute('color')).toBeDefined();
-  });
-
-  it('uses instancing for repeated boundary markers', () => {
-    const manager = new SceneManager(config);
-    const stakes = findObject<InstancedMesh>(manager, 'foundation:boundary-stakes');
-
-    expect(stakes.count).toBe(48);
-    expect(stakes.instanceMatrix.count).toBe(48);
-  });
-
-  it('creates a horizontal, shadow-receiving ground plane', () => {
-    const manager = new SceneManager(config);
-    const ground = findObject<Mesh>(manager, 'foundation:ground');
-
-    expect(ground.geometry).toBeInstanceOf(PlaneGeometry);
-    expect(ground.rotation.x).toBeCloseTo(-Math.PI / 2, 6);
-    expect(ground.receiveShadow).toBe(true);
+    expect((manager.scene.fog as Fog).color.getHex()).toBe(0x654321);
+    expect((manager.scene.fog as Fog).near).toBe(config.render.fogNear);
+    expect((manager.scene.fog as Fog).far).toBe(config.render.fogFar);
   });
 
   it('disposes geometries and materials and detaches the scene graph', () => {
-    const manager = new SceneManager(config);
-    const ground = findObject<Mesh>(manager, 'foundation:ground');
-    const geometryDispose = vi.spyOn(ground.geometry, 'dispose');
+    const { manager } = createHarness();
+    const terrain = findObject<Mesh>(manager, 'environment:terrain');
+    const geometryDispose = vi.spyOn(terrain.geometry, 'dispose');
+    const materialDispose = vi.spyOn(terrain.material as MeshStandardMaterial, 'dispose');
 
     manager.dispose();
 
     expect(geometryDispose).toHaveBeenCalledOnce();
+    expect(materialDispose).toHaveBeenCalledOnce();
     expect(manager.scene.children).toHaveLength(0);
   });
 
-  it('uses the configured background/fog colors', () => {
-    const customConfig = createGameConfig({ render: { backgroundColor: 0x123456 } }).render;
-    const manager = new SceneManager(customConfig);
+  it('does not mutate world data while building the scene', () => {
+    const config = createGameConfig({ world: { resolution: 12, obstacleCount: 4, sizeMeters: 60 } });
+    const world: World = createWorld(config);
+    const before = world.terrain.heightAt(4, 4);
 
-    expect((manager.scene.background as Color).getHex()).toBe(0x123456);
-    expect((manager.scene.fog as Fog).color.getHex()).toBe(0x123456);
+    const manager = new SceneManager(config.render, world);
+    expect(world.terrain.heightAt(4, 4)).toBe(before);
+    expect(world.terrain.resolution).toBe(12);
+    manager.dispose();
   });
 });

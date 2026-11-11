@@ -47,7 +47,7 @@ describe('createGameConfig', () => {
     expect(config.controls.pitchLimit).toBeGreaterThan(0);
     expect(config.basePath).toBe('/');
     expect(config.debug).toBe(false);
-    expect(config.version).toBe('0.2.0');
+    expect(config.version).toBe('0.3.0');
   });
 
   it('supports control overrides', () => {

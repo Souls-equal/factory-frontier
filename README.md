@@ -4,18 +4,17 @@ A first-person, browser-based 3D factory automation game. The player lands on an
 unexplored planet, extracts its resources, and builds increasingly complex
 automated production chains.
 
-**Status:** Foundation + first-person camera implemented · Phase 1 partially started · Version 0.2.0
-**Next phase:** Complete Phase 1 — terrain, gravity, collisions and interaction raycasting
+**Status:** Phase 1 complete — terrain, player physics, collision and interaction · Version 0.3.0
+**Next phase:** Phase 2 — resources and inventory (requires authorization)
 **Platform:** Desktop web browser (WebGL2) · **Stack:** TypeScript, Three.js, Vite
 
 ---
 
 ## Current state
 
-The foundation now includes a functional first-person camera: pointer-lock mouse
-look (with click-drag fallback), WASD movement, sprint, acceleration and a bounded
-flat play area. There is no terrain, gravity, collision, inventory, construction
-or production yet — those belong to Phase 1 and later.
+Phase 1 is implemented: the player explores a real, procedurally generated terrain
+with gravity, jumping, collision and a central interaction system. Factory gameplay
+(inventory, buildings, machines, power, saves) has **not** started.
 
 What exists and works today:
 
@@ -24,19 +23,25 @@ What exists and works today:
 - A central `Game` orchestrator with an explicit lifecycle state machine and a
   dependency-injected rendering engine.
 - A deterministic fixed-timestep simulation clock (50 ms, 20 Hz) with bounded
-  catch-up, driven by a variable-rate render loop.
-- A WebGL2 scene: a foundation survey site with a ground plane, construction
-  grid, origin pad, beacon, instanced boundary markers, lighting, shadows and fog.
-- A first-person camera foundation (`PlayerController` + `InputManager`) with
-  mouse look, WASD movement, sprint, pitch clamping and configurable sensitivity.
-- A typed event bus, validated configuration, and a minimal boot/fatal/debug UI
-  with a crosshair and control hint.
-- Automated tests and build/serve verification scripts (see below).
+  catch-up, driven by a variable-rate render loop; camera interpolation between
+  steps keeps motion smooth without touching simulation state.
+- **Terrain:** a finite 240 m seeded heightfield (120×120 cells) with hills, a flat
+  outpost clearing and a raised boundary ridge. Gameplay queries read terrain data,
+  never mesh geometry, and the render mesh is generated from the same triangles.
+- **Physics:** gravity, ground detection, edge-triggered jumping, landing, slope
+  handling with a configurable walkable limit, sliding on steep ground, and
+  collision against terrain and solid obstacles.
+- **Interaction:** camera-ray targeting with closest-target selection, a reusable
+  `Interactable` contract, highlight + prompt + contextual hint, and `E` to use.
+- **Environment:** vertex-coloured terrain, sky dome, horizon fog, instanced
+  boulders and formations, player-following shadows, two interactable props.
+- A typed event bus, validated configuration, and a minimal boot/fatal/debug UI.
+- 254 automated tests plus build/serve verification scripts (see below).
 
-Deliberately **not** implemented yet: terrain generation, gravity, jumping,
-collision, interaction raycasting, inventory, buildings, machines, conveyors,
-power, progression, persistence, audio. The foundation scene is a render-pipeline
-fixture, not gameplay content.
+Deliberately **not** implemented yet: inventory, resources, buildings, machines,
+conveyors, power, progression, persistence, audio. The survey beacon and relay mast
+are environment props that demonstrate the interaction contract — not gameplay
+systems.
 
 ## Quick start
 
@@ -48,10 +53,10 @@ npm run dev
 ```
 
 Open <http://localhost:5173/>. Click the scene to capture the mouse, then move
-with **WASD**, sprint with **Shift**, look with the mouse, and press **Esc** to
-release the cursor. Click-drag look works even if pointer lock is denied. Add
-`?debug=1` to the URL to show live engine statistics (FPS, frame time, simulation
-time, ticks, draw calls, triangles, frame systems).
+with **WASD**, sprint with **Shift**, jump with **Space**, look with the mouse and
+press **E** when the prompt appears. Click-drag look works even if pointer lock is
+denied. Add `?debug=1` to the URL to show live engine statistics (FPS, frame time,
+simulation time, ticks, draw calls, triangles, frame systems).
 
 ### Controls
 
@@ -59,7 +64,9 @@ time, ticks, draw calls, triangles, frame systems).
 |---|---|
 | Mouse (pointer lock or click-drag) | Look around |
 | W / A / S / D | Move forward / left / backward / right |
+| Space | Jump (grounded only; holding does not repeat) |
 | Shift | Sprint |
+| E | Interact with the highlighted target |
 | Esc | Release pointer lock |
 
 Key remapping is intentionally not implemented yet (Phase 13 settings).
@@ -84,18 +91,27 @@ Key remapping is intentionally not implemented yet (Phase 13 settings).
 ```text
 index.html
   └── src/main.ts                   DOM shell, bootstrap, resize, fatal UI
-        ├── input/InputManager.ts   keyboard/mouse/pointer-lock → axes + deltas
-        ├── player/PlayerController.ts  Three-free first-person movement
+        ├── input/InputManager.ts   keyboard/mouse/pointer-lock → axes, look, action edges
+        ├── world/World.ts          terrain + obstacles + interactables + spawn (no Three.js)
+        │     ├── terrain/TerrainHeightfield.ts  seeded heights, normals, slopes, render data
+        │     ├── ObstacleField.ts  cylinder collision + spatial hash
+        │     └── noise.ts, rng.ts  deterministic generation
+        ├── player/PlayerController.ts  Three-free physics: gravity, jump, slopes, collision
+        ├── interaction/
+        │     ├── InteractionSystem.ts  raycast targeting, edge-triggered execution
+        │     ├── Interactable.ts       reusable contract
+        │     └── raycast.ts            pure ray/sphere maths
         └── core/Game.ts            lifecycle, fixed + frame systems, stats
-              ├── core/GameLoop.ts ──> core/GameClock.ts (fixed timestep)
+              ├── core/GameLoop.ts ──> core/GameClock.ts (fixed timestep + alpha)
               ├── core/GameState.ts (explicit lifecycle transitions)
               ├── core/EventBus.ts  (typed pub/sub)
               └── GameEngine contract
                     └── engine/Engine.ts
-                          ├── Renderer.ts        WebGL renderer + statistics
-                          ├── SceneManager.ts    scene graph / foundation scene
-                          ├── CameraManager.ts   perspective camera / applyView
-                          └── LightingManager.ts lights and shadows
+                          ├── Renderer.ts         WebGL renderer + statistics
+                          ├── SceneManager.ts     atmosphere + environment view
+                          ├── EnvironmentView.ts  terrain mesh, sky, instanced rocks, props
+                          ├── CameraManager.ts    perspective camera / applyView
+                          └── LightingManager.ts  lights, shadows, player-following key light
 ```
 
 Key rules enforced by this structure:
@@ -151,10 +167,11 @@ npm run verify
 This executes:
 
 1. `tsc --noEmit` — strict type checking.
-2. `vitest run` — 158 automated tests covering the clock, loop, event bus,
+2. `vitest run` — 254 automated tests covering the clock, loop, event bus,
    configuration, lifecycle, engine composition, scene graph, input, player
-   movement/look, frame systems, overlays and the real `main.ts` bootstrap (with
-   the engine mocked at the `GameEngine` boundary).
+   physics, terrain, obstacles, world assembly, interaction, prompt UI, frame
+   systems, overlays, the real `main.ts` bootstrap (engine mocked at the
+   `GameEngine` boundary) and two end-to-end Phase 1 suites.
 3. `vite build` — production bundle.
 4. `verify-build` — checks the built HTML references `/factory-frontier/assets/…`,
    assets exist, no localhost or dev-server paths leak into artifacts.
@@ -165,9 +182,9 @@ This executes:
 
 **Rendering limitation:** this environment has no browser binary, so actual WebGL
 rasterization and real pointer-lock behaviour are not executed by the automated
-checks. Scene construction, camera application, player movement, input translation
-and bootstrap wiring are unit-tested in Node/jsdom; the served game must be
-inspected in a browser before Phase 1 is considered complete.
+checks. Terrain data, physics, collision, targeting, scene construction and
+bootstrap wiring are tested in Node/jsdom, and the game must still be inspected in
+a browser before visual/polish claims are made.
 
 ## Deployment (GitHub Pages)
 
@@ -229,7 +246,7 @@ content:
 | Phase | Scope | Status |
 |---|---|---|
 | 0 | Repository inspection and foundation | ✅ Complete |
-| 1 | Playable 3D environment | 🟡 Partial — first-person camera/input done; terrain, gravity, collisions, raycasting pending |
+| 1 | Playable 3D environment | ✅ Complete — terrain, physics, collision, interaction; manual browser check pending |
 | 2 | Resources and inventory | Planned |
 | 3 | Building and placement | Planned |
 | 4 | First automated extractor | Planned |

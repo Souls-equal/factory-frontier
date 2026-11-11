@@ -2,13 +2,15 @@ import { describe, expect, it } from 'vitest';
 
 import { createGameConfig } from '../../src/core/Configuration';
 import { Engine } from '../../src/engine/Engine';
+import { createWorld } from '../../src/world/World';
 import { FakeRenderBackend } from '../helpers/FakeRenderBackend';
 
 function createHarness() {
   const backend = new FakeRenderBackend();
-  const config = createGameConfig();
-  const engine = new Engine({ config, renderer: backend });
-  return { engine, backend, config };
+  const config = createGameConfig({ world: { resolution: 16, obstacleCount: 6, sizeMeters: 80 } });
+  const world = createWorld(config);
+  const engine = new Engine({ config, renderer: backend, world });
+  return { engine, backend, config, world };
 }
 
 describe('Engine', () => {
@@ -16,7 +18,8 @@ describe('Engine', () => {
     const { engine } = createHarness();
 
     expect(engine.isInitialized).toBe(false);
-    expect(engine.scene.children).toHaveLength(5);
+    expect(engine.scene.children).toHaveLength(1);
+    expect(engine.scene.getObjectByName('environment')).toBeDefined();
     expect(engine.scene.getObjectByName('lighting')).toBeUndefined();
   });
 
@@ -50,6 +53,18 @@ describe('Engine', () => {
     expect(backend.renderCalls).toHaveLength(1);
     expect(backend.renderCalls[0]?.scene).toBe(engine.scene);
     expect(backend.renderCalls[0]?.camera).toBe(engine.camera);
+  });
+
+  it('resolves interaction highlights through the scene', () => {
+    const { engine } = createHarness();
+    engine.init();
+    engine.setHighlight('survey-beacon');
+
+    const ring = engine.scene.getObjectByName('environment:prop:survey-beacon:highlight-ring');
+    expect(ring?.visible).toBe(true);
+
+    engine.setHighlight(null);
+    expect(ring?.visible).toBe(false);
   });
 
   it('applies camera views from the player layer', () => {

@@ -4,17 +4,24 @@ import { createGameConfig } from './core/Configuration';
 import { Game } from './core/Game';
 import { Engine } from './engine/Engine';
 import { InputManager } from './input/InputManager';
+import { InteractionSystem } from './interaction/InteractionSystem';
+import { createWorldInteractables } from './interaction/WorldInteractables';
 import { PlayerController } from './player/PlayerController';
 import { ControlsHint } from './ui/ControlsHint';
+import { InteractionPrompt } from './ui/InteractionPrompt';
 import { StatusOverlay } from './ui/StatusOverlay';
+import { createWorld } from './world/World';
 
 /**
  * Application bootstrap.
  *
  * Keeps DOM wiring out of the game core: `Game` never touches the document,
- * `Engine` never knows about the UI, and `PlayerController` never imports
- * Three.js. The first-person camera is applied by a frame system immediately
- * before each render.
+ * `Engine` never knows about the UI, and the player/interaction systems never
+ * import Three.js. Stage assignment matters:
+ *
+ * - player physics and interaction targeting run on the fixed simulation clock,
+ * - mouse look, camera application, highlighting and the prompt run once per
+ *   rendered frame, reading authoritative state without mutating it.
  */
 
 const app = document.querySelector<HTMLElement>('#app');
@@ -26,6 +33,7 @@ if (app === null || canvas === null) {
 
 const overlay = StatusOverlay.fromDocument(document);
 const controlsHint = ControlsHint.fromDocument(document);
+const interactionPrompt = InteractionPrompt.fromDocument(document);
 const query = new URLSearchParams(window.location.search);
 
 const config = createGameConfig({
@@ -64,6 +72,7 @@ function shutdown(): void {
   window.removeEventListener('resize', handleResize);
   input?.dispose();
   input = undefined;
+  interactionPrompt.dispose();
   game?.dispose();
 }
 
@@ -85,42 +94,102 @@ function startDebugStats(target: Game): void {
 }
 
 async function boot(): Promise<void> {
-  overlay.setBootStatus('Starting rendering engine…');
+  overlay.setBootStatus('Generating terrain…');
+  const world = createWorld(config);
 
-  const engine = Engine.create(canvas as HTMLCanvasElement, config);
+  overlay.setBootStatus('Building environment…');
+  const engine = Engine.create(canvas as HTMLCanvasElement, config, world);
   const createdGame = new Game({
     config,
     engine,
     onError: handleFatalError,
   });
   game = createdGame;
-
-  overlay.setBootStatus('Building foundation scene…');
   await createdGame.init();
 
-  overlay.setBootStatus('Initializing first-person controls…');
+  overlay.setBootStatus('Wiring first-person controls…');
   const createdInput = new InputManager(canvas as HTMLCanvasElement, {
     onPointerLockChange: (locked) => controlsHint.setPointerLocked(locked),
   });
   input = createdInput;
 
-  const player = new PlayerController({ controls: config.controls });
+  const player = new PlayerController({
+    controls: config.controls,
+    player: config.player,
+    terrain: world.terrain,
+    obstacles: world.obstacles,
+    spawn: world.spawn,
+  });
 
-  createdGame.registerFrameSystem({
-    id: 'player',
-    update: (frameDeltaMs) => {
+  const interaction = new InteractionSystem({
+    range: config.interaction.range,
+    viewProvider: () => player.view,
+  });
+  for (const interactable of createWorldInteractables(world.interactables)) {
+    interaction.register(interactable);
+  }
+
+  // --- deterministic simulation stage -------------------------------------
+  createdGame.registerSystem({
+    id: 'player-simulation',
+    fixedUpdate: (fixedDeltaMs) => {
       const movement = createdInput.getMovement();
-      const look = createdInput.consumeLookDelta();
-
-      player.update(frameDeltaMs / 1000, {
+      player.step(fixedDeltaMs / 1000, {
         moveX: movement.right,
         moveZ: movement.forward,
         sprint: movement.sprint,
-        lookDeltaX: look.x,
-        lookDeltaY: look.y,
+        lookDeltaX: 0,
+        lookDeltaY: 0,
+        jump: createdInput.consumeJump(),
       });
 
-      engine.applyView(player.view);
+      if (createdInput.consumeInteract()) {
+        interaction.requestInteraction();
+      }
+    },
+  });
+  createdGame.registerSystem(interaction);
+
+  // --- presentation stage --------------------------------------------------
+  createdGame.registerFrameSystem({
+    id: 'player-view',
+    update: () => {
+      const look = createdInput.consumeLookDelta();
+      if (look.x !== 0 || look.y !== 0) {
+        player.applyLook({
+          moveX: 0,
+          moveZ: 0,
+          sprint: false,
+          lookDeltaX: look.x,
+          lookDeltaY: look.y,
+        });
+      }
+      // Interpolation keeps the camera smooth between 20 Hz physics steps
+      // without touching authoritative simulation state.
+      engine.applyView(player.viewAt(createdGame.clock.alpha));
+    },
+  });
+
+  let lastOutcomeSequence = interaction.outcomeSequence;
+  createdGame.registerFrameSystem({
+    id: 'interaction-presentation',
+    update: () => {
+      const target = interaction.target;
+      engine.setHighlight?.(target?.id ?? null);
+
+      if (target === null) {
+        interactionPrompt.hide();
+      } else {
+        interactionPrompt.show(target, target.id);
+      }
+
+      if (interaction.outcomeSequence !== lastOutcomeSequence) {
+        lastOutcomeSequence = interaction.outcomeSequence;
+        const outcome = interaction.lastOutcome;
+        if (outcome !== null) {
+          interactionPrompt.showFeedback(outcome.message);
+        }
+      }
     },
   });
 
@@ -135,7 +204,9 @@ async function boot(): Promise<void> {
   startDebugStats(createdGame);
 
   console.info(
-    `[Factory Frontier] ${config.appName} v${config.version} ready — fixed timestep ${config.simulation.fixedTimestepMs} ms, base "${config.basePath}", first-person controls active.`,
+    `[Factory Frontier] ${config.appName} v${config.version} ready — ${world.terrain.resolution}² terrain cells, ` +
+      `${world.obstacleDefinitions.length} solid obstacles, ${interaction.size} interactables, ` +
+      `fixed timestep ${config.simulation.fixedTimestepMs} ms, base "${config.basePath}".`,
   );
 }
 

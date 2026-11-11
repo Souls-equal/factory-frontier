@@ -48,6 +48,12 @@ try {
     '/src/engine/Engine.ts',
     '/src/input/InputManager.ts',
     '/src/player/PlayerController.ts',
+    '/src/world/World.ts',
+    '/src/world/terrain/TerrainHeightfield.ts',
+    '/src/world/ObstacleField.ts',
+    '/src/interaction/InteractionSystem.ts',
+    '/src/engine/EnvironmentView.ts',
+    '/src/ui/InteractionPrompt.ts',
     '/src/ui/ControlsHint.ts',
     '/src/ui/StatusOverlay.ts',
   ];
@@ -69,6 +75,12 @@ try {
 
   const mainModule = await fetch(`${origin}/src/main.ts`).then((response) => response.text());
   check('main module keeps the bootstrap logic', mainModule.includes('StatusOverlay'));
+  check(
+    'main module wires the Phase 1 systems',
+    mainModule.includes('createWorld') &&
+      mainModule.includes('InteractionSystem') &&
+      mainModule.includes('viewAt'),
+  );
 
   // Three.js must be pre-bundled by the dev server, proving the renderer
   // dependency resolves through Vite rather than a raw node_modules path.
@@ -81,6 +93,15 @@ try {
   const cssResponse = await fetch(`${origin}/src/styles/main.css`);
   const css = await cssResponse.text();
   check('stylesheet is served', cssResponse.status === 200 && css.includes('.boot__panel'));
+  check('stylesheet styles the interaction prompt', css.includes('.interaction-prompt'));
+
+  const terrainModule = await fetch(`${origin}/src/world/terrain/TerrainHeightfield.ts`).then((response) =>
+    response.text(),
+  );
+  check(
+    'terrain module keeps the heightfield and slope limiter',
+    terrainModule.includes('heightAt') && terrainModule.includes('limitSlopes'),
+  );
 } finally {
   await server.close();
 }

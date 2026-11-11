@@ -7,6 +7,67 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Planned
+
+- Phase 2 — resources and inventory (not started; requires authorization).
+
+## [0.3.0] — 2026-11-11
+
+Phase 1 — playable 3D environment: terrain, player physics, collision and the first
+interaction system.
+
+### Added
+
+- `TerrainHeightfield` — deterministic seeded heightfield with analytic normals,
+  slopes, bounds, and render data that shares the physics triangulation.
+- Procedural world generation (`createWorld`): 240 m exploration area with a flat
+  outpost clearing, rolling hills, a boundary ridge, instanced boulders/formations
+  and two environmental interactables.
+- `ObstacleField` — cylinder collision with a spatial-hash broad phase, iterative
+  push-out and a deterministic escape search for obstacle clusters.
+- Player physics: gravity, ground detection, edge-triggered jumping, landing,
+  falling, ground snapping, walkable-slope limit, frictionless sliding on steep
+  ground, terrain and obstacle collision, camera interpolation (`viewAt(alpha)`).
+- Interaction system: `Interactable` contract, analytic ray/sphere targeting,
+  closest-target selection, range handling, edge-triggered execution, world
+  interactables (Survey Beacon, Relay Mast).
+- `InteractionPrompt` UI: highlighted target name, contextual hint, transient
+  outcome feedback.
+- `EnvironmentView` renderer: vertex-coloured terrain mesh, sky dome, horizon fog,
+  instanced rocks, props with highlight rings, player-following shadow light.
+- Configuration sections `world`, `player` and `interaction`, plus `render.fog*`
+  values, all validated with explicit ranges.
+- Input: `Space` jump and `E` interact as edge-triggered actions (`consumeJump`,
+  `consumeInteract`), ignoring key auto-repeat and typing targets.
+- 96 new tests (158 → 254 total across 23 files) covering terrain, obstacles, world
+  assembly, physics, interaction, prompt UI, input edges and two end-to-end suites.
+
+### Changed
+
+- `SceneManager` now builds the environment from world data instead of drawing the
+  flat foundation plane, grid, pad, beacon and boundary stakes.
+- `Engine` takes the world and exposes `setHighlight`; the shadow light follows the
+  player.
+- `PlayerController` integrates physics on the fixed clock and keeps look at frame
+  rate; `update()` remains as a convenience wrapper.
+- Shell copy reflects Phase 1 ("Terrain Survey", jump/interact hints).
+
+### Removed
+
+- The foundation-only flat plane, construction grid, origin pad, beacon and
+  boundary stakes (`foundation:*` scene objects).
+
+### Verification
+
+- `npm run typecheck` — pass.
+- `npm test` — 254/254 tests (23 files).
+- `npm run build` — pass (`dist/index.html` 3.21 kB, CSS 6.63 kB, JS 593.19 kB).
+- `npm run verify:build` / `verify:preview` / `verify:dev` — 25/25, 12/12, 37/37.
+- Real-browser WebGL/pointer-lock verification was **not** performed (no browser
+  binary in this environment).
+
+## [0.2.0] — 2026-11-11
+
 ### Changed (CI/CD infrastructure)
 
 - `ci.yml` now validates pull requests only (`pull_request`, `workflow_dispatch`)
@@ -49,13 +110,6 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
   remain listed as `queued` as orphaned records; they never executed and cannot be
   cancelled through the API.
 
-### Planned
-
-- Complete Phase 1 — playable 3D environment: terrain, gravity, jumping, collision
-  detection, interaction raycasting and initial environment. (First-person camera,
-  mouse look and movement are implemented in 0.2.0; Phase 1 is not complete.)
-
-## [0.2.0] — 2026-11-11
 
 First-person camera and input foundation (Phase 1 groundwork).
 

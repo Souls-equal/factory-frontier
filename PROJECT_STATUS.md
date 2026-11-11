@@ -1,282 +1,191 @@
 # PROJECT STATUS
 
 **Project:** Factory Frontier
-**Version:** 0.2.0
-**Current Phase:** Phase 1 — Playable 3D Environment (foundation portion only)
-**Phase Status:** 🟡 Partially started · first-person camera/input foundation complete ·
-Phase 1 acceptance criteria **not** met
-**Next Recommended Task:** Complete Phase 1 — terrain, gravity, collisions and
-interaction raycasting
+**Version:** 0.3.0
+**Current Phase:** Phase 1 — Playable 3D Environment
+**Phase Status:** ✅ Complete (all Phase 1 acceptance criteria met; manual browser check pending)
+**Next Recommended Task:** Phase 2 — Resources and inventory (requires authorization)
 **Last Updated:** 2026-11-11
 
 ---
 
 ## Repository Inspection Findings (this task)
 
-- The Phase 0 foundation from `main` was present and working: toolchain, docs,
-  core architecture, foundation scene, tests and deployment workflows.
-- No existing implementation needed to be replaced or removed; it was preserved.
-- **Missing for this task:** any input layer, player controller, camera-view
-  application, frame-stage update pipeline and control UI — now implemented.
-- **Missing by design:** terrain/physics/raycasting (Phase 1), inventory and
-  factories (Phases 2–9), save code (Phase 12), data registries (Phases 2–7).
-  Designs for save/data are documented rather than stubbed.
-- **Deployment pipeline repaired and verified:** Pages is configured for GitHub
-  Actions (`build_type: workflow`) and the live site now serves the production
-  build from `dist/` (deployment `7721334220`, run `43101711244`).
+- Phase 0 + the camera foundation from `main` (`821a943`) were present and working:
+  strict TypeScript/Vite/Three.js toolchain, `Game` lifecycle, fixed-timestep clock,
+  frame-system stage, `PlayerController`, `InputManager`, UI shell, 250 tests,
+  CI/Pages workflows.
+- The flat foundation plane, `playAreaRadius` clamp and frame-delta movement were
+  **explicitly documented as Phase 1 placeholders** in Appendix B.1/B.2 and were
+  replaced by terrain-driven physics, not by a rewrite of the surrounding systems.
+- Missing for Phase 1 and now implemented: terrain, gravity, jumping, ground
+  detection, collision, slope handling, interaction raycasting, interactable
+  contract, interaction UI, real environment.
+- Still absent by design: inventory, resources, buildings, machines, power, saves
+  (Phases 2–12). No placeholder modules were created for them.
 
 ---
 
-## Current Development Phase
+## Phase 1 — Playable 3D Environment ✅
 
-Phase 0 (repository inspection and foundation) is complete and merged into `main`.
-It delivered the toolchain, core architecture, deterministic fixed-timestep loop,
-foundation scene, tests and Pages-compatible build.
+### Terrain
 
-This task extended the foundation with the first functional player-facing
-capability: a **controllable first-person camera** (pointer-lock mouse look,
-click-drag fallback, WASD movement, sprint, acceleration and bounded flat play
-area), plus the input/player modules, frame-stage update pipeline, control UI and
-tests.
-
-This is explicitly authorised Phase 1 groundwork, not a completed Phase 1. There is
-still no terrain, gravity, jumping, collision detection or interaction raycasting,
-so the Phase 1 acceptance criteria in `docs/DEVELOPMENT_ROADMAP.md` are not met.
-No factory gameplay system has been started.
-
----
-
-## Completed Work
-
-### Phase 0 — Repository inspection and foundation ✅
-
-Toolchain (strict TypeScript, Vite, Three.js, Vitest), documentation split into
-`docs/*`, central `Game` lifecycle, fixed-timestep clock and render loop, engine
-renderer/scene/camera/lighting, foundation scene, event bus, configuration,
-build/preview/dev verification scripts, CI and Pages workflows, 110 tests.
-
-### Foundation extension — controllable first-person camera ✅
-
-| Objective | Status | Evidence |
-|---|---|---|
-| Inspect repository and preserve existing implementation | ✅ | Phase 0 preserved; no working functionality rewritten |
-| TypeScript / Three.js / Vite requirement | ✅ | Existing toolchain retained; strict check passes |
-| Modular architecture (input, player, engine, core, UI) | ✅ | New `src/input/` and `src/player/` modules, small focused files |
-| Fixed-timestep simulation + independent render loop | ✅ | Existing fixed stage retained; new presentation frame stage documented and tested |
-| Data-driven machines/recipes/resources/items | 📝 Design only | Baseline interfaces and rules documented in Technical Architecture Appendix B.6; implementation deferred to Phases 2–7 |
-| Save system designed for browser persistence | 📝 Design only | IndexedDB envelope, versioning, validation and atomic-write baseline documented in Technical Architecture Appendix B.5; implementation deferred to Phase 12 |
-| GitHub Pages-compatible build | ✅ | Verified production base path and served assets |
-| Basic Three.js scene with ground and lighting | ✅ | Foundation scene preserved and verified by tests and HTTP serving |
-| Controllable 3D first-person camera | ✅ | `PlayerController` + `InputManager`; mouse look, WASD, sprint, pitch clamp, bounds |
-| Application starts through the dev server | ✅ | Dev-server verification script passes; manual server run confirmed HTTP 200 |
-| Production build succeeds | ✅ | `npm run build` passes |
-| Documentation synchronized | ✅ | README, status, changelog, roadmap tracker, architecture appendices updated |
-
-### Implemented in this task
-
-- **`src/input/InputManager.ts`** — WASD/Shift keyboard state; pointer-lock mouse
-  look with click-drag fallback; ignored keys while typing; blur/visibility key
-  clearing; pointer-lock change callback; complete listener cleanup on dispose.
-- **`src/player/PlayerController.ts`** — Three-free first-person controller:
-  accelerated walking/strafe/sprint, mouse look with pitch clamp and yaw
-  normalization, circular safety bound, spawn/reset, camera-view output.
-- **`src/ui/ControlsHint.ts`** — pointer-lock-aware control hint (real state only).
-- **Frame systems** — `Game.registerFrameSystem` / `unregisterFrameSystem`, run
-  once per rendered frame immediately before `engine.render(alpha)`; fail-fast on
-  errors; included in statistics and disposal.
-- **Camera application** — `CameraView` contract and `Engine.applyView` →
-  `CameraManager` (`YXZ` rotation, finite-value validation).
-- **Control configuration** — validated, immutable `GameConfig.controls`
-  (eye height, speed, sprint, acceleration, sensitivity, pitch limit, play area).
-- **Shell** — crosshair, control hint, updated phase label/boot copy.
-- **Tests** — new suites for input, player movement, controls hint, frame systems,
-  camera application and bootstrap wiring (110 → 158 tests).
-- **Verification scripts** — now also check the controls hint, crosshair and new
-  modules.
-
-### Preserved from Phase 0
-
-Toolchain and lockfile, strict configuration, `Game`/`GameClock`/`GameLoop`/
-`GameState`/`EventBus`, `Engine`/`Renderer`/`SceneManager`/`CameraManager`/
-`LightingManager`, foundation scene, `StatusOverlay`, build and verification
-scripts, CI and GitHub Pages workflows.
-
----
-
-## Verification Results
-
-Commands executed in this sandbox:
-
-| Command | Result |
+| Item | Result |
 |---|---|
-| `npm ci` | ✅ 92 packages installed from lockfile |
-| `npm run typecheck` | ✅ No errors (strict TypeScript 5.9.3) |
-| `npm test` | ✅ 15 test files, **158/158 tests passed** |
-| `npm run build` | ✅ Built in ≈0.33 s |
-| `npm run verify:build` | ✅ 23 checks passed (base path, assets, favicon, HUD, no localhost) |
-| `npm run verify:preview` | ✅ 11 checks passed; production build served under `/factory-frontier/`, all assets HTTP 200 |
-| `npm run verify:dev` | ✅ 22 checks passed; dev entry page and module graph served/transformed (including new input/player modules) |
+| Representation | Finite square heightfield, 240 m, 120×120 cells (14 641 vertices, 28 800 triangles), generated from seeded fractal value noise |
+| Determinism | Same seed + config → identical heights, obstacle layout and spawn (tested) |
+| Height queries | `heightAt()` interpolates over the same triangle split the render mesh uses; render/collision agreement tested to 1e-4 |
+| Normals/slopes | Analytic per-triangle normals; unit-length and upward-facing (tested) |
+| Boundaries | `contains()`, `clampXZ()`, inset by player radius; out-of-bounds queries clamp rather than extrapolate |
+| Shape | Flattened outpost clearing, rolling hills, raised boundary ridge closing the horizon |
+| Smoothness | Deterministic relaxation pass caps the generated gradient at 0.72 (≈36°) |
+| Extension | `TerrainQuery` contract + explicit grid origin for future chunk streaming |
 
-Production build output:
+### Player physics
 
-```text
-dist/index.html                   2.64 kB
-dist/assets/index-*.css           5.07 kB
-dist/assets/index-*.js          568.68 kB   (Three.js included)
-dist/assets/index-*.js.map    2,950.23 kB
-dist/favicon.svg                    395 B
-```
-
-### New tests
-
-- `tests/input/InputManager.test.ts` — axes, sprint, blur, typing-target guard,
-  drag deltas, pointer-lock deltas, lock requests, rejection handling, dispose.
-- `tests/player/PlayerController.test.ts` — spawn/view, forward/strafe relative to
-  yaw, acceleration, sprint, braking, diagonal normalization, pitch clamp, yaw
-  normalization, invalid input, frame-delta clamp, play-area bound, reset.
-- `tests/ui/ControlsHint.test.ts` — binding, missing element, pointer-lock display.
-- Extended `tests/core/Game.test.ts` — frame-system ordering, registration,
-  duplicate-id protection, failure handling, disposal.
-- Extended engine/config/overlay/bootstrap tests for camera application, controls
-  config and real shell wiring.
-
-### Acceptance status for this task
-
-| Criterion | Status | Evidence |
+| Requirement | Implementation | Evidence |
 |---|---|---|
-| TypeScript checks | ✅ Passed | `npm run typecheck` |
-| Production build | ✅ Passed | `npm run build` |
-| Tests | ✅ Passed | 158/158 |
-| Dev server starts | ✅ Passed | `verify:dev` + live server HTTP 200 check |
-| Basic scene / ground / lighting | ✅ Constructed and tested | Scene graph, lights, render delegation; real rasterization pending browser |
-| Controllable first-person camera | ✅ Logic verified | 35+ player/input/camera assertions; real pointer lock pending browser |
-| GitHub Pages configuration coherent | ✅ Deployed | Live site serves `dist/` (`/factory-frontier/assets/index-V1qLIqrz.css`, `index-BLJSyog1.js`) from deployment `7721334220` |
-| Application renders correctly in a browser | ⚠️ Not executed | No browser binary in sandbox; manual check required |
+| Gravity | Semi-implicit Euler on the 50 ms fixed clock | 20 physics tests |
+| Ground detection | Surface height + snap distance; never below the surface | Integration test asserts `y ≥ ground` every step |
+| Jumping | Edge-triggered, grounded-only, impulse 7.2 m/s, apex within the analytic range | Holding the key yields exactly one jump over 120 steps |
+| Landing | Snaps to surface, clears vertical velocity, sets grounded | Falling from 12 m lands at y≈0 |
+| Falling | Ledge drops beyond the snap distance become real falls | Covered by gravity tests |
+| Collision — terrain | Heightfield resolution (no tunnelling) | Large-step test at 400 m |
+| Collision — obstacles | Vertical-cylinder push-out in a spatial hash + escape search | Blocked by a rock; walks around it; never stuck |
+| Slopes | Segment-slope climb rejection + frictionless downhill slide above the limit | Steep ramp: no climb, slides; gentle ramp: follows surface |
+| Frame independence | Physics only sees the fixed delta; camera interpolates between steps | Same movement/apex within tolerance at 25 ms vs 50 ms steps |
+| Three.js boundary | `PlayerController` imports no Three.js; consumes `TerrainQuery`/`CollisionQuery` | Type-level separation |
 
-**Manual browser check still required:** open the live preview, click to capture
-the mouse, move/look with WASD + mouse, sprint with Shift, release with Esc, verify
-no console errors, then record the result here.
+### Interaction
+
+| Requirement | Implementation |
+|---|---|
+| Raycast | Camera-centre ray, analytic ray/sphere test in plain maths (no Three.js) |
+| Target selection | Nearest valid hit within `min(globalRange, descriptor.range)`; unavailable objects skipped |
+| Interactable contract | `descriptor` (id, display name, hint, anchor, radius, range), `isAvailable()`, `interact()` |
+| Feedback | Highlight ring + name + contextual hint; hidden with no target; transient outcome message |
+| Input | `E`, edge-triggered (queued once, auto-repeat ignored, typing targets ignored) |
+| Decoupling | System exposes state; UI and renderer poll it. No DOM/Three in gameplay code |
+
+### Environment and rendering
+
+- Single merged terrain mesh with height/slope-driven vertex colours (no textures).
+- Vertex-coloured sky dome, horizon-matched fog, key light + hemisphere + ambient.
+- Shadow-casting key light follows the player; shadows stay crisp across the map.
+- Instanced boulders/formations (3 shared geometries), props with highlight rings.
+- All geometries/materials disposed on teardown; no per-frame allocations in the
+  update path (the frame systems only read state and toggle a highlight).
 
 ---
 
-## Infrastructure — GitHub Actions and Pages (repaired this task)
+## Verification (executed 2026-11-11)
 
-Audit of the run history (2026-11-11):
+| Check | Result |
+|---|---|
+| `npm run typecheck` | ✅ pass (strict, `noUncheckedIndexedAccess`) |
+| `npm test` | ✅ **254/254 tests, 23 files** |
+| `npm run build` | ✅ `dist/index.html` 3.21 kB, CSS 6.63 kB, JS 593.19 kB, map 3.06 MB |
+| `npm run verify:build` | ✅ 25/25 checks |
+| `npm run verify:preview` | ✅ 12/12 checks |
+| `npm run verify:dev` | ✅ 37/37 checks |
+| Dev server serving | ✅ HTTP 200 for all new world/player/interaction modules |
+| Real browser (WebGL, pointer lock) | ❌ **not executed** — no browser binary in this environment |
 
-| Run window | Result | Interpretation |
+**Manual browser check still required.** Open the dev server or the live site,
+click to capture the mouse, then verify: WASD movement follows terrain, Space jumps
+and lands, sprint works, mouse look is smooth, walking into a boulder is blocked,
+aiming at the Survey Beacon shows "Survey Beacon / Log survey ping" with a highlight
+ring, `E` logs a ping once per press, looking away hides the prompt.
+
+---
+
+## Test coverage added this task
+
+| Area | File | Tests |
 |---|---|---|
-| 19:58 – 20:12 | CI and Deploy runs `success` (e.g. `43094267705`) | Pipeline itself worked; the deploy job completed |
-| 20:15 | `pages-build-deployment` `success` from branch `arena/f9c37f65-…` | **Legacy branch build published raw sources**, overwriting the workflow deployment |
-| 20:25 – 20:45 | 4 runs stuck `queued`, 1 `startup_failure` with zero jobs, 1 `failure` whose build job never executed a step | **GitHub incident `dvy0t3mvh1lg`** — Actions and Pages reported `major_outage` from 20:48Z; the job queue stopped dispatching |
+| Terrain | `tests/world/TerrainHeightfield.test.ts` | 13 — determinism, grid/render consistency, bounds, invalid input, flat clearing, ridge, smoothness, normals, render data |
+| Obstacles | `tests/world/ObstacleField.test.ts` | 9 — push-out, misses, vertical spans, determinism, clusters, broad phase, immutability, invalid input |
+| World | `tests/world/World.test.ts` | 9 — reproducible layout, spawn on surface, clearing kept free, unique ids, collider registration, interactable data |
+| Physics | `tests/player/PlayerPhysics.test.ts` | 20 — gravity, landing, no tunnelling, jumping, held-key repeat, slopes, sliding, obstacles, bounds, frame independence, interpolation |
+| Interaction | `tests/interaction/InteractionSystem.test.ts` | 20 — ray maths, targeting, range, closest, availability, retargeting, execution, duplicate ids, world wiring |
+| Interaction UI | `tests/ui/InteractionPrompt.test.ts` | 7 — visibility, content, feedback timer, teardown |
+| Input edges | `tests/input/InputManager.test.ts` | +5 — jump/interact edges, auto-repeat, blur, typing targets |
+| End-to-end | `tests/integration/phase1.test.ts` | 5 — spawn, walking, obstacle blocking, targeting + execution, jumping |
+| Runtime composition | `tests/integration/runtime.test.ts` | 4 — real loop, camera follow, highlight clearing, beacon execution |
 
-Root causes: (a) the outage blocked runners, so queue/`startup_failure` symptoms were
-infrastructure, not our YAML; (b) duplicated validation — `ci.yml` ran on both `push`
-and `pull_request`, producing two identical runs per PR update and a second full
-pipeline on every `main` push; (c) `ci.yml` lacked any concurrency group, so obsolete
-runs piled up; (d) `deploy-pages.yml` used a single workflow-wide `pages` group, which
-serialised builds behind deployments; (e) the live site was stale because a legacy
-branch build outranked the workflow deployment; (f) documentation still described
-Pages as using branch deployment.
+---
 
-Changes: `ci.yml` now runs only on `pull_request`/`workflow_dispatch` with
-`concurrency: ci-${{ github.ref }}` and `cancel-in-progress: true`; `deploy-pages.yml`
-runs on `push` to `main`/`workflow_dispatch`, splits build (`pages-build-…`,
-`cancel-in-progress: true`) from deploy (`pages-deploy`, `cancel-in-progress: false`),
-and uses maintained action majors (checkout v7, setup-node v7, configure-pages v6,
-upload-pages-artifact v5, deploy-pages v5) with `timeout-minutes` on both jobs. Vite
-base-path handling, `dist/` output and `VITE_BASE_PATH` override were left untouched.
+## Architectural decisions (this increment)
 
-Local validation of this change: `npm ci`, `npm run typecheck`, `npm test`
-(158/158), `npm run build`, `verify:build` (23/23), `verify:preview`, `verify:dev`
-all pass; both workflow files parse as valid YAML. Deployment confirmation: see the
-line below — it is only recorded once a real deployment succeeded.
+1. **Heightfield terrain as gameplay data; rendering is a consumer.** No gameplay
+   query touches mesh geometry; the renderer reads `getRenderData()`. Verified by
+   test, not by convention.
+2. **Shared triangle split.** Physics interpolation and mesh triangulation use the
+   same two triangles per cell, so collision and visuals cannot drift.
+3. **Physics on the fixed clock, camera on the frame clock.** `step()` is a
+   `SimulationSystem`; look and `viewAt(alpha)` are frame systems. Interpolation
+   reads history and never writes simulation state.
+4. **Cylinder collision for obstacles.** Chosen over boxes for stability (no corner
+   trapping) and over per-mesh collision for cost; vertical span checks allow
+   walking under/over later without changing the collider type.
+5. **Spatial hash broad phase.** Movement only tests obstacles near the capsule.
+6. **Slope policy:** generated terrain is capped at a traversable gradient, while
+   the player still implements a walkable-slope limit (climb rejection and downhill
+   sliding) for steeper terrain in future biomes.
+7. **Interaction is a simulation system with a data-free contract.** Targeting is
+   deterministic at 20 Hz; execution is edge-triggered; UI and highlight poll.
+8. **Version 0.3.0.** New player-facing systems; no breaking change to the loop,
+   configuration schema (additive sections only) or deployment.
 
-- **Live Pages deployment:** ✅ **Confirmed** 2026-11-11T21:17:58Z — run
-  [`43101711244`](https://github.com/Souls-equal/factory-frontier/actions/runs/43101711244)
-  (build + deploy both `success`), deployment `7721334220` on `main` @ `b2dc982`,
-  environment URL <https://souls-equal.github.io/factory-frontier/>. Verified over
-  HTTP: `/factory-frontier/assets/index-BLJSyog1.js` and
-  `/factory-frontier/assets/index-V1qLIqrz.css` return the minified production
-  bundle, while an unknown asset path returns the GitHub Pages 404 page — the site
-  publishes `dist/`, not raw sources.
-- **Stale queued runs:** runs `43095979915`, `43096758010`, `43096810240` and
-  `43096810255` from the incident window remain listed as `queued` and cannot be
-  cancelled through the API ("Cannot cancel a workflow run that is completed").
-  They hold no runner, were never executed and are superseded; leave them. Later CI
-  and deploy runs on the same workflows executed normally (21s and 32s).
+---
+
+## Infrastructure (unchanged this task)
+
+Workflows were repaired in the previous task and were not modified now: `ci.yml`
+runs on pull requests only with per-ref cancellation, `deploy-pages.yml` builds on
+`main` pushes with build-supersede / deploy-serialise concurrency, and Pages uses
+GitHub Actions. Last confirmed deployment: `7721488024` (run `43102108684`).
+This task's merge is deployed by the same pipeline; the result is recorded below.
+
+- **Live Pages deployment for v0.3.0:** ⏳ verified after this task's merge.
 
 ---
 
 ## Known Issues and Limitations
 
 1. **No real-browser verification in this environment.** WebGL rasterization,
-   pointer lock and browser console output were not executed. Unit/integration
-   tests and HTTP serving checks pass, but visual confirmation is pending.
-2. **Camera foundation is not Phase 1 physics.** There is no terrain height
-   sampling, gravity, jumping, slope handling or collision. The player walks on an
-   assumed flat plane and is constrained by a circular safety radius. Phase 1 must
-   replace this with a deterministic player simulation.
-3. **Movement is presentation-stage.** It integrates frame deltas clamped to
-   250 ms; it is bounded and frame-rate independent in speed but not a
-   deterministic physics step. Industrial simulation remains fixed-step.
-4. **No save system code and no data-driven registries yet.** Only documented
-   designs exist (Technical Architecture Appendices B.5/B.6); no placeholder code
-   was added. Phase 12 and Phases 2–7 respectively.
-5. **No key remapping, settings menu, audio, terrain or interaction prompt.**
-6. **Source maps (~2.95 MB) ship with the production build** for debuggability;
+   pointer lock and visual output were not executed. Geometry, physics, targeting
+   and UI state are covered by Node/jsdom tests and HTTP checks.
+2. **Heightfield limitations.** No overhangs, caves or bridges; terrain is a
+   function of XZ only. Chunk streaming, LOD and biome variety belong to Phase 10.
+3. **Collision approximation.** Rocks collide as vertical cylinders; the visual
+   silhouette can extend slightly past the collider. Props collide as cylinders too.
+4. **No interaction occlusion.** Targets are chosen by ray/sphere hit only; a rock
+   between the player and a beacon does not currently block targeting.
+5. **Only the player is a simulated body.** No rigid-body physics, no dynamic props.
+6. **Two interactable props exist as environment content.** They demonstrate the
+   interaction contract (ping log, relay channel) and are not resource/gameplay
+   systems; Phase 2 replaces them with real deposits/machines.
+7. **No save system, inventory, building, machines or power** — by design.
+8. **Source maps (~3.06 MB) ship with the production build** for debuggability;
    revisit in Phase 13.
-7. **No empty gameplay scaffolding.** Factory/system folders will be created when
-   their phases begin.
-
----
-
-## Architectural Decisions (this increment)
-
-1. **Two-stage update model.** Deterministic industrial simulation stays on the
-   50 ms fixed clock (`SimulationSystem`); input-driven camera/view updates run in
-   a new `FrameSystem` stage once per render. This avoids 20 Hz mouse-look stutter
-   without compromising simulation determinism.
-2. **Three-free player controller.** `PlayerController` owns plain numbers and a
-   `CameraView`; only `Engine`/`CameraManager` touch Three.js. This keeps movement
-   logic testable in Node and preserves the gameplay/rendering boundary.
-3. **Unified system id space.** Simulation and frame systems cannot share ids,
-   preventing ambiguous statistics and teardown.
-4. **Pointer lock with drag fallback.** Pointer lock is preferred, but look input
-   remains usable if the browser denies it, which also makes jsdom-based tests
-   meaningful without faking a lock.
-5. **Controls as validated configuration.** Sensitivity, speeds, pitch limit and
-   play-area radius are data, not constants buried in the controller.
-6. **Design-before-implementation for persistence and data.** Save and registry
-   designs are documented with explicit deferral; no fake systems were introduced.
-7. **Version 0.2.0.** New player-facing capability; compatible with Phase 0
-   foundation.
-
-Unresolved design choices are tracked in `docs/GDD.md` Appendix A; no provisional
-gameplay balance values were encoded.
 
 ---
 
 ## Next Recommended Task
 
-1. Perform the manual browser check and record it here.
-2. **Complete Phase 1 — Playable 3D environment** (do not start Phase 2):
-   - deterministic terrain heightfield and walkable ground,
-   - gravity, jumping, ground detection and collision with terrain/major objects,
-   - interaction raycasting and contextual prompts,
-   - basic environment placement that does not interfere with construction,
-   - movement/collision/raycast tests and update of Phase 1 acceptance evidence.
-3. Perform the manual browser check against the deployed site
-   (<https://souls-equal.github.io/factory-frontier/>) rather than only the local
-   dev server: WebGL scene, pointer lock, WASD + Shift, Esc release.
+1. Perform the manual browser check and record the result here.
+2. **Phase 2 — Resources and inventory (only with explicit authorization):**
+   item registry, inventory model with capacity rules, resource deposits placed on
+   the Phase 1 terrain (`TerrainQuery` + `ObstacleField` are the extension points),
+   manual gathering through the existing interaction contract, minimal HUD.
+3. Do not start Phase 3+ before Phase 2 acceptance criteria are validated.
 
 ---
 
 ## Development Notes
 
-- Documentation is the source of truth; update this file, `CHANGELOG.md` and the
-  roadmap tracker after every task, and architecture appendices when decisions
-  change.
+- Documentation is the source of truth; update this file, `CHANGELOG.md`, the
+  roadmap tracker and architecture appendices after every task.
 - Never mark a phase complete based on visual appearance or unexecuted checks.
 - Run `npm run verify` before declaring a task complete.
-- Preserve the layering: DOM in `main.ts`/`ui/`, orchestration in `core/`,
-  Three.js in `engine/`, player math without Three.js.
