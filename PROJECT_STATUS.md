@@ -3,8 +3,8 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 1 — Playable 3D Environment
-**Phase Status:** ✅ Complete (all Phase 1 acceptance criteria met; manual browser check pending)
-**Next Recommended Task:** Phase 2 — Resources and inventory (requires authorization)
+**Phase Status:** 🟡 Implemented; acceptance pending browser verification
+**Next Recommended Task:** Manual browser verification of Phase 1; Phase 2 requires explicit authorization
 **Last Updated:** 2026-11-11
 
 ---
@@ -13,7 +13,7 @@
 
 - Phase 0 + the camera foundation from `main` (`821a943`) were present and working:
   strict TypeScript/Vite/Three.js toolchain, `Game` lifecycle, fixed-timestep clock,
-  frame-system stage, `PlayerController`, `InputManager`, UI shell, 250 tests,
+  frame-system stage, `PlayerController`, `InputManager`, UI shell, 158 tests,
   CI/Pages workflows.
 - The flat foundation plane, `playAreaRadius` clamp and frame-delta movement were
   **explicitly documented as Phase 1 placeholders** in Appendix B.1/B.2 and were
@@ -26,7 +26,24 @@
 
 ---
 
-## Phase 1 — Playable 3D Environment ✅
+## Collision instability investigation (2026-11-11)
+
+- Reproduced the original bug on a single boulder: a tiny floating-point residual
+  overlap triggered the radial escape search. Its first free angular sample moved
+  the player around the boulder; the controller then divided that positional
+  correction by the 50 ms step, producing **31.52 m/s** on step 10.
+- Horizontal motion now sweeps to the nearest cylinder contact and slides along
+  outward unit normals. The controller projects only inward physical velocity;
+  depenetration is never converted to momentum. The escape search ignores
+  round-off-scale penetration and chooses the closest free sampled point.
+- The existing 50 ms simulation loop and its frame-time clamp remain unchanged.
+  Tests exercise irregular frames through both `GameClock` and the actual `Game`
+  loop, including multi-second frame spikes. No rendering changes or new
+  dependencies were introduced.
+
+---
+
+## Phase 1 — Playable 3D Environment 🟡
 
 ### Terrain
 
@@ -38,7 +55,7 @@
 | Normals/slopes | Analytic per-triangle normals; unit-length and upward-facing (tested) |
 | Boundaries | `contains()`, `clampXZ()`, inset by player radius; out-of-bounds queries clamp rather than extrapolate |
 | Shape | Flattened outpost clearing, rolling hills, raised boundary ridge closing the horizon |
-| Smoothness | Deterministic relaxation pass caps the generated gradient at 0.72 (≈36°) |
+| Smoothness | Bounded relaxation reduces axis-neighbour height differences toward 0.72 rise/run; triangle slopes are not universally capped |
 | Extension | `TerrainQuery` contract + explicit grid origin for future chunk streaming |
 
 ### Player physics
@@ -50,9 +67,9 @@
 | Jumping | Edge-triggered, grounded-only, impulse 7.2 m/s, apex within the analytic range | Holding the key yields exactly one jump over 120 steps |
 | Landing | Snaps to surface, clears vertical velocity, sets grounded | Falling from 12 m lands at y≈0 |
 | Falling | Ledge drops beyond the snap distance become real falls | Covered by gravity tests |
-| Collision — terrain | Heightfield resolution (no tunnelling) | Large-step test at 400 m |
-| Collision — obstacles | Vertical-cylinder push-out in a spatial hash + escape search | Blocked by a rock; walks around it; never stuck |
-| Slopes | Segment-slope climb rejection + frictionless downhill slide above the limit | Steep ramp: no climb, slides; gentle ramp: follows surface |
+| Collision — terrain | Feet are clamped to the sampled ground height | Large vertical-fall test; not a continuous collision proof |
+| Collision — obstacles | Swept horizontal circle against cylinders; separate initial depenetration; inward velocity projection | Sustained pressure, sliding, corners, repeated contacts, jump, slopes and irregular frames tested |
+| Slopes | Segment-slope climb rejection + reduced-drag downhill slide above the limit | Steep ramp: no climb, slides; gentle ramp: follows surface |
 | Frame independence | Physics only sees the fixed delta; camera interpolates between steps | Same movement/apex within tolerance at 25 ms vs 50 ms steps |
 | Three.js boundary | `PlayerController` imports no Three.js; consumes `TerrainQuery`/`CollisionQuery` | Type-level separation |
 
@@ -73,8 +90,8 @@
 - Vertex-coloured sky dome, horizon-matched fog, key light + hemisphere + ambient.
 - Shadow-casting key light follows the player; shadows stay crisp across the map.
 - Instanced boulders/formations (3 shared geometries), props with highlight rings.
-- All geometries/materials disposed on teardown; no per-frame allocations in the
-  update path (the frame systems only read state and toggle a highlight).
+- Renderer resources are disposed on teardown. Collision and interaction queries
+  allocate temporary data; allocation-free hot paths have not been demonstrated.
 
 ---
 
@@ -83,19 +100,18 @@
 | Check | Result |
 |---|---|
 | `npm run typecheck` | ✅ pass (strict, `noUncheckedIndexedAccess`) |
-| `npm test` | ✅ **254/254 tests, 23 files** |
-| `npm run build` | ✅ `dist/index.html` 3.21 kB, CSS 6.63 kB, JS 593.19 kB, map 3.06 MB |
+| `npm test` | ✅ **271/271 tests, 24 files** |
+| `npm run build` | ✅ `dist/index.html` 3.21 kB, CSS 6.63 kB, JS 594.67 kB, map 3.07 MB |
 | `npm run verify:build` | ✅ 25/25 checks |
 | `npm run verify:preview` | ✅ 12/12 checks |
 | `npm run verify:dev` | ✅ 37/37 checks |
 | Dev server serving | ✅ HTTP 200 for all new world/player/interaction modules |
 | Real browser (WebGL, pointer lock) | ❌ **not executed** — no browser binary in this environment |
 
-**Manual browser check still required.** Open the dev server or the live site,
-click to capture the mouse, then verify: WASD movement follows terrain, Space jumps
-and lands, sprint works, mouse look is smooth, walking into a boulder is blocked,
-aiming at the Survey Beacon shows "Survey Beacon / Log survey ping" with a highlight
-ring, `E` logs a ping once per press, looking away hides the prompt.
+**Manual browser checks not performed:** movement, mouse look and pointer lock,
+sprint, jump, landing, terrain and obstacle collision (including sustained
+pressure, sliding and corners), targeting and interaction, prompt visibility,
+and rendering. These remain required before accepting Phase 1.
 
 ---
 
@@ -104,13 +120,14 @@ ring, `E` logs a ping once per press, looking away hides the prompt.
 | Area | File | Tests |
 |---|---|---|
 | Terrain | `tests/world/TerrainHeightfield.test.ts` | 13 — determinism, grid/render consistency, bounds, invalid input, flat clearing, ridge, smoothness, normals, render data |
-| Obstacles | `tests/world/ObstacleField.test.ts` | 9 — push-out, misses, vertical spans, determinism, clusters, broad phase, immutability, invalid input |
-| World | `tests/world/World.test.ts` | 9 — reproducible layout, spawn on surface, clearing kept free, unique ids, collider registration, interactable data |
-| Physics | `tests/player/PlayerPhysics.test.ts` | 20 — gravity, landing, no tunnelling, jumping, held-key repeat, slopes, sliding, obstacles, bounds, frame independence, interpolation |
+| Obstacles | `tests/world/ObstacleField.test.ts` | 13 — push-out, misses, vertical spans, determinism, clusters, broad phase, immutability, invalid input |
+| World | `tests/world/World.test.ts` | 10 — reproducible layout, spawn on surface, clearing kept free, unique ids, collider registration, interactable data |
+| Physics | `tests/player/PlayerPhysics.test.ts` | 20 — gravity, landing, large vertical falls, jumping, held-key repeat, slopes, sliding, obstacles, bounds, frame independence, interpolation |
 | Interaction | `tests/interaction/InteractionSystem.test.ts` | 20 — ray maths, targeting, range, closest, availability, retargeting, execution, duplicate ids, world wiring |
 | Interaction UI | `tests/ui/InteractionPrompt.test.ts` | 7 — visibility, content, feedback timer, teardown |
 | Input edges | `tests/input/InputManager.test.ts` | +5 — jump/interact edges, auto-repeat, blur, typing targets |
 | End-to-end | `tests/integration/phase1.test.ts` | 5 — spawn, walking, obstacle blocking, targeting + execution, jumping |
+| Contact stability | `tests/player/ObstacleStability.test.ts` | 13 — launch repro, sustained pressure, sliding, corners, repeated contacts, jump, frame spikes, slopes, world rocks, thin-collider sweep |
 | Runtime composition | `tests/integration/runtime.test.ts` | 4 — real loop, camera follow, highlight clearing, beacon execution |
 
 ---
@@ -125,13 +142,13 @@ ring, `E` logs a ping once per press, looking away hides the prompt.
 3. **Physics on the fixed clock, camera on the frame clock.** `step()` is a
    `SimulationSystem`; look and `viewAt(alpha)` are frame systems. Interpolation
    reads history and never writes simulation state.
-4. **Cylinder collision for obstacles.** Chosen over boxes for stability (no corner
-   trapping) and over per-mesh collision for cost; vertical span checks allow
-   walking under/over later without changing the collider type.
+4. **Cylinder collision for obstacles.** Swept circle motion and iterative
+   sliding handle horizontal contacts; velocity projection is separate from
+   depenetration. Vertical spans are sampled at the start of each step.
 5. **Spatial hash broad phase.** Movement only tests obstacles near the capsule.
-6. **Slope policy:** generated terrain is capped at a traversable gradient, while
-   the player still implements a walkable-slope limit (climb rejection and downhill
-   sliding) for steeper terrain in future biomes.
+6. **Slope policy:** generation relaxes neighbouring heights with a bounded number
+   of passes. The player implements a configurable slope limit; a universal
+   maximum triangle slope and whole-world traversability are not guaranteed.
 7. **Interaction is a simulation system with a data-free contract.** Targeting is
    deterministic at 20 Hz; execution is edge-triggered; UI and highlight poll.
 8. **Version 0.3.0.** New player-facing systems; no breaking change to the loop,
@@ -147,7 +164,9 @@ runs on pull requests only with per-ref cancellation, `deploy-pages.yml` builds 
 GitHub Actions. Last confirmed deployment: `7721488024` (run `43102108684`).
 This task's merge is deployed by the same pipeline; the result is recorded below.
 
-- **Live Pages deployment for v0.3.0:** ⏳ verified after this task's merge.
+- **Previous v0.3.0 Pages deployment:** run `43105952909`, deployment
+  `7721918068`, on merge `8d30fbd`, succeeded. This collision fix is not deployed
+  until it is merged and a subsequent deployment succeeds.
 
 ---
 
@@ -165,10 +184,16 @@ This task's merge is deployed by the same pipeline; the result is recorded below
 5. **Only the player is a simulated body.** No rigid-body physics, no dynamic props.
 6. **Two interactable props exist as environment content.** They demonstrate the
    interaction contract (ping log, relay channel) and are not resource/gameplay
-   systems; Phase 2 replaces them with real deposits/machines.
+   systems.
 7. **No save system, inventory, building, machines or power** — by design.
-8. **Source maps (~3.06 MB) ship with the production build** for debuggability;
-   revisit in Phase 13.
+8. **Source maps (~3.07 MB) ship with the production build** for debuggability.
+9. **Collision bounds:** a deeply embedded spawn or pathological intersecting
+   cylinder cluster may need a noticeable depenetration correction or remain
+   overlapped. Remaining movement is conservatively stopped when the bounded
+   search/contact iterations cannot resolve it. Vertical cylinder overlap is
+   sampled at the start of each fixed step, not continuously swept in 3D.
+10. **Terrain slope relaxation** is bounded and axis-neighbour based; it does not
+    prove every triangle meets the configured walkable-slope limit.
 
 ---
 

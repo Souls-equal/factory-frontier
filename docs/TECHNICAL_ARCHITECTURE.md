@@ -740,17 +740,16 @@ interaction system, and the boundaries that later phases must respect.
   agrees with `heightAt` within 1e-4.
 - Normals and slopes are derived analytically from the same triangles; the
   renderer computes separate smooth vertex normals only for shading.
-- A deterministic relaxation pass (`limitSlopes`) bounds the generated gradient to
-  `GENERATED_MAX_SLOPE_TANGENT` (0.72 ≈ 36°), which guarantees smooth transitions
-  and a traversable surface. It is order-stable, so the same seed still produces
-  the same world.
+- A deterministic, bounded relaxation pass (`limitSlopes`) reduces axis-neighbour
+  height differences toward `GENERATED_MAX_SLOPE_TANGENT` (0.72 rise/run). It does
+  not guarantee a maximum triangle slope or complete-world traversability.
 - The world is a finite square with a raised boundary ridge. Heights are clamped
   (never extrapolated) outside the bounds; the player is additionally inset by
   its collision radius.
 
-**Chunk extensibility:** every terrain value is expressed against an explicit
-`originX/originZ` and a cell size, so Phase 10 can instantiate one heightfield per
-chunk and reuse the same query contract (`TerrainQuery`) unchanged.
+**Chunk extensibility:** the grid has an explicit origin and cell size. `TerrainQuery`
+is a starting point for chunk-aware queries, but generation and relaxation do not
+currently guarantee seamless borders between independently generated chunks.
 
 ## C.3 Player physics and collision
 
@@ -769,15 +768,23 @@ chunk and reuse the same query contract (`TerrainQuery`) unchanged.
   never end a step below the surface height.
 - **Slope rules:** a movement segment that climbs faster than
   `tan(maxWalkableSlope)` is rejected (position and velocity rollback). On ground
-  steeper than the limit there is no foothold: braking is skipped and a downhill
-  slide accelerates the player, so steep terrain is exited rather than climbed.
-- **Collision shapes:** obstacles are vertical cylinders for physics regardless of
-  their visual mesh. Circle push-out is stable, cannot trap the player at corners
-  and costs two multiplications. Player/obstacle solutions are iterated, and an
-  obstacle cluster that still overlaps is escaped by a deterministic radial search
-  so the player is never left inside geometry.
-- **Broad phase:** a uniform spatial hash (8 m cells) means a step only tests
-  obstacles near the capsule, not the whole world.
+  steeper than the limit with no input, reduced drag allows downhill sliding.
+- **Collision shapes and response:** obstacles are vertical cylinders and the
+  player is a horizontal circle with a vertical span. A spatial-hash query covers
+  the swept path. The earliest circle/cylinder hit yields an outward unit normal;
+  remaining displacement is projected tangentially and swept again. Multiple
+  contacts are resolved iteratively. Velocity is separately projected away from
+  contact normals; positional correction is never divided by timestep or applied as
+  momentum. No global velocity cap is used.
+- **Initial overlaps:** iterative depenetration precedes movement. A small
+  world-space contact tolerance avoids treating floating-point residuals as a
+  cluster. The fallback radial search picks the nearest free sampled candidate.
+  In pathological clusters it can still leave overlap or require a noticeable
+  correction; unresolved motion and exhausted contact iterations conservatively
+  stop instead of crossing obstacles. Vertical overlap is tested at the start of
+  the step rather than continuously swept in 3D.
+- **Broad phase:** a uniform spatial hash (8 m cells) limits tests to cylinders
+  intersecting the horizontal swept bounding region.
 
 ## C.4 Interaction system
 

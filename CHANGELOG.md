@@ -7,6 +7,19 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed player launches under repeated obstacle pressure. Floating-point residual
+  penetration could trigger an excessive radial escape, and the resulting position
+  correction was incorrectly converted into physical velocity. Horizontal motion
+  now sweeps to cylinder contacts and projects inward velocity while preserving
+  tangential movement; initial depenetration does not add momentum.
+- Added 17 regression tests for the reproduced 31.52 m/s launch, sustained pressure,
+  oblique and corner contacts, repeated approaches, jumping, low frame rates,
+  slopes, generated boulders, duplicate colliders and swept thin-obstacle contact.
+  `npm run verify`: 271 tests across 24 files, typecheck, production build and
+  build/preview/dev checks passed. Browser verification was not performed.
+
 ### Planned
 
 - Phase 2 — resources and inventory (not started; requires authorization).

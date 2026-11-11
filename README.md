@@ -4,7 +4,7 @@ A first-person, browser-based 3D factory automation game. The player lands on an
 unexplored planet, extracts its resources, and builds increasingly complex
 automated production chains.
 
-**Status:** Phase 1 complete — terrain, player physics, collision and interaction · Version 0.3.0
+**Status:** Phase 1 implemented; browser acceptance pending · Version 0.3.0
 **Next phase:** Phase 2 — resources and inventory (requires authorization)
 **Platform:** Desktop web browser (WebGL2) · **Stack:** TypeScript, Three.js, Vite
 
@@ -36,7 +36,7 @@ What exists and works today:
 - **Environment:** vertex-coloured terrain, sky dome, horizon fog, instanced
   boulders and formations, player-following shadows, two interactable props.
 - A typed event bus, validated configuration, and a minimal boot/fatal/debug UI.
-- 254 automated tests plus build/serve verification scripts (see below).
+- 271 automated tests plus build/serve verification scripts (see below).
 
 Deliberately **not** implemented yet: inventory, resources, buildings, machines,
 conveyors, power, progression, persistence, audio. The survey beacon and relay mast
@@ -167,7 +167,7 @@ npm run verify
 This executes:
 
 1. `tsc --noEmit` — strict type checking.
-2. `vitest run` — 254 automated tests covering the clock, loop, event bus,
+2. `vitest run` — 271 automated tests covering the clock, loop, event bus,
    configuration, lifecycle, engine composition, scene graph, input, player
    physics, terrain, obstacles, world assembly, interaction, prompt UI, frame
    systems, overlays, the real `main.ts` bootstrap (engine mocked at the
@@ -246,7 +246,7 @@ content:
 | Phase | Scope | Status |
 |---|---|---|
 | 0 | Repository inspection and foundation | ✅ Complete |
-| 1 | Playable 3D environment | ✅ Complete — terrain, physics, collision, interaction; manual browser check pending |
+| 1 | Playable 3D environment | 🟡 Implemented; manual browser verification pending |
 | 2 | Resources and inventory | Planned |
 | 3 | Building and placement | Planned |
 | 4 | First automated extractor | Planned |
