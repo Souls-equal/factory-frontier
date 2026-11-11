@@ -52,6 +52,9 @@ export const DEFAULT_PLAYER_SPAWN: Readonly<Required<PlayerSpawn>> = Object.free
 
 /** Largest delta the controller integrates in one call (seconds). */
 const MAX_UPDATE_SECONDS = 0.25;
+/** Iterative contact projections before conservatively stopping in a tight corner. */
+const MAX_CONTACT_PROJECTION_PASSES = 12;
+const CONTACT_VELOCITY_EPSILON = 1e-9;
 
 /** A flat, unbounded ground used when no terrain is supplied (tests/tools). */
 export const FLAT_TERRAIN: TerrainQuery = Object.freeze({
@@ -68,7 +71,8 @@ export const FLAT_TERRAIN: TerrainQuery = Object.freeze({
 
 /** No collisions, used when no obstacle field is supplied. */
 export const NO_OBSTACLES: CollisionQuery = Object.freeze({
-  resolveCircle: (x: number, z: number) => ({ x, z, collided: false }),
+  moveCircle: (x: number, z: number, dx: number, dz: number) =>
+    ({ x: x + dx, z: z + dz, collided: false, normals: [], blocked: false }),
 });
 
 export interface PlayerControllerOptions {
@@ -298,19 +302,38 @@ export class PlayerController {
       }
     }
 
-    const resolved = this.obstacles.resolveCircle(
-      nextX,
-      nextZ,
-      this.physics.radius,
-      this.y,
-      this.y + this.physics.height,
+    const resolved = this.obstacles.moveCircle(
+      startX, startZ, nextX - startX, nextZ - startZ,
+      this.physics.radius, this.y, this.y + this.physics.height,
     );
 
-    if (resolved.collided) {
-      // Re-derive velocity from the actual displacement so blocked movement
-      // slides along the obstacle instead of pushing into it.
-      this.velocityX = (resolved.x - startX) / dt;
-      this.velocityZ = (resolved.z - startZ) / dt;
+    // Project the physical velocity onto the feasible contact directions.
+    // Never derive it from position correction: depenetration is not momentum.
+    if (resolved.blocked) {
+      this.velocityX = 0;
+      this.velocityZ = 0;
+    } else {
+      // Sequential projections handle corners. Recheck earlier normals because
+      // projection onto a later, non-orthogonal contact may violate them.
+      for (let pass = 0; pass < MAX_CONTACT_PROJECTION_PASSES; pass += 1) {
+        let changed = false;
+        for (const normal of resolved.normals) {
+          const inward = this.velocityX * normal.x + this.velocityZ * normal.z;
+          if (inward < -CONTACT_VELOCITY_EPSILON) {
+            this.velocityX -= inward * normal.x;
+            this.velocityZ -= inward * normal.z;
+            changed = true;
+          }
+        }
+        if (!changed) break;
+      }
+      if (resolved.normals.some((normal) =>
+        this.velocityX * normal.x + this.velocityZ * normal.z < -CONTACT_VELOCITY_EPSILON)) {
+        // Stop rather than allow an unresolved multi-contact constraint to
+        // produce persistent inward motion on the next step.
+        this.velocityX = 0;
+        this.velocityZ = 0;
+      }
     }
 
     this.x = resolved.x;

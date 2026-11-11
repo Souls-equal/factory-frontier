@@ -106,4 +106,36 @@ describe('ObstacleField', () => {
     expect(() => field.resolveCircle(Number.NaN, 0, 0.5, 0, 1.8)).toThrow(RangeError);
     expect(() => field.resolveCircle(0, 0, -1, 0, 1.8)).toThrow(RangeError);
   });
+
+  it('sweeps against a small obstacle and reports an outward unit normal', () => {
+    const field = new ObstacleField([obstacle({ radius: 0.1 })]);
+    const result = field.moveCircle(0, 2, 0, -4, 0.4, 0, 1.8);
+    expect(result.z).toBeCloseTo(0.5, 8);
+    expect(result.blocked).toBe(false);
+    expect(result.normals).toHaveLength(1);
+    expect(result.normals[0]?.x).toBeCloseTo(0, 8);
+    expect(result.normals[0]?.z).toBeCloseTo(1, 8);
+  });
+
+  it('does not escape around the entire obstacle for round-off penetration', () => {
+    const field = new ObstacleField([obstacle({ x: 1.447567, z: 0.023544, radius: 0.71 })]);
+    const x = 1.4586768148;
+    const z = 1.1344884525;
+    const result = field.resolveCircle(x, z, 0.4, 0, 1.8);
+    expect(Math.hypot(result.x - x, result.z - z)).toBeLessThan(0.001);
+  });
+
+  it('preserves unobstructed motion and ignores vertical non-overlap', () => {
+    const field = new ObstacleField([obstacle({ height: 1 })]);
+    const result = field.moveCircle(0, 3, 1, -4, 0.4, 1.2, 3);
+    expect(result).toEqual({ x: 1, z: -1, collided: false, normals: [], blocked: false });
+  });
+
+  it('handles duplicate overlapping colliders without introducing a large correction', () => {
+    const field = new ObstacleField([obstacle(), obstacle({ id: 'duplicate' })]);
+    const result = field.moveCircle(0, 3, 0, -1, 0.4, 0, 1.8);
+    expect(result.z).toBeCloseTo(2.4, 8);
+    expect(result.blocked).toBe(false);
+  });
+
 });
