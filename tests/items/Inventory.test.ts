@@ -112,3 +112,25 @@ describe('inventory conservation under repeated operations', () => {
     }
   });
 });
+
+describe('atomic slot swaps', () => {
+  it('swaps incompatible full stacks and preserves counts and stack limits', () => {
+    const inventory = setup(2);
+    inventory.addItem('iron-ore', 100); inventory.addItem('coal', 47);
+    const revision = inventory.revision;
+    expect(inventory.swapSlots(0, 1)).toBe(true);
+    expect(inventory.snapshot()).toEqual([{ itemId: 'coal', quantity: 47 }, { itemId: 'iron-ore', quantity: 100 }]);
+    expect(inventory.getItemCount('iron-ore')).toBe(100);
+    expect(inventory.getItemCount('coal')).toBe(47);
+    expect(inventory.revision).toBe(revision + 1);
+  });
+  it('rejects invalid indices without mutation and ignores empty or identical slots', () => {
+    const inventory = setup(2); inventory.addItem('wood', 7);
+    const before = inventory.snapshot(); const revision = inventory.revision;
+    expect(() => inventory.swapSlots(0, 2)).toThrow(RangeError);
+    expect(inventory.swapSlots(0, 0)).toBe(false);
+    expect(inventory.swapSlots(0, 1)).toBe(false);
+    expect(inventory.snapshot()).toEqual(before);
+    expect(inventory.revision).toBe(revision);
+  });
+});

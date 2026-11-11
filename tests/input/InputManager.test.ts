@@ -322,3 +322,43 @@ describe('inventory modal input isolation', () => {
     expect(input.getMovement().forward).toBe(1); input.dispose(); canvas.remove();
   });
 });
+
+describe('pointer lock restoration around the inventory', () => {
+  it('releases and requests previous pointer lock during the close gesture', () => {
+    const request = vi.fn(); const exit = vi.fn(() => setPointerLockElement(null));
+    Object.defineProperty(canvas, 'requestPointerLock', { configurable: true, value: request });
+    Object.defineProperty(document, 'exitPointerLock', { configurable: true, value: exit });
+    canvas.tabIndex = 0;
+    input = new InputManager(canvas);
+    setPointerLockElement(canvas);
+    input.suspendForModal();
+    expect(exit).toHaveBeenCalledOnce();
+    expect(input.isPointerLocked).toBe(false);
+    input.resumeFromModal();
+    expect(document.activeElement).toBe(canvas);
+    expect(request).toHaveBeenCalledOnce();
+    expect(input.consumeLookDelta()).toEqual({ x: 0, y: 0 });
+    Reflect.deleteProperty(document, 'exitPointerLock');
+  });
+  it('does not request capture when opening unlocked', () => {
+    const request = vi.fn();
+    Object.defineProperty(canvas, 'requestPointerLock', { configurable: true, value: request });
+    input = new InputManager(canvas);
+    input.suspendForModal(); input.resumeFromModal();
+    expect(request).not.toHaveBeenCalled();
+  });
+  it('falls back safely when the browser rejects a restoration request', async () => {
+    const request = vi.fn().mockRejectedValue(new Error('user gesture required'));
+    const exit = vi.fn(() => setPointerLockElement(null));
+    Object.defineProperty(canvas, 'requestPointerLock', { configurable: true, value: request });
+    Object.defineProperty(document, 'exitPointerLock', { configurable: true, value: exit });
+    input = new InputManager(canvas); setPointerLockElement(canvas);
+    input.suspendForModal(); input.resumeFromModal();
+    await Promise.resolve();
+    expect(request).toHaveBeenCalledOnce();
+    keyDown('KeyW');
+    expect(input.getMovement().forward).toBe(1);
+    expect(input.isPointerLocked).toBe(false);
+    Reflect.deleteProperty(document, 'exitPointerLock');
+  });
+});

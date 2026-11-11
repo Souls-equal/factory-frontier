@@ -88,6 +88,16 @@ export class Inventory {
     this.slots[source] = moved === from.quantity ? null : { itemId: from.itemId, quantity: from.quantity - moved };
     this.revisionValue++; return moved;
   }
+  /** Atomically exchange two occupied slots without changing their quantities. */
+  swapSlots(first: number, second: number): boolean {
+    this.validSlot(first); this.validSlot(second);
+    if (first === second) return false;
+    const left = this.slots[first], right = this.slots[second];
+    if (!left || !right) return false;
+    this.slots[first] = right; this.slots[second] = left;
+    this.revisionValue++;
+    return true;
+  }
   splitStack(source: number, amount: number): number {
     this.validSlot(source); quantity(amount);
     const slot = this.slots[source];

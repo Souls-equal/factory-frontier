@@ -7,7 +7,22 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
-### Added — Phase 2 (browser acceptance pending)
+### Changed — Phase 2.1 inventory UX
+
+- Replaced click-to-move with native drag-and-drop for moving, partial merging and
+  atomic swapping. Selection is inspection only; cancelled or stale drags do not
+  mutate inventory. Half-stack splitting remains available.
+- Inventory closing now attempts to restore pointer lock synchronously from the
+  closing gesture when it was previously held. Browser denial falls back to
+  click-to-capture; scripts cannot reposition the physical cursor.
+- Added regression coverage for drag cancellation, conservation, full inventories,
+  partial collection across several stacks, and pointer-lock restoration/denial.
+  `npm run typecheck`, `npm test`, `npm run build` and `npm run verify` passed
+  (314 tests, 27 files). Browser-level verification of these changes was not
+  performed in this environment.
+
+
+### Added — Phase 2 (historical implementation)
 
 - Central item registry with iron ore, copper ore, limestone, coal, stone and wood;
   slot inventory with partial add/remove/transfer, capacity, split and merge.
@@ -18,8 +33,9 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 - Added collision-release, inventory conservation, generation, gathering, modal,
   input and mocked-renderer bootstrap tests. `npm run typecheck`, `npm test`,
   `npm run build` and `npm run verify` passed (299 tests, 27 files).
-- No manual browser/WebGL or pointer-lock testing was performed. Bounded deposit
-  placement can yield fewer results on constrained world configurations.
+- At implementation time, the agent did not perform browser testing. The user
+  later reported browser acceptance passed overall, except full inventory. Bounded
+  deposit placement can yield fewer results on constrained configurations.
 
 ### Fixed
 
@@ -36,7 +52,7 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ### Planned
 
-- Browser acceptance checks for the Phase 1 and Phase 2 implementations.
+- Browser checks for Phase 2.1 drag-and-drop, pointer-lock restoration and full inventory.
 
 ## [0.3.0] — 2026-11-11
 

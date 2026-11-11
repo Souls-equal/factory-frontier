@@ -458,5 +458,7 @@ body {
   border-radius: 7px; padding: 10px; cursor: pointer; }
 .inventory button:hover, .inventory button:focus-visible, .inventory__slot.is-selected { border-color: var(--ff-accent); background: #214550; }
 .inventory button:disabled { opacity: .4; cursor: default; }
+.inventory__slot[draggable="true"] { cursor: grab; }
+.inventory__slot.is-dragging { opacity: .45; cursor: grabbing; }
 .inventory__slot { min-height: 58px; text-align: left; overflow-wrap: anywhere; font: 11px var(--ff-mono); }
 @media (max-width: 650px) { .inventory__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

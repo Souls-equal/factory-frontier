@@ -858,13 +858,22 @@ range checks and E-edge consumption. Feedback uses the actual added quantity.
 shares geometry and per-type materials. Deposit colliders use the existing obstacle
 field; no visual object owns gameplay state.
 
-`InventoryUI` renders snapshots and invokes inventory operations. `InputManager`
-remains the sole gameplay input layer; it suspends and clears gameplay input and
-releases pointer lock while the inventory is open. Closing restores controls but
-requires a click to recapture the pointer. The existing game loop remains unchanged.
+`InventoryUI` renders snapshots and invokes inventory operations. Native HTML
+drag-and-drop records a slot and inventory revision, applies no mutation until a
+valid drop, and cancels if state changed. Empty slots receive stacks, matching
+stacks merge, and incompatible occupied slots use the inventory model's atomic
+`swapSlots`. Clicks only inspect or deselect; split remains a separate action.
+
+`InputManager` remains the sole gameplay input layer; it suspends and clears
+input, remembers and releases prior pointer lock while inventory is open. Closing
+requests recapture synchronously in the close gesture only when previously locked;
+if denied, click-to-capture remains available. Browser security prevents scripts
+from warping the OS cursor. The existing game loop remains unchanged.
 No machines, recipes, building or persistence systems were introduced.
 
 Automated tests exercise the registry, inventory conservation, seeded generation,
-gathering and full/partial outcomes, modal input, scene construction and the real
-bootstrap with a mocked WebGL engine. Browser rendering and real pointer-lock UX
-remain unverified.
+gathering and full/partial outcomes, drag/drop event handling, modal input, scene
+construction and the real bootstrap with a mocked WebGL engine. The user reports
+earlier Phase 2 browser acceptance passed overall, except full inventory; the new
+Phase 2.1 drag/drop and pointer-lock behavior has not been browser-verified by the
+agent. Native drag-and-drop currently has no keyboard move alternative.

@@ -187,6 +187,37 @@ describe('application bootstrap', () => {
     expect(panel.hidden).toBe(true);
   });
 
+  it('restores previous pointer lock on Tab, Escape and close-button gestures', async () => {
+    vi.spyOn(console, 'info').mockImplementation(() => undefined);
+    await import('../../src/main');
+    await vi.waitFor(() => expect(fakeEngine.initCalls).toBe(1));
+    const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
+    const panel = document.querySelector<HTMLElement>('[data-ui="inventory"]')!;
+    let locked: Element | null = canvas;
+    Object.defineProperty(document, 'pointerLockElement', { configurable: true, get: () => locked });
+    const exit = vi.fn(() => { locked = null; document.dispatchEvent(new Event('pointerlockchange')); });
+    const request = vi.fn(() => { locked = canvas; document.dispatchEvent(new Event('pointerlockchange')); });
+    Object.defineProperty(document, 'exitPointerLock', { configurable: true, value: exit });
+    Object.defineProperty(canvas, 'requestPointerLock', { configurable: true, value: request });
+    try {
+      const tab = () => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab', cancelable: true }));
+      tab(); expect(panel.hidden).toBe(false); expect(locked).toBeNull();
+      tab(); expect(panel.hidden).toBe(true); expect(request).toHaveBeenCalledTimes(1);
+      tab(); expect(locked).toBeNull();
+      window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', cancelable: true }));
+      expect(panel.hidden).toBe(true); expect(request).toHaveBeenCalledTimes(2);
+      tab(); expect(locked).toBeNull();
+      panel.querySelector<HTMLButtonElement>('[data-inventory-close]')!.click();
+      expect(panel.hidden).toBe(true); expect(request).toHaveBeenCalledTimes(3);
+      expect(exit).toHaveBeenCalledTimes(3);
+      expect(document.activeElement).toBe(canvas);
+    } finally {
+      locked = null;
+      Reflect.deleteProperty(document, 'pointerLockElement');
+      Reflect.deleteProperty(document, 'exitPointerLock');
+    }
+  });
+
   it('disposes the game when the page unloads', async () => {
     vi.spyOn(console, 'info').mockImplementation(() => undefined);
     vi.spyOn(console, 'error').mockImplementation(() => undefined);

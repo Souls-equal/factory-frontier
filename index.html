@@ -13,7 +13,7 @@
   </head>
   <body>
     <div id="app">
-      <canvas id="game-canvas" aria-label="Factory Frontier 3D viewport"></canvas>
+      <canvas id="game-canvas" tabindex="0" aria-label="Factory Frontier 3D viewport"></canvas>
 
       <div class="hud-brand" aria-hidden="true">
         <span class="hud-brand__name">FACTORY FRONTIER</span>
@@ -45,7 +45,7 @@
         <div class="inventory__panel">
           <header class="inventory__header"><div><span class="inventory__eyebrow">FIELD OPERATIONS</span><h2>Inventory</h2></div>
             <button type="button" data-inventory-close aria-label="Close inventory">Close · Esc</button></header>
-          <p class="inventory__intro">Select an item, then another slot to move or merge.</p>
+          <p class="inventory__intro">Drag items between slots to move, merge or swap. Select an item to inspect or split.</p>
           <div class="inventory__grid" data-inventory-grid></div>
           <div class="inventory__footer"><p data-inventory-capacity></p><button type="button" data-inventory-split>Split stack</button></div>
           <p class="inventory__detail" data-inventory-detail></p>

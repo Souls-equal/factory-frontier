@@ -45,6 +45,7 @@ export class InputManager {
   private readonly onInventoryToggle: (() => void) | undefined;
   private readonly onInventoryClose: (() => void) | undefined;
   private gameplayEnabled = true;
+  private restorePointerLockAfterModal = false;
 
   private dragging = false;
   private disposed = false;
@@ -129,6 +130,22 @@ export class InputManager {
     }
   }
 
+  /** Remember capture before opening a modal, then release it for UI use. */
+  suspendForModal(): void {
+    if (!this.gameplayEnabled) return;
+    this.restorePointerLockAfterModal = this.isPointerLocked;
+    this.setGameplayEnabled(false);
+  }
+
+  /** Call synchronously from the close gesture; browsers may still deny capture. */
+  resumeFromModal(): void {
+    const restore = this.restorePointerLockAfterModal;
+    this.restorePointerLockAfterModal = false;
+    this.setGameplayEnabled(true);
+    this.element.focus({ preventScroll: true });
+    if (restore) this.requestPointerLock();
+  }
+
   /** Request pointer lock; drag-look remains available if it is denied. */
   requestPointerLock(): void {
     if (this.disposed || !this.gameplayEnabled) {
@@ -155,6 +172,7 @@ export class InputManager {
       return;
     }
     this.disposed = true;
+    this.restorePointerLockAfterModal = false;
 
     this.element.removeEventListener('mousedown', this.handleMouseDown);
     this.view.removeEventListener('keydown', this.handleKeyDown);
