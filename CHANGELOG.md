@@ -65,6 +65,8 @@ interaction system.
 - `npm run verify:build` / `verify:preview` / `verify:dev` — 25/25, 12/12, 37/37.
 - Real-browser WebGL/pointer-lock verification was **not** performed (no browser
   binary in this environment).
+- Deployed to GitHub Pages: run `43105952909` (build + deploy success), deployment
+  `7721918068`; the live site serves the v0.3.0 bundles.
 
 ## [0.2.0] — 2026-11-11
 

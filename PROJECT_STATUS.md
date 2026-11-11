@@ -147,7 +147,12 @@ runs on pull requests only with per-ref cancellation, `deploy-pages.yml` builds 
 GitHub Actions. Last confirmed deployment: `7721488024` (run `43102108684`).
 This task's merge is deployed by the same pipeline; the result is recorded below.
 
-- **Live Pages deployment for v0.3.0:** ⏳ verified after this task's merge.
+- **Live Pages deployment for v0.3.0:** ✅ **Confirmed** 2026-11-11T21:47Z — run
+  [`43105952909`](https://github.com/Souls-equal/factory-frontier/actions/runs/43105952909)
+  (build + deploy `success`), deployment `7721918068` on `main` @ `8d30fbd`.
+  Verified over HTTP: the live site serves the v0.3.0 bundles
+  (`assets/index-BqPsifUf.css` containing the interaction-prompt styles,
+  `assets/index-C2sbTGQQ.js`) at <https://souls-equal.github.io/factory-frontier/>.
 
 ---
 
