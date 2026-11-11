@@ -199,6 +199,11 @@ already in flight (`ci-${{ github.ref }}` and `pages-build-${{ github.ref }}` us
 repository (unbundled `index.html`/`src/*.ts`) instead of `dist/`. For a renamed
 repository or custom domain, set the `VITE_BASE_PATH` repository variable.
 
+The live site is <https://souls-equal.github.io/factory-frontier/>. It is only
+considered deployed when the `Deploy GitHub Pages` run for the pushed `main` commit
+succeeded and the published HTML references `/factory-frontier/assets/*` — a
+successful `build` job alone does not publish anything.
+
 No backend, account or database is required. The build is fully static and uses
 relative-to-base asset URLs.
 
