@@ -21,10 +21,9 @@ interaction raycasting
 - **Missing by design:** terrain/physics/raycasting (Phase 1), inventory and
   factories (Phases 2–9), save code (Phase 12), data registries (Phases 2–7).
   Designs for save/data are documented rather than stubbed.
-- **External technical issue (now resolved in the repository setting):** Pages is
-  configured for GitHub Actions (`build_type: workflow`). The *published* content
-  is still the last legacy branch build, which serves raw sources instead of
-  `dist/`; it is replaced by the next successful workflow deployment.
+- **Deployment pipeline repaired and verified:** Pages is configured for GitHub
+  Actions (`build_type: workflow`) and the live site now serves the production
+  build from `dist/` (deployment `7721334220`, run `43101711244`).
 
 ---
 
@@ -151,7 +150,7 @@ dist/favicon.svg                    395 B
 | Dev server starts | ✅ Passed | `verify:dev` + live server HTTP 200 check |
 | Basic scene / ground / lighting | ✅ Constructed and tested | Scene graph, lights, render delegation; real rasterization pending browser |
 | Controllable first-person camera | ✅ Logic verified | 35+ player/input/camera assertions; real pointer lock pending browser |
-| GitHub Pages configuration coherent | ✅ Build / ⏳ deploy | Artifacts and base path verified; Pages uses GitHub Actions; deployment verification pending |
+| GitHub Pages configuration coherent | ✅ Deployed | Live site serves `dist/` (`/factory-frontier/assets/index-V1qLIqrz.css`, `index-BLJSyog1.js`) from deployment `7721334220` |
 | Application renders correctly in a browser | ⚠️ Not executed | No browser binary in sandbox; manual check required |
 
 **Manual browser check still required:** open the live preview, click to capture
@@ -192,34 +191,41 @@ Local validation of this change: `npm ci`, `npm run typecheck`, `npm test`
 all pass; both workflow files parse as valid YAML. Deployment confirmation: see the
 line below — it is only recorded once a real deployment succeeded.
 
-- **Live Pages deployment:** ⏳ not yet confirmed after the rework.
+- **Live Pages deployment:** ✅ **Confirmed** 2026-11-11T21:17:58Z — run
+  [`43101711244`](https://github.com/Souls-equal/factory-frontier/actions/runs/43101711244)
+  (build + deploy both `success`), deployment `7721334220` on `main` @ `b2dc982`,
+  environment URL <https://souls-equal.github.io/factory-frontier/>. Verified over
+  HTTP: `/factory-frontier/assets/index-BLJSyog1.js` and
+  `/factory-frontier/assets/index-V1qLIqrz.css` return the minified production
+  bundle, while an unknown asset path returns the GitHub Pages 404 page — the site
+  publishes `dist/`, not raw sources.
+- **Stale queued runs:** runs `43095979915`, `43096758010`, `43096810240` and
+  `43096810255` from the incident window remain listed as `queued` and cannot be
+  cancelled through the API ("Cannot cancel a workflow run that is completed").
+  They hold no runner, were never executed and are superseded; leave them. Later CI
+  and deploy runs on the same workflows executed normally (21s and 32s).
 
 ---
 
 ## Known Issues and Limitations
 
-1. **The published Pages site is stale (legacy branch build).** Pages itself is
-   configured for GitHub Actions (`build_type: workflow`), but the most recent
-   deployment (2026-11-11T20:15Z) came from the **legacy branch build** of an old
-   feature branch, so it publishes raw sources instead of `dist/`. It is replaced by
-   the next successful workflow deployment; no repository setting change is needed.
-2. **No real-browser verification in this environment.** WebGL rasterization,
+1. **No real-browser verification in this environment.** WebGL rasterization,
    pointer lock and browser console output were not executed. Unit/integration
    tests and HTTP serving checks pass, but visual confirmation is pending.
-3. **Camera foundation is not Phase 1 physics.** There is no terrain height
+2. **Camera foundation is not Phase 1 physics.** There is no terrain height
    sampling, gravity, jumping, slope handling or collision. The player walks on an
    assumed flat plane and is constrained by a circular safety radius. Phase 1 must
    replace this with a deterministic player simulation.
-4. **Movement is presentation-stage.** It integrates frame deltas clamped to
+3. **Movement is presentation-stage.** It integrates frame deltas clamped to
    250 ms; it is bounded and frame-rate independent in speed but not a
    deterministic physics step. Industrial simulation remains fixed-step.
-5. **No save system code and no data-driven registries yet.** Only documented
+4. **No save system code and no data-driven registries yet.** Only documented
    designs exist (Technical Architecture Appendices B.5/B.6); no placeholder code
    was added. Phase 12 and Phases 2–7 respectively.
-6. **No key remapping, settings menu, audio, terrain or interaction prompt.**
-7. **Source maps (~2.95 MB) ship with the production build** for debuggability;
+5. **No key remapping, settings menu, audio, terrain or interaction prompt.**
+6. **Source maps (~2.95 MB) ship with the production build** for debuggability;
    revisit in Phase 13.
-8. **No empty gameplay scaffolding.** Factory/system folders will be created when
+7. **No empty gameplay scaffolding.** Factory/system folders will be created when
    their phases begin.
 
 ---
@@ -259,8 +265,9 @@ gameplay balance values were encoded.
    - interaction raycasting and contextual prompts,
    - basic environment placement that does not interfere with construction,
    - movement/collision/raycast tests and update of Phase 1 acceptance evidence.
-3. Re-run the Pages deployment once CI infrastructure is healthy and confirm the
-   live site serves `/factory-frontier/assets/*.js` (not raw sources).
+3. Perform the manual browser check against the deployed site
+   (<https://souls-equal.github.io/factory-frontier/>) rather than only the local
+   dev server: WebGL scene, pointer lock, WASD + Shift, Esc release.
 
 ---
 

@@ -30,11 +30,24 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
   GitHub Actions Pages source accurately (the previous "Pages uses branch
   deployment" statement was outdated).
 
+### Verified
+
+- First run on the new structure: CI run `43101563695` (PR #3) — all 10 steps
+  `success` in 21 s.
+- Merge to `main` (`b2dc982`) produced exactly **one** workflow run — the Pages
+  deploy `43101711244` (build + deploy `success`, 32 s), with no duplicate CI run.
+- Deployment `7721334220` published `dist/`; `https://souls-equal.github.io/factory-frontier/`
+  now serves the hashed production bundles (`assets/index-V1qLIqrz.css`,
+  `assets/index-BLJSyog1.js`) instead of raw sources.
+
 ### Notes
 
 - No game code, tests, configuration or dependencies changed.
 - The 2026-11-11 queued runs and `startup_failure` were caused by GitHub incident
-  `dvy0t3mvh1lg` (Actions/Pages `major_outage`), not by the workflows.
+  `dvy0t3mvh1lg` (Actions/Pages `major_outage`), not by the workflows. Four runs
+  from that window (`43095979915`, `43096758010`, `43096810240`, `43096810255`)
+  remain listed as `queued` as orphaned records; they never executed and cannot be
+  cancelled through the API.
 
 ### Planned
 
