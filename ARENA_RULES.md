@@ -109,3 +109,19 @@ Priority order:
 6. Additional polish.
 
 Never sacrifice the foundations of the game for a quick visual result.
+
+## 10. Automatic Pull Request Merging
+
+For every pull request created for development work, the agent owns its entire
+lifecycle and must not leave completed work open for the user to merge manually.
+Before merging, ensure implementation is complete, run required verification,
+confirm all relevant automated tests and CI checks succeed, resolve conflicts,
+and review the final changes for accidental modifications and regressions.
+Investigate and fix failed checks; never bypass failing CI, branch protections or
+unresolved conflicts. Once these requirements are met, merge without asking for
+confirmation, preferring squash when supported and appropriate. Do not merge
+unrelated pull requests or changes the agent did not create. If GitHub prevents
+merging, report the precise blocker and leave the repository safe. After merging,
+verify that the target branch contains the expected commit and verify the GitHub
+Pages deployment workflow when applicable. This policy applies to future tasks,
+not just Phase 3.

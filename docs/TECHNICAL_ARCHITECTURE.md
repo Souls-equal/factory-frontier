@@ -877,3 +877,28 @@ construction and the real bootstrap with a mocked WebGL engine. The user reports
 earlier Phase 2 browser acceptance passed overall, except full inventory; the new
 Phase 2.1 drag/drop and pointer-lock behavior has not been browser-verified by the
 agent. Native drag-and-drop currently has no keyboard move alternative.
+
+
+## Appendix E — Phase 3 construction integration
+
+`World` owns a `BuildingSystem` and a data-driven Three-free `BuildingRegistry`.
+`Inventory.exchange` plans multi-item changes in a copied slot array and commits
+only if all removals/additions fit. The default foundation costs 10 stone and 5
+wood; demolition refunds all of it or leaves the building intact. IDs are stable
+for a session only. No persistence or machines are implemented.
+
+`ConstructionController` casts a terrain query ray using the existing view vector,
+snaps footprint edges to a configurable 1 m grid, and invokes the same model
+validation for preview and placement. TerrainHeightfield support clips every
+intersecting terrain triangle to the footprint; generic terrain implementations
+fall back to finite samples. Natural solids/deposits, buildings, the player,
+world bounds and material availability are checked. Placement/demolition requests
+are consumed in the fixed-step stage.
+
+`BuildingCollision` composes existing natural sweeps with conservative expanded
+rectangle sweeps. `BuildingTerrain` exposes foundation tops to the player; both
+read the current registry, so removal has immediate logical effect. The rendering
+engine's `BuildingView` mirrors snapshots and owns separate preview resources,
+which are reused while active and disposed on removal. Menus reuse the existing
+modal/pointer-lock input suspension. Demolition targeting does not perform
+terrain/prop line-of-sight occlusion. Real-browser verification remains pending.

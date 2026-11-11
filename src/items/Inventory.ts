@@ -70,6 +70,43 @@ export class Inventory {
     if (moved > 0) { this.removeItem(id, moved); destination.addItem(id, moved); }
     return { requested: amount, moved, remainder: amount - moved };
   }
+  /** Apply a multi-item exchange all-or-nothing, including shared empty-slot capacity. */
+  exchange(remove: readonly ItemStack[], add: readonly ItemStack[]): boolean {
+    const next = this.snapshot().map((slot) => slot ? { ...slot } : null);
+    for (const entry of [...remove, ...add]) { quantity(entry.quantity); this.registry.get(entry.itemId); }
+    for (const entry of remove) {
+      let remaining = entry.quantity;
+      for (let i = 0; i < next.length && remaining > 0; i++) {
+        const slot = next[i];
+        if (slot?.itemId !== entry.itemId) continue;
+        const moved = Math.min(slot.quantity, remaining);
+        next[i] = moved === slot.quantity ? null : { ...slot, quantity: slot.quantity - moved };
+        remaining -= moved;
+      }
+      if (remaining) return false;
+    }
+    for (const entry of add) {
+      let remaining = entry.quantity;
+      const max = this.registry.get(entry.itemId).maxStackSize;
+      for (let i = 0; i < next.length && remaining > 0; i++) {
+        const slot = next[i];
+        if (slot?.itemId !== entry.itemId) continue;
+        const moved = Math.min(max - slot.quantity, remaining);
+        next[i] = { ...slot, quantity: slot.quantity + moved }; remaining -= moved;
+      }
+      for (let i = 0; i < next.length && remaining > 0; i++) {
+        if (next[i] !== null) continue;
+        const moved = Math.min(max, remaining);
+        next[i] = { itemId: entry.itemId, quantity: moved }; remaining -= moved;
+      }
+      if (remaining) return false;
+    }
+    if (remove.length || add.length) {
+      for (let i = 0; i < next.length; i++) this.slots[i] = next[i] ?? null;
+      this.revisionValue++;
+    }
+    return true;
+  }
   private validSlot(index: number): void {
     if (!Number.isInteger(index) || index < 0 || index >= this.capacity) throw new RangeError('Invalid slot index.');
   }

@@ -1,3 +1,6 @@
+import { BuildingView } from './BuildingView';
+import type { BuildingRegistry } from '../buildings/BuildingRegistry';
+import type { BuildingInstance, PlacementResult } from '../buildings/BuildingSystem';
 import type { GameConfig } from '../core/Configuration';
 import { CameraManager } from './CameraManager';
 import { LightingManager } from './LightingManager';
@@ -24,6 +27,7 @@ export class Engine implements GameEngine {
   private readonly cameraManager: CameraManager;
   private readonly lightingManager: LightingManager;
 
+  private buildingView: BuildingView | undefined;
   private initialized = false;
   private disposed = false;
 
@@ -74,6 +78,15 @@ export class Engine implements GameEngine {
     this.lightingManager.setFocus(view.position.x, view.position.z);
   }
 
+  initBuildings(registry: BuildingRegistry, cellSize: number): void {
+    if (this.buildingView) throw new Error('Building renderer is already initialized.');
+    this.buildingView = new BuildingView(registry, cellSize);
+    this.sceneManager.scene.add(this.buildingView.group);
+  }
+
+  syncBuildings(buildings: readonly BuildingInstance[]): void { this.buildingView?.sync(buildings); }
+  setBuildingPreview(typeId: string | null, result?: PlacementResult): void { this.buildingView?.setPreview(typeId, result); }
+
   setHighlight(id: string | null): void {
     if (this.disposed) {
       return;
@@ -110,6 +123,7 @@ export class Engine implements GameEngine {
     this.disposed = true;
     this.initialized = false;
 
+    this.buildingView?.dispose();
     this.lightingManager.dispose();
     this.sceneManager.dispose();
     this.renderer.dispose();

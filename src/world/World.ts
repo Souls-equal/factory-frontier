@@ -1,3 +1,7 @@
+import { BuildingSystem } from '../buildings/BuildingSystem';
+import { createDefaultBuildingRegistry } from '../buildings/BuildingRegistry';
+import { Inventory } from '../items/Inventory';
+import { createDefaultItemRegistry } from '../items/ItemRegistry';
 import type { GameConfig } from '../core/Configuration';
 import { generateDeposits, type ResourceDeposit } from '../resources/ResourceDeposit';
 import { ObstacleField, type ObstacleDefinition } from './ObstacleField';
@@ -43,6 +47,7 @@ export interface WorldSpawn {
 
 export interface World {
   readonly terrain: TerrainHeightfield;
+  readonly buildings: BuildingSystem;
   readonly obstacles: ObstacleField;
   readonly obstacleDefinitions: readonly ObstacleDefinition[];
   readonly interactables: readonly InteractableDefinition[];
@@ -57,7 +62,7 @@ const SPAWN_YAW = 0;
 /** Keep the clearing around the outpost free of boulders. */
 const CLEARING_RADIUS = 15;
 
-export function createWorld(config: GameConfig): World {
+export function createWorld(config: GameConfig, inventory = new Inventory(createDefaultItemRegistry(), config.resources.inventorySlots)): World {
   const { world: worldConfig, interaction } = config;
 
   const terrain = new TerrainHeightfield({
@@ -80,6 +85,8 @@ export function createWorld(config: GameConfig): World {
 
   return {
     terrain,
+    buildings: new BuildingSystem(createDefaultBuildingRegistry(inventory.registry), inventory, terrain,
+      obstacles.definitions, config.construction.gridSize, config.controls.playAreaRadius),
     obstacles,
     obstacleDefinitions: obstacles.definitions,
     interactables,

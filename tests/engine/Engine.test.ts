@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { createDefaultBuildingRegistry } from '../../src/buildings/BuildingRegistry';
+import { createDefaultItemRegistry } from '../../src/items/ItemRegistry';
+import { snapFootprint } from '../../src/buildings/Transform';
 import { createGameConfig } from '../../src/core/Configuration';
 import { Engine } from '../../src/engine/Engine';
 import { createWorld } from '../../src/world/World';
@@ -53,6 +56,22 @@ describe('Engine', () => {
     expect(backend.renderCalls).toHaveLength(1);
     expect(backend.renderCalls[0]?.scene).toBe(engine.scene);
     expect(backend.renderCalls[0]?.camera).toBe(engine.camera);
+  });
+
+  it('renders the building registry independently from the preview and removes both on teardown', () => {
+    const { engine } = createHarness(); engine.init();
+    const registry = createDefaultBuildingRegistry(createDefaultItemRegistry());
+    engine.initBuildings(registry, 1);
+    const transform = snapFootprint(registry.get('foundation'), 4, 4, 1, 1);
+    engine.setBuildingPreview('foundation', { reason: 'valid', transform });
+    expect(engine.scene.getObjectByName('building-preview')).toBeDefined();
+    engine.syncBuildings([{ id: 'building-1', typeId: 'foundation', transform }]);
+    expect(engine.scene.getObjectByName('building-1')?.position.x).toBe(transform.x);
+    engine.setBuildingPreview(null);
+    expect(engine.scene.getObjectByName('building-preview')).toBeUndefined();
+    expect(engine.scene.getObjectByName('building-1')).toBeDefined();
+    engine.syncBuildings([]); expect(engine.scene.getObjectByName('building-1')).toBeUndefined();
+    engine.dispose(); expect(engine.scene.children).toHaveLength(0);
   });
 
   it('resolves interaction highlights through the scene', () => {

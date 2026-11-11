@@ -7,6 +7,21 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added — Phase 3 building and placement (browser acceptance pending)
+
+- Connected the world-owned construction model to the modal menu, placement
+  controls, snapped terrain preview, fixed-step construction actions, renderer,
+  player collision/ground queries and demolition. Foundation costs 10 stone and
+  5 wood; demolition refunds the full cost or fails if inventory cannot fit it.
+- Added exact triangle/footprint terrain support checks for the production
+  heightfield, and tests for modal isolation, aiming, placement, demolition,
+  refunds, collision, terrain support and scene lifecycle.
+- `npm run typecheck`, `npm test`, `npm run build` and `npm run verify` passed
+  with 335 tests in 34 files, including build/preview/dev-server checks.
+- Added the permanent automatic pull-request merging policy to `ARENA_RULES.md`.
+- Browser/WebGL verification is pending; Chromium could not launch in the prior
+  attempt because NSS/NSPR libraries were missing.
+
 ### Changed — Phase 2.1 inventory UX
 
 - Replaced click-to-move with native drag-and-drop for moving, partial merging and

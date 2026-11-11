@@ -1,0 +1,59 @@
+import type { ItemRegistry } from '../items/ItemRegistry';
+
+export interface MaterialCost { readonly itemId: string; readonly quantity: number }
+/** Plain gameplay data; dimensions are integer grid cells and never Three.js meshes. */
+export interface BuildingDefinition {
+  readonly id: string;
+  readonly name: string;
+  readonly description: string;
+  readonly cost: readonly MaterialCost[];
+  readonly widthCells: number;
+  readonly depthCells: number;
+  readonly height: number;
+  readonly maxSlope: number;
+  readonly maxGroundVariation: number;
+  readonly color: number;
+}
+
+export class BuildingRegistry {
+  private readonly definitions = new Map<string, BuildingDefinition>();
+  constructor(private readonly items: ItemRegistry) {}
+  register(value: BuildingDefinition): void {
+    if (!value.id.trim() || !value.name.trim() || !value.description.trim() ||
+        !Number.isSafeInteger(value.widthCells) || value.widthCells <= 0 ||
+        !Number.isSafeInteger(value.depthCells) || value.depthCells <= 0 ||
+        !Number.isFinite(value.height) || value.height <= 0 ||
+        !Number.isFinite(value.maxSlope) || value.maxSlope < 0 || value.maxSlope >= Math.PI / 2 ||
+        !Number.isFinite(value.maxGroundVariation) || value.maxGroundVariation < 0 ||
+        !Number.isInteger(value.color) || value.color < 0 || value.color > 0xffffff || !value.cost.length) {
+      throw new RangeError('Invalid building definition.');
+    }
+    if (this.definitions.has(value.id)) throw new Error(`Duplicate building id: ${value.id}`);
+    const seen = new Set<string>();
+    const cost = value.cost.map((entry) => {
+      this.items.get(entry.itemId);
+      if (seen.has(entry.itemId) || !Number.isSafeInteger(entry.quantity) || entry.quantity <= 0) {
+        throw new RangeError('Building costs require unique item ids and positive integer quantities.');
+      }
+      seen.add(entry.itemId);
+      return Object.freeze({ ...entry });
+    });
+    this.definitions.set(value.id, Object.freeze({ ...value, cost: Object.freeze(cost) }));
+  }
+  get(id: string): BuildingDefinition {
+    const result = this.definitions.get(id);
+    if (!result) throw new RangeError(`Unknown building: ${id}`);
+    return result;
+  }
+  all(): readonly BuildingDefinition[] { return [...this.definitions.values()]; }
+}
+
+export function createDefaultBuildingRegistry(items: ItemRegistry): BuildingRegistry {
+  const registry = new BuildingRegistry(items);
+  registry.register({ id: 'foundation', name: 'Foundation',
+    description: 'A simple stone and timber structural platform.',
+    cost: [{ itemId: 'stone', quantity: 10 }, { itemId: 'wood', quantity: 5 }],
+    widthCells: 2, depthCells: 2, height: 0.4, maxSlope: 0.12,
+    maxGroundVariation: 0.12, color: 0x778b91 });
+  return registry;
+}

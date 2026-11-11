@@ -1,5 +1,9 @@
 import './styles/main.css';
 
+import { BuildingTerrain } from './buildings/BuildingTerrain';
+import { BuildingCollision } from './buildings/BuildingCollision';
+import { ConstructionController } from './buildings/ConstructionController';
+import { ConstructionUI } from './ui/ConstructionUI';
 import { createGameConfig } from './core/Configuration';
 import { Game } from './core/Game';
 import { Engine } from './engine/Engine';
@@ -51,6 +55,7 @@ let game: Game | undefined;
 let input: InputManager | undefined;
 let statsTimer: number | undefined;
 let inventoryUI: InventoryUI | undefined;
+let constructionUI: ConstructionUI | undefined;
 
 function measureViewport(): { width: number; height: number } {
   const width = app?.clientWidth ?? 0;
@@ -80,6 +85,8 @@ function shutdown(): void {
   interactionPrompt.dispose();
   inventoryUI?.dispose();
   inventoryUI = undefined;
+  constructionUI?.dispose();
+  constructionUI = undefined;
   game?.dispose();
 }
 
@@ -102,7 +109,9 @@ function startDebugStats(target: Game): void {
 
 async function boot(): Promise<void> {
   overlay.setBootStatus('Generating terrain…');
-  const world = createWorld(config);
+  const registry = createDefaultItemRegistry();
+  const inventory = new Inventory(registry, config.resources.inventorySlots);
+  const world = createWorld(config, inventory);
 
   overlay.setBootStatus('Building environment…');
   const engine = Engine.create(canvas as HTMLCanvasElement, config, world);
@@ -115,35 +124,63 @@ async function boot(): Promise<void> {
   await createdGame.init();
 
   overlay.setBootStatus('Wiring first-person controls…');
-  const registry = createDefaultItemRegistry();
-  const inventory = new Inventory(registry, config.resources.inventorySlots);
   const inventoryRoot = document.querySelector<HTMLElement>('[data-ui="inventory"]');
-  if (!inventoryRoot) throw new Error('Application shell is missing inventory panel.');
+  const constructionRoot = document.querySelector<HTMLElement>('[data-ui="construction"]');
+  const constructionStatus = document.querySelector<HTMLElement>('[data-ui="construction-status"]');
+  if (!inventoryRoot || !constructionRoot || !constructionStatus) throw new Error('Application shell is missing a gameplay panel.');
+  const buildings = world.buildings;
+  const buildingRegistry = buildings.registry;
+  const construction = new ConstructionController(buildings, world.terrain, config.construction.reach);
+  engine.initBuildings?.(buildingRegistry, config.construction.gridSize);
+  const player = new PlayerController({
+    controls: config.controls, player: config.player, terrain: new BuildingTerrain(world.terrain, buildings),
+    obstacles: new BuildingCollision(world.obstacles, buildings), spawn: world.spawn,
+  });
+  const playerFootprint = () => ({ x: player.position.x, z: player.position.z, radius: config.player.radius });
+  let pendingConstruction: 'place' | 'demolish' | null = null;
   let createdInput: InputManager;
   const closeInventory = (): void => {
     if (!inventoryUI?.isOpen) return;
-    inventoryUI.closePanel();
-    // Synchronous with the key/button gesture so the browser can grant lock.
-    createdInput.resumeFromModal();
+    inventoryUI.closePanel(); createdInput.resumeFromModal();
+  };
+  const closeConstruction = (): void => {
+    if (!constructionUI?.isOpen) return;
+    constructionUI.closePanel(); createdInput.resumeFromModal();
   };
   inventoryUI = new InventoryUI(inventoryRoot, inventory, closeInventory);
+  constructionUI = new ConstructionUI(constructionRoot, buildingRegistry, inventory, (id) => {
+    construction.select(id); closeConstruction();
+    interactionPrompt.showFeedback('Aim at nearby ground. R rotates · C places · Esc cancels.');
+  }, closeConstruction);
   createdInput = new InputManager(canvas as HTMLCanvasElement, {
     onPointerLockChange: (locked) => controlsHint.setPointerLocked(locked),
     onInventoryToggle: () => {
+      if (constructionUI?.isOpen) return;
       if (inventoryUI?.isOpen) closeInventory();
-      else { createdInput.suspendForModal(); inventoryUI?.open(); }
+      else { construction.cancel(); pendingConstruction = null; player.stopHorizontalMotion(); createdInput.suspendForModal(); inventoryUI?.open(); }
     },
     onInventoryClose: closeInventory,
+    onConstructionKey: (code) => {
+      if (inventoryUI?.isOpen) return code !== 'Escape';
+      if (code === 'Escape') {
+        if (constructionUI?.isOpen) { closeConstruction(); return true; }
+        if (construction.active) { construction.cancel(); pendingConstruction = null; return true; }
+        return false;
+      }
+      if (code === 'KeyQ') {
+        if (constructionUI?.isOpen) closeConstruction();
+        else if (construction.active) { construction.cancel(); pendingConstruction = null; }
+        else { pendingConstruction = null; player.stopHorizontalMotion(); createdInput.suspendForModal(); constructionUI?.open(); }
+        return true;
+      }
+      if (constructionUI?.isOpen) return true;
+      if (code === 'KeyR' && construction.active) { construction.rotate(); return true; }
+      if (code === 'KeyC' && construction.active) { pendingConstruction = 'place'; return true; }
+      if (code === 'KeyF' && !construction.active) { pendingConstruction = 'demolish'; return true; }
+      return false;
+    },
   });
   input = createdInput;
-
-  const player = new PlayerController({
-    controls: config.controls,
-    player: config.player,
-    terrain: world.terrain,
-    obstacles: world.obstacles,
-    spawn: world.spawn,
-  });
 
   const interaction = new InteractionSystem({
     range: config.interaction.range,
@@ -162,16 +199,32 @@ async function boot(): Promise<void> {
     id: 'player-simulation',
     fixedUpdate: (fixedDeltaMs) => {
       const movement = createdInput.getMovement();
-      player.step(fixedDeltaMs / 1000, {
-        moveX: movement.right,
-        moveZ: movement.forward,
-        sprint: movement.sprint,
-        lookDeltaX: 0,
-        lookDeltaY: 0,
-        jump: createdInput.consumeJump(),
-      });
+      const jump = createdInput.consumeJump();
+      if (!constructionUI?.isOpen && !inventoryUI?.isOpen) {
+        player.step(fixedDeltaMs / 1000, {
+          moveX: movement.right,
+          moveZ: movement.forward,
+          sprint: movement.sprint,
+          lookDeltaX: 0,
+          lookDeltaY: 0,
+          jump,
+        });
+      }
 
-      if (createdInput.consumeInteract()) {
+      const action = pendingConstruction; pendingConstruction = null;
+      if (action === 'place' && construction.active && !constructionUI?.isOpen && !inventoryUI?.isOpen) {
+        const result = construction.confirm(player.view, playerFootprint());
+        interactionPrompt.showFeedback(result ? (result.reason === 'valid' ? 'Foundation placed.' : `Cannot place: ${result.reason}.`) : 'Aim at nearby ground.');
+      } else if (action === 'demolish' && !construction.active && !constructionUI?.isOpen && !inventoryUI?.isOpen) {
+        const target = construction.target(player.view);
+        if (!target) interactionPrompt.showFeedback('Aim at a placed building to demolish.');
+        else {
+          const result = buildings.demolish(target);
+          interactionPrompt.showFeedback(result === 'removed' ? 'Building demolished; materials refunded.' : `Cannot demolish: ${result}.`);
+        }
+      }
+      const interactPressed = createdInput.consumeInteract();
+      if (interactPressed && action === null && !construction.active && !constructionUI?.isOpen && !inventoryUI?.isOpen) {
         interaction.requestInteraction();
       }
     },
@@ -202,8 +255,15 @@ async function boot(): Promise<void> {
   createdGame.registerFrameSystem({
     id: 'interaction-presentation',
     update: () => {
-      inventoryUI?.update();
-      const target = inventoryUI?.isOpen ? null : interaction.target;
+      inventoryUI?.update(); constructionUI?.update();
+      const preview = construction.preview(player.view, playerFootprint());
+      engine.syncBuildings?.(buildings.all());
+      engine.setBuildingPreview?.(construction.selected, preview ?? undefined);
+      constructionStatus.hidden = !construction.active;
+      if (construction.active) constructionStatus.textContent = preview
+        ? `${preview.reason === 'valid' ? 'Valid placement' : `Cannot place: ${preview.reason}`} · R rotate · C place · Esc cancel`
+        : `Aim at ground within ${config.construction.reach} m · R rotate · Esc cancel`;
+      const target = inventoryUI?.isOpen || constructionUI?.isOpen || construction.active ? null : interaction.target;
       engine.setHighlight?.(target?.id ?? null);
 
       if (target === null) {
