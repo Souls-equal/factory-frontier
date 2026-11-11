@@ -7,6 +7,35 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Changed (CI/CD infrastructure)
+
+- `ci.yml` now validates pull requests only (`pull_request`, `workflow_dispatch`)
+  instead of also running on every `push`, removing the duplicate pipeline per PR
+  update and the second full pipeline on `main`.
+- Added `concurrency: ci-${{ github.ref }}` with `cancel-in-progress: true` so an
+  obsolete run for an older commit is cancelled rather than queued.
+- `deploy-pages.yml` splits concurrency by job: builds use
+  `pages-build-${{ github.ref }}` with `cancel-in-progress: true` (a newer commit
+  supersedes a stale build) while deploys use `pages-deploy` with
+  `cancel-in-progress: false` (deployments never interleave or cancel mid-flight).
+- Removed the workflow-wide `pages` concurrency group that made every new push wait
+  behind a running build/deploy pair.
+- Updated actions to maintained majors: `checkout@v7`, `setup-node@v7`,
+  `configure-pages@v6`, `upload-pages-artifact@v5`, `deploy-pages@v5`. Added
+  `timeout-minutes` to all jobs.
+- Deployment no longer repeats `verify:preview`/`verify:dev`; those dev-server
+  checks remain in CI, while the deploy gate runs tests, type-checked build and
+  `verify:build`.
+- `README.md` and `PROJECT_STATUS.md` now describe the workflow structure and the
+  GitHub Actions Pages source accurately (the previous "Pages uses branch
+  deployment" statement was outdated).
+
+### Notes
+
+- No game code, tests, configuration or dependencies changed.
+- The 2026-11-11 queued runs and `startup_failure` were caused by GitHub incident
+  `dvy0t3mvh1lg` (Actions/Pages `major_outage`), not by the workflows.
+
 ### Planned
 
 - Complete Phase 1 — playable 3D environment: terrain, gravity, jumping, collision

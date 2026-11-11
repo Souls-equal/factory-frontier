@@ -1,5 +1,10 @@
 name: Deploy GitHub Pages
 
+# The single deployment pipeline: every push to `main` (and manual dispatch)
+# validates, builds and publishes `dist/` to GitHub Pages.
+#
+# Pushes to `main` are intentionally *not* covered by ci.yml, so each commit is
+# validated exactly once before it goes live.
 on:
   push:
     branches: [main]
@@ -10,21 +15,24 @@ permissions:
   pages: write
   id-token: write
 
-concurrency:
-  group: pages
-  cancel-in-progress: false
-
 jobs:
   build:
     name: Build production site
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # Builds supersede each other: a newer commit cancels a build that has not
+    # reached the deploy job yet, so an obsolete artifact is never published.
+    concurrency:
+      group: pages-build-${{ github.ref }}
+      cancel-in-progress: true
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -32,28 +40,28 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Type-check
-        run: npm run typecheck
-
       - name: Unit tests
         run: npm test
 
-      # The production base path defaults to /factory-frontier/. If the
-      # repository is renamed or served from a custom domain, set the
-      # VITE_BASE_PATH repository variable (for example "/").
-      - name: Build
+      # `npm run build` runs `tsc --noEmit` before bundling.
+      # Vite resolves the production base path from VITE_BASE_PATH, defaulting to
+      # `/factory-frontier/` (see vite.config.ts). Set the repository variable for
+      # a renamed repository or a custom domain.
+      - name: Production build
         run: npm run build
         env:
           VITE_BASE_PATH: ${{ vars.VITE_BASE_PATH }}
 
-      - name: Verify build output
+      - name: Verify build output (GitHub Pages base path)
         run: npm run verify:build
+        env:
+          VITE_BASE_PATH: ${{ vars.VITE_BASE_PATH }}
 
       - name: Configure Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: dist
 
@@ -61,6 +69,14 @@ jobs:
     name: Deploy
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # Deployments never run concurrently, and an in-flight deployment is never
+    # cancelled — only its superseded build is.
+    concurrency:
+      group: pages-deploy
+      cancel-in-progress: false
+
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -68,4 +84,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

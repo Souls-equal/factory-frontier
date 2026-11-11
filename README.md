@@ -180,13 +180,24 @@ VITE_BASE_PATH=/ npm run build      # custom domain at the root
 VITE_BASE_PATH=/games/ff/ npm run build
 ```
 
-`.github/workflows/deploy-pages.yml` builds, tests and deploys `dist/` to GitHub
-Pages on every push to `main`. **Required repository setting:** Pages → Build and
-deployment → Source = **GitHub Actions**. (The repository currently still has the
-legacy branch source configured, which publishes raw source files instead of
-`dist/`; the workflow itself succeeds, but the live site is only correct after
-that setting is changed.) For a renamed repository or custom domain, set the
-`VITE_BASE_PATH` repository variable.
+There are exactly two workflows, with disjoint responsibilities:
+
+| Workflow | Trigger | Purpose |
+|---|---|---|
+| `.github/workflows/ci.yml` | `pull_request`, `workflow_dispatch` | Validate a PR: `npm ci`, type-check, tests, production build, `verify:build`, `verify:preview`, `verify:dev` |
+| `.github/workflows/deploy-pages.yml` | `push` to `main`, `workflow_dispatch` | Tests, builds, verifies and deploys `dist/` to GitHub Pages |
+
+CI does **not** run on pushes to `main`; the deployment workflow runs the same
+production gate there, so no commit is validated twice. Concurrency is scoped so a
+newer commit supersedes a stale run without cancelling a deployment that is
+already in flight (`ci-${{ github.ref }}` and `pages-build-${{ github.ref }}` use
+`cancel-in-progress: true`; `pages-deploy` serialises deployments with
+`cancel-in-progress: false`).
+
+**Required repository setting:** Pages → Build and deployment → Source =
+**GitHub Actions**. With the branch source selected, GitHub publishes the raw
+repository (unbundled `index.html`/`src/*.ts`) instead of `dist/`. For a renamed
+repository or custom domain, set the `VITE_BASE_PATH` repository variable.
 
 No backend, account or database is required. The build is fully static and uses
 relative-to-base asset URLs.
