@@ -2,10 +2,41 @@
 
 **Project:** Factory Frontier
 **Version:** 0.3.0
-**Current Phase:** Phase 2 — Resources and Inventory
-**Phase Status:** 🟡 Implemented; acceptance pending browser verification and placement limitations
-**Next Recommended Task:** Manual browser verification of the Phase 1/2 resource loop and collision regression
+**Current Phase:** Phase 2.1 — Inventory UX Improvements
+**Phase Status:** 🟡 Improvements implemented and automatically tested; browser verification pending
+**Next Recommended Task:** Browser-check drag-and-drop, pointer-lock restoration and full inventory
 **Last Updated:** 2026-11-11
+
+---
+
+## Phase 2.1 — Inventory UX improvements (2026-11-11)
+
+- The user reports that the earlier Phase 2 browser acceptance passed overall for
+  terrain, movement/collision, resources, interaction, inventory opening/stack
+  operations and modal input isolation. The user also reports that a completely
+  full inventory had not yet been manually tested. This is a user report, not a
+  browser run by this agent.
+- Inventory slots now use native drag-and-drop: empty destination moves a stack,
+  compatible destination merges up to the stack limit, incompatible occupied
+  destination swaps atomically. Selection is inspection only; outside drops cancel,
+  and a changed inventory revision cancels stale drags. Half-stack split remains.
+- Opening inventory remembers whether the game held pointer lock and releases it.
+  Closing through Tab, Escape or the close button synchronously requests recapture
+  only if it was previously held. If the browser denies that request, the existing
+  click-to-capture / drag-look fallback remains. Browsers do not permit scripts to
+  reposition the physical cursor, so recapture uses relative pointer movement.
+- New tests cover moves, partial merges, swaps, cancelled/stale drags, selection,
+  pointer-lock restoration and rejection, a full 24-slot inventory, gathering
+  with no capacity, and gathering across multiple partial stacks with remainder.
+  `npm run typecheck`, `npm test`, `npm run build`, and `npm run verify` passed:
+  **314 tests in 27 files**. Existing click-to-move UI test was updated because
+  that behavior was intentionally replaced by drag-and-drop.
+- The agent did **not** perform browser-level verification of these changes:
+  headless Chromium in the sandbox is missing NSS/NSPR system libraries. Verify
+  native drag-and-drop (including cancelling outside the panel), split/merge/swap,
+  pointer-lock restore and denial fallback, and full/partial gathering in a real
+  browser. Native HTML drag-and-drop has no dedicated keyboard move alternative.
+- No Phase 3 systems were implemented.
 
 ---
 
@@ -28,9 +59,9 @@
 
 ## Phase 2 — Resources and inventory (2026-11-11)
 
-Implemented, but **not accepted as complete**: WebGL, pointer lock, resource
-readability and in-browser controls have not been manually verified. Phase 1
-browser acceptance is also pending.
+Historical implementation notes: the user subsequently reported the original Phase
+2 browser checks passed overall. Full-inventory behavior was not manually checked,
+and the new Phase 2.1 UX requires its own browser verification.
 
 - Central registry: six raw resources, unique IDs, descriptions, icons and stack
   limits; no water item. The solid slot inventory is renderer-independent and
@@ -46,7 +77,7 @@ browser acceptance is also pending.
   partial/full results appear in its feedback. Inventory opens with Tab, closes
   with Tab/Escape/button, and supports slot selection, inspection, moving,
   merging and half-stack splitting. Modal input clears held/queued actions and
-  releases pointer lock; after closing click the viewport to recapture it.
+  releases pointer lock; Phase 2.1 now attempts to restore previous capture.
 - `npm run typecheck`, `npm test`, `npm run build`, `npm run verify` all passed:
   **299 tests in 27 files**, including the real bootstrap with mocked WebGL, seeded
   generation across 20 seeds, registry/inventory conservation, targeting and
@@ -60,11 +91,7 @@ browser acceptance is also pending.
   per-position slope/spacing check does not prove paths are reachable. Interaction
   still has no line-of-sight occlusion. Deposits are infinite and inventory does
   not persist between reloads; both are intentional for this phase.
-- Required browser checks: appearance and placement of all six resource types;
-  discovery and sustained collision pressure; mouse look, movement, sprint and
-  jump; aiming, purity, E repeat prevention, success/partial/full feedback; Tab,
-  Escape, close button, pointer-lock release/recapture; selecting, moving,
-  splitting and merging stacks; inventory capacity and controls isolation.
+- Remaining browser checks for the new changes are listed in the Phase 2.1 section.
 
 ---
 
@@ -207,15 +234,15 @@ GitHub Actions. Last confirmed deployment: `7721488024` (run `43102108684`).
 This task's merge is deployed by the same pipeline; the result is recorded below.
 
 - **Previous v0.3.0 Pages deployment:** run `43105952909`, deployment
-  `7721918068`, on merge `8d30fbd`, succeeded. This Phase 2 work is not deployed until merged and a subsequent deployment succeeds.
+  `7721918068`, on merge `8d30fbd`, succeeded. Phase 2 was subsequently merged; deployment of this Phase 2.1 work has not been verified.
 
 ---
 
 ## Known Issues and Limitations
 
-1. **No real-browser verification in this environment.** WebGL rasterization,
-   pointer lock and visual output were not executed. Geometry, physics, targeting
-   and UI state are covered by Node/jsdom tests and HTTP checks.
+1. **No browser verification by this agent for Phase 2.1.** The user reports the
+   earlier Phase 2 browser acceptance passed overall, except full-inventory testing.
+   New drag-and-drop and pointer-lock restoration need a real-browser pass.
 2. **Heightfield limitations.** No overhangs, caves or bridges; terrain is a
    function of XZ only. Chunk streaming, LOD and biome variety belong to Phase 10.
 3. **Collision approximation.** Rocks collide as vertical cylinders; the visual
@@ -240,7 +267,7 @@ This task's merge is deployed by the same pipeline; the result is recorded below
 
 ## Next Recommended Task
 
-1. Perform and record all manual browser checks above; investigate any failures.
+1. Perform and record the remaining Phase 2.1 browser checks above; investigate any failures.
 2. Address any constrained-generation or reachability issues discovered during
    testing. Do not start Phase 3 without explicit authorization and validated
    Phase 2 acceptance.

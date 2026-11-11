@@ -4,8 +4,8 @@ A first-person, browser-based 3D factory automation game. The player lands on an
 unexplored planet, extracts its resources, and builds increasingly complex
 automated production chains.
 
-**Status:** Phase 2 implemented; browser acceptance pending · Version 0.3.0 (unreleased changes)
-**Next step:** Browser verification of Phase 1 and Phase 2
+**Status:** Phase 2.1 inventory UX implemented; browser verification pending · Version 0.3.0 (unreleased changes)
+**Next step:** Browser verification of drag-and-drop, pointer-lock restoration and full inventory
 **Platform:** Desktop web browser (WebGL2) · **Stack:** TypeScript, Three.js, Vite
 
 ---
@@ -14,7 +14,8 @@ automated production chains.
 
 Phase 2 adds collectible resources and a slot inventory to the Phase 1 terrain,
 physics and interaction systems. Buildings, machines, power and saves are not yet
-implemented. Browser acceptance remains pending.
+implemented. The user reports earlier browser checks passed overall; Phase 2.1
+browser verification remains pending.
 
 What exists and works today:
 
@@ -37,7 +38,7 @@ What exists and works today:
   boulders and formations, player-following shadows, two interactable props.
 - A typed event bus, validated configuration, and a minimal boot/fatal/debug UI.
 - Seeded deposits, manual gathering, a slot inventory and an on-demand inventory UI.
-- 299 automated tests plus build/serve verification scripts (see below).
+- 314 automated tests plus build/serve verification scripts (see below).
 
 Deliberately **not** implemented yet: buildings, machines,
 conveyors, power, progression, persistence, audio. The survey beacon and relay mast
@@ -55,9 +56,10 @@ npm run dev
 
 Open <http://localhost:5173/>. Click the scene to capture the mouse, then move
 with **WASD**, sprint with **Shift**, jump with **Space**, look with the mouse and
-press **E** when the prompt appears; **Tab** opens the inventory. After closing it,
-click the viewport to recapture the mouse. Click-drag look works even if pointer lock is
-denied. Add `?debug=1` to the URL to show live engine statistics (FPS, frame time,
+press **E** when the prompt appears; **Tab** opens the inventory. Drag items to
+move, merge or swap, and select an item to split it. Closing attempts to restore
+previous pointer lock; if denied, click the viewport to recapture the mouse.
+Click-drag look works even if pointer lock is denied. Add `?debug=1` to the URL to show live engine statistics (FPS, frame time,
 simulation time, ticks, draw calls, triangles, frame systems).
 
 ### Controls
@@ -173,7 +175,7 @@ npm run verify
 This executes:
 
 1. `tsc --noEmit` — strict type checking.
-2. `vitest run` — 299 automated tests covering the clock, loop, event bus,
+2. `vitest run` — 314 automated tests covering the clock, loop, event bus,
    configuration, lifecycle, engine composition, scene graph, input, player
    physics, terrain, obstacles, world assembly, interaction, prompt UI, frame
    systems, overlays, the real `main.ts` bootstrap (engine mocked at the
@@ -186,8 +188,8 @@ This executes:
 6. `verify-dev` — starts the dev server, fetches and transforms the module graph,
    and confirms Three.js resolves through Vite.
 
-**Rendering limitation:** this environment has no browser binary, so actual WebGL
-rasterization and real pointer-lock behaviour are not executed by the automated
+**Rendering limitation:** the available headless Chromium cannot launch without
+missing system libraries, so actual WebGL rasterization and real pointer-lock behaviour are not executed by the automated
 checks. Terrain data, physics, collision, targeting, scene construction and
 bootstrap wiring are tested in Node/jsdom, and the game must still be inspected in
 a browser before visual/polish claims are made.
@@ -252,8 +254,8 @@ content:
 | Phase | Scope | Status |
 |---|---|---|
 | 0 | Repository inspection and foundation | ✅ Complete |
-| 1 | Playable 3D environment | 🟡 Implemented; manual browser verification pending |
-| 2 | Resources and inventory | 🟡 Implemented; browser verification pending |
+| 1 | Playable 3D environment | 🟡 Implemented; user reports earlier browser checks passed overall |
+| 2 | Resources and inventory | 🟡 Implemented; Phase 2.1 and full-inventory browser checks pending |
 | 3 | Building and placement | Planned |
 | 4 | First automated extractor | Planned |
 | 5 | Conveyor foundation | Planned |

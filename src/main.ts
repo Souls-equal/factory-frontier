@@ -121,15 +121,17 @@ async function boot(): Promise<void> {
   if (!inventoryRoot) throw new Error('Application shell is missing inventory panel.');
   let createdInput: InputManager;
   const closeInventory = (): void => {
-    inventoryUI?.closePanel();
-    createdInput.setGameplayEnabled(true);
+    if (!inventoryUI?.isOpen) return;
+    inventoryUI.closePanel();
+    // Synchronous with the key/button gesture so the browser can grant lock.
+    createdInput.resumeFromModal();
   };
   inventoryUI = new InventoryUI(inventoryRoot, inventory, closeInventory);
   createdInput = new InputManager(canvas as HTMLCanvasElement, {
     onPointerLockChange: (locked) => controlsHint.setPointerLocked(locked),
     onInventoryToggle: () => {
       if (inventoryUI?.isOpen) closeInventory();
-      else { createdInput.setGameplayEnabled(false); inventoryUI?.open(); }
+      else { createdInput.suspendForModal(); inventoryUI?.open(); }
     },
     onInventoryClose: closeInventory,
   });
