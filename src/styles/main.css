@@ -1,0 +1,289 @@
+/* Factory Frontier — application shell styles (Phase 0).
+   The game world is the primary focus; UI stays minimal and unobtrusive. */
+
+:root {
+  --ff-bg: #050a10;
+  --ff-panel: rgba(10, 20, 28, 0.88);
+  --ff-border: rgba(90, 214, 232, 0.22);
+  --ff-accent: #5ad6e8;
+  --ff-accent-dim: rgba(90, 214, 232, 0.45);
+  --ff-warm: #ffcf8a;
+  --ff-text: #e6f1f5;
+  --ff-muted: #8ba3ae;
+  --ff-danger: #ff7a6b;
+  --ff-font: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --ff-mono: 'JetBrains Mono', 'SFMono-Regular', 'Cascadia Mono', Consolas, monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  overflow: hidden;
+  background: var(--ff-bg);
+  color: var(--ff-text);
+  font-family: var(--ff-font);
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+#game-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+}
+
+.is-hidden {
+  display: none !important;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+/* ---------- Minimal HUD label ---------- */
+
+.hud-brand {
+  position: absolute;
+  top: 18px;
+  left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.hud-brand__name {
+  font-family: var(--ff-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.26em;
+  color: var(--ff-text);
+  opacity: 0.82;
+}
+
+.hud-brand__phase {
+  font-family: var(--ff-mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--ff-accent);
+  opacity: 0.7;
+}
+
+/* ---------- Boot overlay ---------- */
+
+.boot {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(26, 68, 84, 0.55), transparent 62%),
+    linear-gradient(180deg, rgba(5, 10, 16, 0.72), rgba(5, 10, 16, 0.94));
+  backdrop-filter: blur(3px);
+  z-index: 10;
+}
+
+.boot::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(90, 214, 232, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(90, 214, 232, 0.045) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(circle at center, #000 0%, transparent 75%);
+  pointer-events: none;
+}
+
+.boot__panel {
+  position: relative;
+  width: min(440px, 100%);
+  padding: 34px 36px 30px;
+  border: 1px solid var(--ff-border);
+  border-radius: 14px;
+  background: linear-gradient(160deg, rgba(12, 25, 34, 0.94), rgba(7, 14, 20, 0.94));
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.boot__panel::after {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 36px;
+  right: 36px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--ff-accent), transparent);
+  opacity: 0.65;
+}
+
+.boot__eyebrow {
+  margin: 0 0 10px;
+  font-family: var(--ff-mono);
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  color: var(--ff-accent);
+}
+
+.boot__title {
+  margin: 0;
+  font-size: 40px;
+  line-height: 1.05;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  background: linear-gradient(100deg, #f4fbfd 20%, #a9dbe4 60%, var(--ff-warm) 120%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.boot__tagline {
+  margin: 12px 0 26px;
+  max-width: 32ch;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ff-muted);
+}
+
+.boot__progress {
+  position: relative;
+  height: 2px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: rgba(90, 214, 232, 0.12);
+}
+
+.boot__progress span {
+  position: absolute;
+  inset: 0;
+  width: 38%;
+  background: linear-gradient(90deg, transparent, var(--ff-accent), transparent);
+  animation: ff-sweep 1.4s ease-in-out infinite;
+}
+
+@keyframes ff-sweep {
+  0% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(290%);
+  }
+}
+
+.boot__status {
+  margin: 14px 0 0;
+  font-family: var(--ff-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ff-muted);
+}
+
+/* ---------- Fatal error panel ---------- */
+
+.fatal {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(5, 10, 16, 0.94);
+  z-index: 20;
+}
+
+.fatal__panel {
+  width: min(520px, 100%);
+  padding: 28px 30px;
+  border: 1px solid rgba(255, 122, 107, 0.35);
+  border-radius: 12px;
+  background: rgba(24, 12, 12, 0.9);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+}
+
+.fatal__eyebrow {
+  margin: 0 0 10px;
+  font-family: var(--ff-mono);
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  color: var(--ff-danger);
+}
+
+.fatal h2 {
+  margin: 0 0 12px;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.fatal__message {
+  margin: 0 0 16px;
+  font-family: var(--ff-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: #ffd6d0;
+  overflow-wrap: anywhere;
+}
+
+.fatal__hint {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ff-muted);
+}
+
+/* ---------- Debug statistics ---------- */
+
+.debug-stats {
+  position: absolute;
+  left: 20px;
+  bottom: 18px;
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid rgba(90, 214, 232, 0.18);
+  border-radius: 8px;
+  background: rgba(5, 12, 18, 0.72);
+  color: #a9e6ef;
+  font-family: var(--ff-mono);
+  font-size: 10.5px;
+  line-height: 1.65;
+  pointer-events: none;
+  user-select: none;
+  white-space: pre;
+  z-index: 5;
+}
+
+@media (max-width: 560px) {
+  .boot__panel {
+    padding: 26px 22px 24px;
+  }
+
+  .boot__title {
+    font-size: 32px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boot__progress span {
+    animation: none;
+    width: 100%;
+    opacity: 0.35;
+  }
+}

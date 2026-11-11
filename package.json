@@ -1,0 +1,33 @@
+{
+  "name": "factory-frontier",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Factory Frontier \u2014 a browser-based 3D factory automation game.",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run typecheck && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "verify:build": "node scripts/verify-build.mjs",
+    "verify:preview": "node scripts/verify-preview.mjs",
+    "verify:dev": "node scripts/verify-dev-server.mjs",
+    "verify": "npm run typecheck && npm run test && npm run build && npm run verify:build && npm run verify:preview && npm run verify:dev"
+  },
+  "dependencies": {
+    "three": "0.187.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "@types/three": "0.187.0",
+    "jsdom": "^27.0.0",
+    "typescript": "5.9.3",
+    "vite": "8.3.8",
+    "vitest": "5.1.0"
+  }
+}

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Factory Frontier">
+  <rect width="64" height="64" rx="14" fill="#0b1522"/>
+  <path d="M32 9 51 20v24L32 55 13 44V20Z" fill="none" stroke="#5ad6e8" stroke-width="2.5" opacity="0.85"/>
+  <path d="M22 43V27l7 5 7-5v16h-5V33l-2 1.5-2-1.5v10Z" fill="#e6f1f5"/>
+  <circle cx="44" cy="22" r="3" fill="#ffcf8a"/>
+</svg>
