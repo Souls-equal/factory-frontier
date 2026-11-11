@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Factory Frontier — a browser-based 3D factory automation game. Phase 0 foundation build."
+    />
+    <meta name="theme-color" content="#050a10" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Factory Frontier</title>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game-canvas" aria-label="Factory Frontier 3D viewport"></canvas>
+
+      <div class="hud-brand" aria-hidden="true">
+        <span class="hud-brand__name">FACTORY FRONTIER</span>
+        <span class="hud-brand__phase">PHASE 0 · FOUNDATION</span>
+      </div>
+
+      <pre class="debug-stats is-hidden" data-ui="debug-stats" aria-hidden="true"></pre>
+
+      <div class="boot" data-ui="boot">
+        <div class="boot__panel">
+          <p class="boot__eyebrow">FACTORY FRONTIER</p>
+          <h1 class="boot__title">Foundation</h1>
+          <p class="boot__tagline">Rendering pipeline and deterministic simulation core</p>
+          <div class="boot__progress" aria-hidden="true"><span></span></div>
+          <p class="boot__status" data-ui="boot-status" role="status" aria-live="polite">
+            Initializing…
+          </p>
+        </div>
+      </div>
+
+      <div class="fatal" data-ui="fatal" role="alert" hidden>
+        <div class="fatal__panel">
+          <p class="fatal__eyebrow">STARTUP FAILURE</p>
+          <h2>Unable to start Factory Frontier</h2>
+          <p class="fatal__message" data-ui="fatal-message"></p>
+          <p class="fatal__hint">
+            Factory Frontier requires a desktop browser with WebGL2 and hardware acceleration
+            enabled. Reload the page after enabling it.
+          </p>
+        </div>
+      </div>
+
+      <noscript>
+        <div class="fatal">
+          <div class="fatal__panel">
+            <h2>JavaScript is required</h2>
+            <p class="fatal__message">Factory Frontier is a browser game and needs JavaScript enabled.</p>
+          </div>
+        </div>
+      </noscript>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
