@@ -277,3 +277,48 @@ describe('InputManager action edges', () => {
     expect(input.consumeInteract()).toBe(false);
   });
 });
+
+describe('inventory modal input isolation', () => {
+  it('releases a late pointer-lock grant while the modal is open', () => {
+    const canvas = document.createElement('canvas'); document.body.append(canvas);
+    const exit = vi.fn();
+    Object.defineProperty(document, 'pointerLockElement', { configurable: true, value: canvas });
+    Object.defineProperty(document, 'exitPointerLock', { configurable: true, value: exit });
+    const input = new InputManager(canvas);
+    input.setGameplayEnabled(false);
+    exit.mockClear();
+    document.dispatchEvent(new Event('pointerlockchange'));
+    expect(exit).toHaveBeenCalledOnce();
+    input.dispose();
+    Reflect.deleteProperty(document, 'pointerLockElement');
+    Reflect.deleteProperty(document, 'exitPointerLock');
+    canvas.remove();
+  });
+
+  it('toggles via Tab, clears held actions and look, and restores controls', () => {
+    const canvas = document.createElement('canvas'); document.body.append(canvas);
+    let opened = false;
+    let input: InputManager;
+    input = new InputManager(canvas, {
+      onInventoryToggle: () => { opened = !opened; input.setGameplayEnabled(!opened); },
+      onInventoryClose: () => { opened = false; input.setGameplayEnabled(true); },
+    });
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyE' }));
+    expect(input.getMovement().forward).toBe(1);
+    const tab = new KeyboardEvent('keydown', { code: 'Tab', cancelable: true });
+    window.dispatchEvent(tab);
+    expect(tab.defaultPrevented).toBe(true); expect(opened).toBe(true);
+    expect(input.getMovement().forward).toBe(0); expect(input.consumeInteract()).toBe(false);
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' }));
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyE' }));
+    window.dispatchEvent(new MouseEvent('mousemove', { clientX: 100, clientY: 100 }));
+    expect(input.getMovement().forward).toBe(0); expect(input.consumeJump()).toBe(false);
+    expect(input.consumeInteract()).toBe(false); expect(input.consumeLookDelta()).toEqual({ x: 0, y: 0 });
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape' }));
+    expect(opened).toBe(false);
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW' }));
+    expect(input.getMovement().forward).toBe(1); input.dispose(); canvas.remove();
+  });
+});

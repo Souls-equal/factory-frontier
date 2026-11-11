@@ -4,17 +4,17 @@ A first-person, browser-based 3D factory automation game. The player lands on an
 unexplored planet, extracts its resources, and builds increasingly complex
 automated production chains.
 
-**Status:** Phase 1 implemented; browser acceptance pending · Version 0.3.0
-**Next phase:** Phase 2 — resources and inventory (requires authorization)
+**Status:** Phase 2 implemented; browser acceptance pending · Version 0.3.0 (unreleased changes)
+**Next step:** Browser verification of Phase 1 and Phase 2
 **Platform:** Desktop web browser (WebGL2) · **Stack:** TypeScript, Three.js, Vite
 
 ---
 
 ## Current state
 
-Phase 1 is implemented: the player explores a real, procedurally generated terrain
-with gravity, jumping, collision and a central interaction system. Factory gameplay
-(inventory, buildings, machines, power, saves) has **not** started.
+Phase 2 adds collectible resources and a slot inventory to the Phase 1 terrain,
+physics and interaction systems. Buildings, machines, power and saves are not yet
+implemented. Browser acceptance remains pending.
 
 What exists and works today:
 
@@ -36,9 +36,10 @@ What exists and works today:
 - **Environment:** vertex-coloured terrain, sky dome, horizon fog, instanced
   boulders and formations, player-following shadows, two interactable props.
 - A typed event bus, validated configuration, and a minimal boot/fatal/debug UI.
-- 271 automated tests plus build/serve verification scripts (see below).
+- Seeded deposits, manual gathering, a slot inventory and an on-demand inventory UI.
+- 299 automated tests plus build/serve verification scripts (see below).
 
-Deliberately **not** implemented yet: inventory, resources, buildings, machines,
+Deliberately **not** implemented yet: buildings, machines,
 conveyors, power, progression, persistence, audio. The survey beacon and relay mast
 are environment props that demonstrate the interaction contract — not gameplay
 systems.
@@ -54,7 +55,8 @@ npm run dev
 
 Open <http://localhost:5173/>. Click the scene to capture the mouse, then move
 with **WASD**, sprint with **Shift**, jump with **Space**, look with the mouse and
-press **E** when the prompt appears. Click-drag look works even if pointer lock is
+press **E** when the prompt appears; **Tab** opens the inventory. After closing it,
+click the viewport to recapture the mouse. Click-drag look works even if pointer lock is
 denied. Add `?debug=1` to the URL to show live engine statistics (FPS, frame time,
 simulation time, ticks, draw calls, triangles, frame systems).
 
@@ -67,7 +69,8 @@ simulation time, ticks, draw calls, triangles, frame systems).
 | Space | Jump (grounded only; holding does not repeat) |
 | Shift | Sprint |
 | E | Interact with the highlighted target |
-| Esc | Release pointer lock |
+| Tab | Open or close inventory |
+| Esc | Close inventory, or release pointer lock |
 
 Key remapping is intentionally not implemented yet (Phase 13 settings).
 
@@ -96,6 +99,9 @@ index.html
         │     ├── terrain/TerrainHeightfield.ts  seeded heights, normals, slopes, render data
         │     ├── ObstacleField.ts  cylinder collision + spatial hash
         │     └── noise.ts, rng.ts  deterministic generation
+        ├── items/                  item registry + slot inventory (no rendering)
+        ├── resources/              seeded deposits + gathering interactables
+        ├── ui/InventoryUI.ts        inventory modal consuming actual state
         ├── player/PlayerController.ts  Three-free physics: gravity, jump, slopes, collision
         ├── interaction/
         │     ├── InteractionSystem.ts  raycast targeting, edge-triggered execution
@@ -167,7 +173,7 @@ npm run verify
 This executes:
 
 1. `tsc --noEmit` — strict type checking.
-2. `vitest run` — 271 automated tests covering the clock, loop, event bus,
+2. `vitest run` — 299 automated tests covering the clock, loop, event bus,
    configuration, lifecycle, engine composition, scene graph, input, player
    physics, terrain, obstacles, world assembly, interaction, prompt UI, frame
    systems, overlays, the real `main.ts` bootstrap (engine mocked at the
@@ -247,7 +253,7 @@ content:
 |---|---|---|
 | 0 | Repository inspection and foundation | ✅ Complete |
 | 1 | Playable 3D environment | 🟡 Implemented; manual browser verification pending |
-| 2 | Resources and inventory | Planned |
+| 2 | Resources and inventory | 🟡 Implemented; browser verification pending |
 | 3 | Building and placement | Planned |
 | 4 | First automated extractor | Planned |
 | 5 | Conveyor foundation | Planned |

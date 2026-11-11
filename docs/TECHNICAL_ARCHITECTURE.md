@@ -669,7 +669,7 @@ No save code exists yet. The design baseline to implement in Phase 12:
 
 Until Phase 12 there is no autosave, no save slots and no persistence claims.
 
-## B.6 Data-driven definitions baseline (Phases 2–7 — not implemented)
+## B.6 Data-driven definitions baseline (historical; see Appendix D for Phase 2)
 
 Machine, recipe, item and resource data will be immutable definitions loaded from
 validated data modules, with registries owning lookup and referential integrity:
@@ -831,3 +831,40 @@ currently guarantee seamless borders between independently generated chunks.
 - Rock collision is an inscribed cylinder approximation of the visual mesh; the
   visual silhouette can extend slightly past the collider.
 - No soft-body/rigid-body physics; the player is the only simulated body.
+
+
+---
+
+# APPENDIX D — PHASE 2 RESOURCE AND INVENTORY SYSTEMS
+
+`ItemRegistry` is the authoritative source of item IDs, presentation metadata
+and stack limits. `Inventory` stores only item IDs and quantities; its operations
+validate input before mutation and report actual moved quantities, including
+partial adds/removals/transfers. UI reads snapshots and revisions; no Three.js
+objects or DOM nodes enter inventory state. Transfer between distinct inventories
+preserves items; slot moving/merging and half-stack splitting use the same model.
+
+`generateDeposits` creates seeded clusters from terrain and obstacle data, with
+independent IDs, resource type, position, purity and future extraction metadata.
+Placement rejects spawn/solid/deposit overlaps and steep samples. Attempts are
+bounded, so constrained configurations can place fewer than requested; reachable
+paths are not guaranteed. Purity multipliers are configurable but do not affect
+manual gathering. Deposits are infinite and not persistent in this phase.
+
+`DepositInteractable` adapts a logical deposit and inventory to the existing
+`Interactable` contract; the existing fixed-step interaction system owns raycast,
+range checks and E-edge consumption. Feedback uses the actual added quantity.
+`EnvironmentView` derives geometry/materials/highlight from logical deposits and
+shares geometry and per-type materials. Deposit colliders use the existing obstacle
+field; no visual object owns gameplay state.
+
+`InventoryUI` renders snapshots and invokes inventory operations. `InputManager`
+remains the sole gameplay input layer; it suspends and clears gameplay input and
+releases pointer lock while the inventory is open. Closing restores controls but
+requires a click to recapture the pointer. The existing game loop remains unchanged.
+No machines, recipes, building or persistence systems were introduced.
+
+Automated tests exercise the registry, inventory conservation, seeded generation,
+gathering and full/partial outcomes, modal input, scene construction and the real
+bootstrap with a mocked WebGL engine. Browser rendering and real pointer-lock UX
+remain unverified.

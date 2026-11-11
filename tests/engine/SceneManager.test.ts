@@ -120,6 +120,19 @@ describe('SceneManager', () => {
     expect(manager.scene.children).toHaveLength(0);
   });
 
+  it('renders and highlights the logical deposit identities', () => {
+    const { manager, world } = createHarness();
+    expect(world.deposits.length).toBeGreaterThan(0);
+    const deposit = world.deposits[0]; if (!deposit) throw new Error('missing deposit');
+    const model = manager.scene.getObjectByName(`environment:deposit:${deposit.id}`);
+    const ring = manager.scene.getObjectByName(`environment:deposit:${deposit.id}:highlight-ring`);
+    expect(model?.position.y).toBeCloseTo(deposit.y, 6);
+    expect(ring?.visible).toBe(false);
+    manager.setHighlight(deposit.id); expect(ring?.visible).toBe(true);
+    manager.setHighlight(null); expect(ring?.visible).toBe(false);
+    manager.dispose();
+  });
+
   it('does not mutate world data while building the scene', () => {
     const config = createGameConfig({ world: { resolution: 12, obstacleCount: 4, sizeMeters: 60 } });
     const world: World = createWorld(config);

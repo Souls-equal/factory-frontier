@@ -1,4 +1,5 @@
 import type { GameConfig } from '../core/Configuration';
+import { generateDeposits, type ResourceDeposit } from '../resources/ResourceDeposit';
 import { ObstacleField, type ObstacleDefinition } from './ObstacleField';
 import { createRandom } from './rng';
 import { TerrainHeightfield } from './terrain/TerrainHeightfield';
@@ -45,6 +46,7 @@ export interface World {
   readonly obstacles: ObstacleField;
   readonly obstacleDefinitions: readonly ObstacleDefinition[];
   readonly interactables: readonly InteractableDefinition[];
+  readonly deposits: readonly ResourceDeposit[];
   readonly spawn: WorldSpawn;
 }
 
@@ -68,13 +70,20 @@ export function createWorld(config: GameConfig): World {
   });
 
   const interactables = createInteractables(terrain, interaction.targetRadius);
-  const obstacles = createObstacles(terrain, worldConfig, interactables);
+  const original = createObstacles(terrain, worldConfig, interactables);
+  const deposits = generateDeposits(terrain, original.definitions, worldConfig.seed,
+    { x: SPAWN_X, z: SPAWN_Z }, config.resources, config.controls.playAreaRadius);
+  const obstacles = new ObstacleField([...original.definitions, ...deposits.map((deposit) => ({
+    id: `${deposit.id}-collider`, kind: 'prop' as const, x: deposit.x, y: deposit.y,
+    z: deposit.z, radius: deposit.radius, height: 1.5, yaw: 0, variant: 0,
+  }))]);
 
   return {
     terrain,
     obstacles,
     obstacleDefinitions: obstacles.definitions,
     interactables,
+    deposits,
     spawn: {
       x: SPAWN_X,
       y: terrain.heightAt(SPAWN_X, SPAWN_Z),

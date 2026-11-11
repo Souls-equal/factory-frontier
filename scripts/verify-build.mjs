@@ -66,6 +66,7 @@ check(
   'entry HTML contains the interaction feedback slot',
   html.includes('data-ui="interaction-feedback"'),
 );
+check('entry HTML contains inventory controls', html.includes('data-ui="inventory"') && html.includes('data-inventory-grid') && html.includes('data-inventory-split'));
 check(
   'favicon is referenced under the base path',
   html.includes(`${expectedBase}favicon.svg`),

@@ -139,3 +139,24 @@ describe('ObstacleField', () => {
   });
 
 });
+
+describe('collision stability before Phase 2', () => {
+  it('leaves contact cleanly after sustained pressure against nearby cylinders', () => {
+    const make = (id: string, x: number): ObstacleDefinition => ({
+      id, kind: 'boulder', x, y: 0, z: 0, radius: 1, height: 3, yaw: 0, variant: 0,
+    });
+    const field = new ObstacleField([make('left', -1), make('right', 1)]);
+    let x = 0;
+    let z = 2;
+    for (let i = 0; i < 500; i++) {
+      const result = field.moveCircle(x, z, 0, -0.1, 0.4, 0, 1.8);
+      expect(Math.hypot(result.x - x, result.z - z)).toBeLessThanOrEqual(0.1000001);
+      expect(Math.hypot(result.x - 1, result.z)).toBeGreaterThanOrEqual(1.4 - 1e-7);
+      expect(Math.hypot(result.x + 1, result.z)).toBeGreaterThanOrEqual(1.4 - 1e-7);
+      x = result.x; z = result.z;
+    }
+    const leaving = field.moveCircle(x, z, 0, 0.25, 0.4, 0, 1.8);
+    expect(leaving.z - z).toBeCloseTo(0.25, 7);
+    expect(leaving.blocked).toBe(false);
+  });
+});

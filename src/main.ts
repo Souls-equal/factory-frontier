@@ -4,6 +4,10 @@ import { createGameConfig } from './core/Configuration';
 import { Game } from './core/Game';
 import { Engine } from './engine/Engine';
 import { InputManager } from './input/InputManager';
+import { Inventory } from './items/Inventory';
+import { createDefaultItemRegistry } from './items/ItemRegistry';
+import { DepositInteractable } from './resources/ResourceDeposit';
+import { InventoryUI } from './ui/InventoryUI';
 import { InteractionSystem } from './interaction/InteractionSystem';
 import { createWorldInteractables } from './interaction/WorldInteractables';
 import { PlayerController } from './player/PlayerController';
@@ -46,6 +50,7 @@ const config = createGameConfig({
 let game: Game | undefined;
 let input: InputManager | undefined;
 let statsTimer: number | undefined;
+let inventoryUI: InventoryUI | undefined;
 
 function measureViewport(): { width: number; height: number } {
   const width = app?.clientWidth ?? 0;
@@ -73,6 +78,8 @@ function shutdown(): void {
   input?.dispose();
   input = undefined;
   interactionPrompt.dispose();
+  inventoryUI?.dispose();
+  inventoryUI = undefined;
   game?.dispose();
 }
 
@@ -108,8 +115,23 @@ async function boot(): Promise<void> {
   await createdGame.init();
 
   overlay.setBootStatus('Wiring first-person controls…');
-  const createdInput = new InputManager(canvas as HTMLCanvasElement, {
+  const registry = createDefaultItemRegistry();
+  const inventory = new Inventory(registry, config.resources.inventorySlots);
+  const inventoryRoot = document.querySelector<HTMLElement>('[data-ui="inventory"]');
+  if (!inventoryRoot) throw new Error('Application shell is missing inventory panel.');
+  let createdInput: InputManager;
+  const closeInventory = (): void => {
+    inventoryUI?.closePanel();
+    createdInput.setGameplayEnabled(true);
+  };
+  inventoryUI = new InventoryUI(inventoryRoot, inventory, closeInventory);
+  createdInput = new InputManager(canvas as HTMLCanvasElement, {
     onPointerLockChange: (locked) => controlsHint.setPointerLocked(locked),
+    onInventoryToggle: () => {
+      if (inventoryUI?.isOpen) closeInventory();
+      else { createdInput.setGameplayEnabled(false); inventoryUI?.open(); }
+    },
+    onInventoryClose: closeInventory,
   });
   input = createdInput;
 
@@ -127,6 +149,10 @@ async function boot(): Promise<void> {
   });
   for (const interactable of createWorldInteractables(world.interactables)) {
     interaction.register(interactable);
+  }
+  for (const deposit of world.deposits) {
+    interaction.register(new DepositInteractable(deposit, inventory, registry,
+      config.resources.gatherQuantity, config.interaction.range));
   }
 
   // --- deterministic simulation stage -------------------------------------
@@ -174,7 +200,8 @@ async function boot(): Promise<void> {
   createdGame.registerFrameSystem({
     id: 'interaction-presentation',
     update: () => {
-      const target = interaction.target;
+      inventoryUI?.update();
+      const target = inventoryUI?.isOpen ? null : interaction.target;
       engine.setHighlight?.(target?.id ?? null);
 
       if (target === null) {

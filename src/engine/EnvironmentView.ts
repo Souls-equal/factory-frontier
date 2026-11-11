@@ -53,8 +53,7 @@ const PALETTE = Object.freeze({
 
 interface HighlightBinding {
   readonly ring: Mesh;
-  readonly cap: Mesh;
-  readonly capMaterial: MeshStandardMaterial;
+  readonly capMaterial?: MeshStandardMaterial;
 }
 
 export class EnvironmentView {
@@ -72,6 +71,7 @@ export class EnvironmentView {
     this.group.add(this.createSky());
     this.group.add(this.createTerrain(world));
     this.group.add(this.createRocks(world));
+    this.group.add(this.createDeposits(world));
 
     const props = new Group();
     props.name = 'environment:props';
@@ -94,7 +94,7 @@ export class EnvironmentView {
     for (const [key, binding] of this.highlightBindings) {
       const active = key === id;
       binding.ring.visible = active;
-      binding.capMaterial.emissiveIntensity = active ? 3.2 : 1.4;
+      if (binding.capMaterial) binding.capMaterial.emissiveIntensity = active ? 3.2 : 1.4;
     }
   }
 
@@ -291,6 +291,39 @@ export class EnvironmentView {
     return rocks;
   }
 
+  private createDeposits(world: World): Group {
+    const group = new Group();
+    group.name = 'environment:deposits';
+    const rock = new IcosahedronGeometry(1, 0);
+    const wood = new CylinderGeometry(0.42, 0.52, 1.8, 7);
+    const ringGeometry = new TorusGeometry(1.05, 0.045, 6, 24);
+    const ringMaterial = new MeshBasicMaterial({ color: 0x8ff3ff });
+    this.registerGeometry(rock); this.registerGeometry(wood); this.registerGeometry(ringGeometry);
+    this.registerMaterial(ringMaterial);
+    const colors: Record<string, number> = { 'iron-ore': 0x63757c, 'copper-ore': 0xb87348,
+      limestone: 0xd0c8aa, coal: 0x202830, stone: 0x89928c, wood: 0x895e3c };
+    const materials = new Map<string, MeshStandardMaterial>();
+    for (const deposit of world.deposits) {
+      let material = materials.get(deposit.itemId);
+      if (!material) {
+        material = new MeshStandardMaterial({ color: colors[deposit.itemId] ?? 0x777777,
+          roughness: 0.8, metalness: deposit.itemId.endsWith('-ore') ? 0.45 : 0.05, flatShading: true });
+        materials.set(deposit.itemId, material); this.registerMaterial(material);
+      }
+      const model = new Group(); model.name = `environment:deposit:${deposit.id}`;
+      model.position.set(deposit.x, deposit.y, deposit.z);
+      const body = new Mesh(deposit.itemId === 'wood' ? wood : rock, material);
+      if (deposit.itemId !== 'wood') body.scale.set(0.8, 1.1, 0.8);
+      body.position.y = 0.85; body.castShadow = true; body.receiveShadow = true;
+      const ring = new Mesh(ringGeometry, ringMaterial);
+      ring.name = `${model.name}:highlight-ring`; ring.rotation.x = Math.PI / 2;
+      ring.position.y = 1.65; ring.visible = false;
+      model.add(body, ring); group.add(model);
+      this.highlightBindings.set(deposit.id, { ring });
+    }
+    return group;
+  }
+
   private createInteractableProp(definition: InteractableDefinition): Group {
     const prop = new Group();
     prop.name = `environment:prop:${definition.id}`;
@@ -358,7 +391,7 @@ export class EnvironmentView {
     ring.visible = false;
 
     prop.add(base, mast, cap, ring);
-    this.highlightBindings.set(definition.id, { ring, cap, capMaterial });
+    this.highlightBindings.set(definition.id, { ring, capMaterial });
     return prop;
   }
 
