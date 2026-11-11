@@ -86,7 +86,7 @@ export function createWorld(config: GameConfig, inventory = new Inventory(create
   return {
     terrain,
     buildings: new BuildingSystem(createDefaultBuildingRegistry(inventory.registry), inventory, terrain,
-      obstacles.definitions, config.construction.gridSize, config.controls.playAreaRadius),
+      obstacles.definitions, config.construction.gridSize, config.controls.playAreaRadius, deposits),
     obstacles,
     obstacleDefinitions: obstacles.definitions,
     interactables,

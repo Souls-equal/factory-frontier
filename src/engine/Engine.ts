@@ -1,6 +1,7 @@
 import { BuildingView } from './BuildingView';
 import type { BuildingRegistry } from '../buildings/BuildingRegistry';
 import type { BuildingInstance, PlacementResult } from '../buildings/BuildingSystem';
+import type { MachineState } from '../machines/Miner';
 import type { GameConfig } from '../core/Configuration';
 import { CameraManager } from './CameraManager';
 import { LightingManager } from './LightingManager';
@@ -86,6 +87,7 @@ export class Engine implements GameEngine {
 
   syncBuildings(buildings: readonly BuildingInstance[]): void { this.buildingView?.sync(buildings); }
   setBuildingPreview(typeId: string | null, result?: PlacementResult): void { this.buildingView?.setPreview(typeId, result); }
+  setMachineStates(states: readonly { readonly id: string; readonly state: MachineState }[]): void { this.buildingView?.setMachineStates(states); }
 
   setHighlight(id: string | null): void {
     if (this.disposed) {

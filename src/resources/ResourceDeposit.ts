@@ -15,7 +15,7 @@ export interface ResourceDeposit {
   readonly z: number;
   readonly radius: number;
   readonly purity: Purity;
-  /** Stored for future extraction; manual gathering is unaffected. */
+  /** Extraction multiplier based on purity; manual gathering is unaffected. */
   readonly productionMultiplier: number;
   readonly extractionCompatible: boolean;
 }
@@ -59,13 +59,13 @@ export function generateDeposits(terrain: TerrainQuery, obstacles: readonly Obst
 export class DepositInteractable implements Interactable {
   readonly descriptor;
   constructor(readonly deposit: ResourceDeposit, private readonly inventory: Inventory,
-    registry: ItemRegistry, private readonly gatherQuantity: number, range: number) {
+    registry: ItemRegistry, private readonly gatherQuantity: number, range: number, private readonly available: () => boolean = () => true) {
     const item = registry.get(deposit.itemId);
     this.descriptor = Object.freeze({ id: deposit.id, displayName: `${item.name} Deposit`,
       hint: `Purity: ${deposit.purity.toUpperCase()} · Gather`,
       position: Object.freeze({ x: deposit.x, y: deposit.y + 1.1, z: deposit.z }), targetRadius: 1.1, range });
   }
-  isAvailable(): boolean { return true; }
+  isAvailable(): boolean { return this.available(); }
   interact(): InteractionOutcome {
     const result = this.inventory.addItem(this.deposit.itemId, this.gatherQuantity);
     const name = this.inventory.registry.get(this.deposit.itemId).name;

@@ -37,7 +37,7 @@ export class ConstructionUI {
       button.type = 'button'; button.dataset.building = definition.id; button.className = 'construction__entry';
       const affordable = definition.cost.every((cost) => this.inventory.hasItem(cost.itemId, cost.quantity));
       button.disabled = !affordable;
-      const title = this.root.ownerDocument.createElement('strong'); title.textContent = definition.name;
+      const title = this.root.ownerDocument.createElement('strong'); title.textContent = definition.category ? `${definition.category} · ${definition.name}` : definition.name;
       const description = this.root.ownerDocument.createElement('span'); description.textContent = definition.description;
       const cost = this.root.ownerDocument.createElement('span');
       cost.textContent = definition.cost.map((entry) => `${this.inventory.registry.get(entry.itemId).name}: ${this.inventory.getItemCount(entry.itemId)} / ${entry.quantity}`).join(' · ') + (affordable ? '' : ' — insufficient materials');

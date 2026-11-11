@@ -7,6 +7,18 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added — Phase 4 Miner Mk.1 (browser acceptance pending)
+
+- Deposit-bound construction, deterministic purity-scaled extraction and a
+  capacity-limited per-machine output inventory with safe partial transfers.
+- Central interaction inspection, enable/disable, modal simulation pause,
+  state-driven procedural visuals and output-safe demolition with full refunds.
+- Added simulation, lifecycle, generated-world placement, UI, rendering and
+  mocked-renderer bootstrap tests. Electricity is not required in this phase;
+  no power network or conveyor systems have been added. Real-browser acceptance
+  is pending; automated mocked-renderer tests do not establish WebGL usability.
+- Typecheck, tests, build and verify passed: **353 tests in 39 files**.
+
 ### Added — Phase 3 building and placement (browser acceptance pending)
 
 - Connected the world-owned construction model to the modal menu, placement

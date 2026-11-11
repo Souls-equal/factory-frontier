@@ -1,3 +1,4 @@
+import type { ResourceDeposit } from '../resources/ResourceDeposit';
 import type { Inventory } from '../items/Inventory';
 import type { ObstacleDefinition } from '../world/ObstacleField';
 import type { TerrainQuery } from '../world/terrain/TerrainHeightfield';
@@ -9,9 +10,11 @@ export interface BuildingInstance {
   readonly id: string;
   readonly typeId: string;
   readonly transform: BuildingTransform;
+  readonly depositId?: string;
+  readonly depositItemId?: string;
 }
-export type PlacementReason = 'valid' | 'outside bounds' | 'invalid terrain support' | 'terrain too steep' | 'occupied space' | 'player overlap' | 'insufficient materials';
-export interface PlacementResult { readonly reason: PlacementReason; readonly transform: BuildingTransform }
+export type PlacementReason = 'valid' | 'outside bounds' | 'invalid terrain support' | 'terrain too steep' | 'occupied space' | 'player overlap' | 'insufficient materials' | 'no compatible deposit' | 'multiple deposits';
+export interface PlacementResult { readonly reason: PlacementReason; readonly transform: BuildingTransform; readonly depositId?: string; readonly depositItemId?: string }
 export interface PlayerFootprint { readonly x: number; readonly z: number; readonly radius: number }
 
 const intersects = (a: Footprint, b: Footprint): boolean =>
@@ -26,9 +29,12 @@ function circleIntersects(box: Footprint, x: number, z: number, radius: number):
 export class BuildingSystem {
   private readonly buildings = new Map<string, BuildingInstance>();
   private nextId = 1;
+  private demolitionGuard: ((building: BuildingInstance) => boolean) | null = null;
+  setDemolitionGuard(guard: (building: BuildingInstance) => boolean): void { this.demolitionGuard = guard; }
   constructor(readonly registry: BuildingRegistry, private readonly inventory: Inventory,
     private readonly terrain: TerrainQuery, private readonly obstacles: readonly ObstacleDefinition[],
-    readonly cellSize: number, private readonly playAreaRadius: number) {
+    readonly cellSize: number, private readonly playAreaRadius: number,
+    private readonly deposits: readonly ResourceDeposit[] = []) {
     if (!Number.isFinite(cellSize) || cellSize <= 0 || !Number.isFinite(playAreaRadius) || playAreaRadius <= 0) {
       throw new RangeError('Invalid construction grid or world bounds.');
     }
@@ -53,28 +59,38 @@ export class BuildingSystem {
     // Sink a limited amount into terrain rather than floating above its lowest edge.
     const transform = { ...base, y: support.low };
     if (support.slope > definition.maxSlope || support.high - support.low > definition.maxGroundVariation) return fail('terrain too steep', transform);
+    let deposit: ResourceDeposit | undefined;
+    if (definition.placement === 'deposit') {
+      const candidates = this.deposits.filter((d) => d.x >= f.minX && d.x <= f.maxX && d.z >= f.minZ && d.z <= f.maxZ);
+      if (candidates.length > 1) return fail('multiple deposits', transform);
+      deposit = candidates[0];
+      if (!deposit?.extractionCompatible || !deposit.id.trim() || !Number.isFinite(deposit.productionMultiplier) || deposit.productionMultiplier <= 0) return fail('no compatible deposit', transform);
+      try { this.inventory.registry.get(deposit.itemId); } catch { return fail('no compatible deposit', transform); }
+      if (this.all().some((building) => building.depositId === deposit?.id)) return fail('occupied space', transform);
+    }
     if (this.all().some((building) => intersects(f, building.transform.footprint)) ||
-        this.obstacles.some((obstacle) => circleIntersects(f, obstacle.x, obstacle.z, obstacle.radius))) return fail('occupied space', transform);
+        this.obstacles.some((obstacle) => (!deposit || obstacle.id !== `${deposit.id}-collider`) && circleIntersects(f, obstacle.x, obstacle.z, obstacle.radius))) return fail('occupied space', transform);
     if (player.x > f.minX - player.radius && player.x < f.maxX + player.radius &&
         player.z > f.minZ - player.radius && player.z < f.maxZ + player.radius) return fail('player overlap', transform);
     if (definition.cost.some((entry) => !this.inventory.hasItem(entry.itemId, entry.quantity))) return fail('insufficient materials', transform);
-    return { reason: 'valid', transform };
+    return { reason: 'valid', transform, ...(deposit ? { depositId: deposit.id, depositItemId: deposit.itemId } : {}) };
   }
 
   place(typeId: string, x: number, z: number, rotation: number, player: PlayerFootprint): PlacementResult & { readonly building?: BuildingInstance } {
     const result = this.validate(typeId, x, z, rotation, player);
     if (result.reason !== 'valid') return result;
     const definition = this.registry.get(typeId);
-    const building: BuildingInstance = Object.freeze({ id: `building-${this.nextId}`, typeId,
+    const building: BuildingInstance = Object.freeze({ id: `building-${this.nextId}`, typeId, ...(result.depositId && result.depositItemId ? { depositId: result.depositId, depositItemId: result.depositItemId } : {}),
       transform: Object.freeze({ ...result.transform, footprint: Object.freeze({ ...result.transform.footprint }) }) });
     if (!this.inventory.exchange(definition.cost, [])) return { ...result, reason: 'insufficient materials' };
     this.buildings.set(building.id, building); this.nextId++;
     return { ...result, building };
   }
   /** Full original refund or no demolition: never discard an overflow remainder. */
-  demolish(id: string): 'removed' | 'unknown building' | 'inventory full' {
+  demolish(id: string): 'removed' | 'unknown building' | 'inventory full' | 'output not empty' {
     const building = this.buildings.get(id);
     if (!building) return 'unknown building';
+    if (this.demolitionGuard && !this.demolitionGuard(building)) return 'output not empty';
     const definition: BuildingDefinition = this.registry.get(building.typeId);
     if (!this.inventory.exchange([], definition.cost)) return 'inventory full';
     this.buildings.delete(id);

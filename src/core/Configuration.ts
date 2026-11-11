@@ -92,6 +92,9 @@ export const DEFAULT_INTERACTION_CONFIG = Object.freeze({
 export const DEFAULT_CONSTRUCTION_CONFIG = Object.freeze({ gridSize: 1, reach: 6 });
 export interface ConstructionConfig { readonly gridSize: number; readonly reach: number }
 
+export interface MinerConfig { readonly baseRatePerMinute: number; readonly outputSlots: number }
+export const DEFAULT_MINER_CONFIG: MinerConfig = Object.freeze({ baseRatePerMinute: 30, outputSlots: 1 });
+
 export const DEFAULT_RESOURCE_CONFIG = Object.freeze({
   inventorySlots: 24,
   gatherQuantity: 5,
@@ -200,6 +203,7 @@ export interface GameConfig {
   readonly interaction: InteractionConfig;
   readonly resources: ResourceConfig;
   readonly construction: ConstructionConfig;
+  readonly miner: MinerConfig;
 }
 
 export interface GameConfigOverrides {
@@ -215,6 +219,7 @@ export interface GameConfigOverrides {
   readonly interaction?: Partial<InteractionConfig>;
   readonly resources?: Partial<ResourceConfig>;
   readonly construction?: Partial<ConstructionConfig>;
+  readonly miner?: Partial<MinerConfig>;
 }
 
 export class ConfigurationError extends Error {
@@ -237,6 +242,7 @@ export const DEFAULT_GAME_CONFIG: GameConfig = Object.freeze({
   interaction: DEFAULT_INTERACTION_CONFIG,
   resources: DEFAULT_RESOURCE_CONFIG,
   construction: DEFAULT_CONSTRUCTION_CONFIG,
+  miner: DEFAULT_MINER_CONFIG,
 });
 
 /**
@@ -310,6 +316,7 @@ export function createGameConfig(overrides: GameConfigOverrides = {}): GameConfi
     interaction,
     resources,
     construction: Object.freeze({ ...DEFAULT_CONSTRUCTION_CONFIG, ...overrides.construction }),
+    miner: Object.freeze({ ...DEFAULT_MINER_CONFIG, ...overrides.miner }),
   });
 
   validateGameConfig(config);
@@ -375,6 +382,9 @@ export function validateGameConfig(config: GameConfig): void {
 
   assertNumberInRange(config.interaction.range, 'interaction.range', 0.5, 20);
   assertNumberInRange(config.interaction.targetRadius, 'interaction.targetRadius', 0.1, 5);
+
+  assertNumberInRange(config.miner.baseRatePerMinute, 'miner.baseRatePerMinute', 0.01, 10000);
+  assertIntegerInRange(config.miner.outputSlots, 'miner.outputSlots', 1, 200);
 
   assertNumberInRange(config.construction.gridSize, 'construction.gridSize', 0.25, 10);
   assertNumberInRange(config.construction.reach, 'construction.reach', 1, 20);

@@ -902,3 +902,32 @@ engine's `BuildingView` mirrors snapshots and owns separate preview resources,
 which are reused while active and disposed on removal. Menus reuse the existing
 modal/pointer-lock input suspension. Demolition targeting does not perform
 terrain/prop line-of-sight occlusion. Real-browser verification remains pending.
+
+
+## Appendix F — Phase 4 Miner Mk.1 integration
+
+`BuildingSystem` owns the snapped placement and deposit binding; the same
+validator supplies preview and commit. A compatible, registered item deposit's
+centre must fall within the footprint, and only its own natural collider is
+exempted. The committed building stores the session-stable deposit and item IDs.
+The fixed-step `MachineManager` follows building lifecycles and blocks demolition
+while machine output contains items; normal deletion refunds the cost atomically.
+The bootstrap synchronizes machine interactables with the central interaction
+registry and suppresses gathering on occupied deposits, so deposit targeting cannot
+hide machine inspection. Rendering consumes logical state and never drives it.
+
+`Miner` implements the reusable `Machine` interface and state vocabulary. The
+configuration defaults are 30 items/minute and one output slot. Progress stores
+fractional work, calculated as `rate × deposit.productionMultiplier × fixedMs`;
+60,000 work units equal one item. Work is capped by available output capacity,
+so no backlog is created while blocked. Inventory transfers reuse the validated
+partial transfer API. Deposits are infinite; loss or incompatibility stops work
+as MISSING_INPUT, and restoring it resumes. Modal panels suspend both player and
+machines; an explicitly paused game does not simulate or catch up. Hidden-tab scheduling
+follows the browser and the existing bounded catch-up policy.
+
+The temporary Phase 4 policy requires **no electricity**: NO_POWER is reserved
+for a future power model and is not produced by a pretend network. Inspection is
+DOM-only; the procedural machine indicator reads authoritative state. Renderer
+objects and the placement preview have separate lifecycles and are disposed.
+There are no conveyors, machine recipes, power connections or persistence yet.

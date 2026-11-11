@@ -14,7 +14,7 @@
 ## PROGRESS TRACKER
 
 **Last updated:** 2026-11-11
-**Current phase:** Phase 3 implemented; browser acceptance pending
+**Current phase:** Phase 4 implemented; browser acceptance pending (Phase 5 not authorized)
 
 The phase definitions below are authoritative. This tracker only records status;
 detailed evidence and verification results live in `PROJECT_STATUS.md`.
@@ -125,6 +125,8 @@ Acceptance criteria:
 - Buildings remain in the correct position.
 
 ## PHASE 4 — First automated extractor
+
+Implementation and automated coverage complete; real-browser acceptance remains pending.
 
 Objectives:
 
