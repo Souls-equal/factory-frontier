@@ -4,7 +4,7 @@
 **Version:** 0.3.0
 **Current Phase:** Phase 5 — Conveyor foundation (in progress)
 **Phase Status:** 🟡 In progress — headless WebGL path verified; user acceptance pending
-**Next Recommended Task:** Validate the voxel bootstrap and Phase 5 chain in a real browser; then migrate remaining machine/resource visuals to voxel style
+**Next Recommended Task:** Validate voxel visuals, bootstrap and the Phase 5 chain in a real WebGL browser and with the user
 **Last Updated:** 2026-11-11
 
 ---
@@ -42,10 +42,18 @@
 - Automated verification: 436 tests in 50 files, including an empty-inventory
   bootstrap through Miner and terminal, inventory conservation, active placement
   obstacles and synchronized collision/scene state.
-- **Still pending:** voxel styling of deposit and machine/building models, and
-  actual WebGL and physical user acceptance of terrain, bootstrap and Phase 5.
-  Tests and mocked rendering do not prove browser usability; phase 5 is not
-  accepted and phase 6 is not started.
+- Deposits, natural rocks and outpost props now use block meshes; the Miner has
+  a stepped block drill/head, the foundation and receiving terminal have block
+  details, and conveyors retain box-based surfaces following their existing paths.
+  Cyan/yellow port markers, coloured deposit auras/ground traces, highlights and
+  logical state lamps remain. Valid/invalid placement tints all preview parts.
+  Conveyor curves and inclines still use angled box surfaces to follow the actual
+  transport path; circular markers and the sky remain non-voxel presentation.
+  Natural obstacle physics still uses cylindrical colliders and is approximate.
+  Current typecheck, test, build and verify pass; 445 tests in 50 files.
+- **Still pending:** actual WebGL and physical user acceptance of the voxel
+  visuals, terrain, bootstrap and Phase 5. Scene-graph tests do not prove browser
+  usability; phase 5 is not accepted and phase 6 is not started.
 
 ---
 

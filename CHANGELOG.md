@@ -7,6 +7,18 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Changed — block-style current world objects
+
+- Replaced Miner drill/head, deposits, natural rocks and outpost props with block
+  geometry; added block detailing to the foundation and receiving terminal.
+  Conveyors retain box segments on their logical curved/inclined paths, and
+  transported items remain cubes. Auras, ground markings, ports and state lamps
+  remain; valid/invalid preview tint now applies to every visible component.
+- Collision and game logic are unchanged; natural obstacle colliders are still
+  cylindrical. Sky and circular highlight/aura indicators remain non-voxel.
+  Real WebGL and physical Phase 5 acceptance are still pending.
+- Typecheck, test, build and verify pass: 445 tests in 50 files.
+
 ### Added — voxel starter resources
 
 - Added seeded, finite trees (three E presses, 20 wood), branches (5 wood) and
@@ -16,8 +28,8 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
   and require a Miner rather than direct gathering; terrain remains indestructible.
 - Automated suite: 436 tests in 50 files; typecheck, test, build and verify.
 - Bounded generation is tested for representative default seeds, not all custom
-  worlds. WebGL and physical acceptance of this update remain pending; voxel
-  models for existing machines and deposits remain future work.
+  worlds. WebGL and physical acceptance of this update remain pending; see the
+  later block-style models entry above.
 
 ### In progress — voxel terrain integration
 

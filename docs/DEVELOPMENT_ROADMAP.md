@@ -17,8 +17,8 @@
 **Current phase:** Phase 5 in progress; Phase 4 accepted by user with browser verification pending
 
 The voxel transition is underway within Phase 5: finite starter resources and a
-no-iron first Miner are implemented, while block-style machine/deposit visuals and
-physical browser acceptance remain pending. This explicitly replaces the earlier
+no-iron first Miner and block-style models for current world objects are implemented;
+physical browser acceptance remains pending. This explicitly replaces the earlier
 direct deposit-gathering loop to avoid mining terrain blocks.
 
 The phase definitions below are authoritative. This tracker only records status;
@@ -158,8 +158,8 @@ Proceed in independently verified steps: (1) immutable voxel data and exposed
 faces, (2) actual world integration with swept block-side collisions, jumping,
 landing and safe construction support, (3) the initial resource loop and visuals,
 (4) full regression plus real-browser and user acceptance. The transition
-now includes integrated terrain, wall collisions and placement checks; browser
-acceptance remains pending. The resource-loop and styling step remains open.
+now includes integrated terrain, wall collisions, placement checks, starter
+resources and block-style current models. Browser and user acceptance remain pending.
 Chunks, persistence and terrain editing are not included in the current step.
 
 ## PHASE 5 — Conveyor foundation

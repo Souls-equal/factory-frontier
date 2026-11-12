@@ -43,8 +43,14 @@ No save system exists: a reload resets all construction and inventory.
 - Place a foundation on a flat top; attempt to place one across a height change.
   The latter should be rejected without charging resources. Check deposits and
   the factory chain below still work. Record any visual/collision mismatch.
-- Terrain cannot be broken. Starter objects use block meshes; deposit and machine
-  models are not yet fully voxel-styled.
+- Terrain cannot be broken. Check block-shaped deposits, rocks, props, Miner,
+  foundations and terminal. Conveyor surfaces remain angled where they follow a
+  curve or incline; circular auras/highlights are indicators, not terrain blocks.
+  Natural rock collision remains cylindrical and may differ from box corners.
+- Aim at several gisements: expect distinct persistent resource colours, auras
+  and ground marks, plus a separate targeting highlight. Inspect each building's
+  valid and invalid previews, all four rotations and its colour/state indicators;
+  check ports remain visible and match the moving items. Record discrepancies.
 
 ## Construct and connect
 

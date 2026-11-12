@@ -1,4 +1,4 @@
-import { BoxGeometry, ConeGeometry, CylinderGeometry, Group, Mesh, MeshStandardMaterial, Vector3 } from 'three';
+import { BoxGeometry, Group, Mesh, MeshStandardMaterial, Vector3 } from 'three';
 import type { MachineState } from '../machines/Miner';
 import { ConveyorPath } from '../logistics/ConveyorPath';
 import { CONVEYOR_SHAPES, BELT_HEIGHT } from '../logistics/ConveyorDefinitions';
@@ -64,7 +64,7 @@ export class BuildingView {
     mesh.rotation.y = placement.transform.rotation * Math.PI / 2;
     const color = placement.reason === 'valid' ? 0x55e8b2 : 0xff5363;
     mesh.material.color.setHex(color);
-    if (CONVEYOR_SHAPES[typeId]) for (const child of mesh.children) if (child instanceof Mesh && child.material instanceof MeshStandardMaterial) child.material.color.setHex(color);
+    for (const child of mesh.children) if (child instanceof Mesh && child.material instanceof MeshStandardMaterial) child.material.color.setHex(color);
   }
   dispose(): void {
     for (const mesh of this.meshes.values()) this.release(mesh);
@@ -79,16 +79,17 @@ export class BuildingView {
       depthWrite: !preview, roughness: 0.8 });
     const mesh = new Mesh(geometry, material); mesh.castShadow = !preview; mesh.receiveShadow = !preview;
     if (typeId === 'miner-mk1') {
-      if (!preview) { material.transparent = true; material.opacity = 0; material.depthWrite = false; mesh.castShadow = false; }
-      const part = (shape: BoxGeometry | ConeGeometry | CylinderGeometry, color: number, x: number, y: number, z: number, name: string): void => {
-        const object = new Mesh(shape, new MeshStandardMaterial({ color, roughness: .65, transparent: preview, opacity: preview ? .45 : 1 }));
+      material.transparent = true; material.opacity = 0; material.depthWrite = false; mesh.castShadow = false;
+      const part = (shape: BoxGeometry, color: number, x: number, y: number, z: number, name: string): void => {
+        const object = new Mesh(shape, new MeshStandardMaterial({ color, roughness: .65, transparent: preview, opacity: preview ? .45 : 1, depthWrite: !preview }));
         object.position.set(x, y - def.height / 2, z); object.name = name; object.castShadow = !preview; object.receiveShadow = !preview; mesh.add(object);
       };
       const scale = this.cellSize;
       part(new BoxGeometry(1.8 * scale, .28, 1.8 * scale), 0x65777c, 0, .14, 0, 'miner-base');
       part(new BoxGeometry(1.3 * scale, 1.2, 1.25 * scale), 0xb58035, 0, 1.1, 0, 'miner-body');
-      part(new CylinderGeometry(.36 * scale, .48 * scale, .6, 12), 0x627882, 0, .35, 0, 'miner-drill');
-      part(new ConeGeometry(.45 * scale, .6, 12), 0x92a0a0, 0, 2.05, 0, 'miner-head');
+      part(new BoxGeometry(.76 * scale, .6, .76 * scale), 0x627882, 0, .35, 0, 'miner-drill');
+      part(new BoxGeometry(.9 * scale, .38, .9 * scale), 0x92a0a0, 0, 1.89, 0, 'miner-head');
+      part(new BoxGeometry(.55 * scale, .22, .55 * scale), 0xd1ae64, 0, 2.19, 0, 'miner-head-cap');
       part(new BoxGeometry(.25, .25, .12), 0x59656c, .48 * scale, 1.4, -.65 * scale, 'machine-indicator');
       part(new BoxGeometry(.45 * scale, .3, .16), 0xf5d056, 0, .5, -scale, 'machine-output-port');
     }
@@ -99,7 +100,7 @@ export class BuildingView {
         size: 2 * this.cellSize, ...(shape === 'incline' ? { rise: this.cellSize } : {}) });
       const count = shape === 'curve-right' ? 16 : 1;
       const geometry = new BoxGeometry(.8 * this.cellSize, .12, path.length / count + .004);
-      const belt = new MeshStandardMaterial({ color: 0x425961, roughness: .85, transparent: preview, opacity: preview ? .55 : 1 });
+      const belt = new MeshStandardMaterial({ color: 0x425961, roughness: .85, transparent: preview, opacity: preview ? .55 : 1, depthWrite: !preview });
       for (let i = 0; i < count; i++) {
         const a = path.point(i * path.length / count), b = path.point((i + 1) * path.length / count);
         const piece = new Mesh(geometry, belt); const tangent = new Vector3(b.x - a.x, b.y - a.y, b.z - a.z).normalize();
@@ -109,26 +110,42 @@ export class BuildingView {
       // Coloured end markers show flow: cyan = inlet, yellow = outlet.
       for (const [distance, color, name] of [[0, 0x59dce1, 'conveyor-input'], [path.length, 0xf5d056, 'conveyor-output']] as const) {
         const p = path.point(distance);
-        const marker = new Mesh(new BoxGeometry(.22, .12, .22), new MeshStandardMaterial({ color, transparent: preview, opacity: preview ? .65 : 1 }));
+        const marker = new Mesh(new BoxGeometry(.22, .12, .22), new MeshStandardMaterial({ color, transparent: preview, opacity: preview ? .65 : 1, depthWrite: !preview }));
         marker.position.set(p.x, p.y - def.height / 2 + .1, p.z); marker.name = name; mesh.add(marker);
       }
-      const lamp = new Mesh(new BoxGeometry(.18, .15, .18), new MeshStandardMaterial({ color: 0xdd6954 }));
+      const lamp = new Mesh(new BoxGeometry(.18, .15, .18), new MeshStandardMaterial({ color: 0xdd6954, transparent: preview, opacity: preview ? .55 : 1, depthWrite: !preview }));
       lamp.position.set(-.43 * this.cellSize, BELT_HEIGHT - def.height / 2 + .12, .6 * this.cellSize);
       lamp.name = 'conveyor-indicator'; mesh.add(lamp);
       for (const z of [-.6 * this.cellSize, .6 * this.cellSize]) {
         const support = new Mesh(new BoxGeometry(.9 * this.cellSize, .35, .16),
-          new MeshStandardMaterial({ color: 0x7e8b8a, transparent: preview, opacity: preview ? .55 : 1 }));
+          new MeshStandardMaterial({ color: 0x7e8b8a, transparent: preview, opacity: preview ? .55 : 1, depthWrite: !preview }));
         support.position.set(0, .175 - def.height / 2, z); support.name = 'conveyor-support'; mesh.add(support);
+      }
+    }
+    if (typeId === 'foundation') {
+      // Shallow inset blocks retain the logical footprint while making the slab legible.
+      const tileGeometry = new BoxGeometry(.88 * this.cellSize, .025, .88 * this.cellSize);
+      const tileMaterial = new MeshStandardMaterial({ color: 0x94a5a2, transparent: preview,
+        opacity: preview ? .55 : 1, depthWrite: !preview, roughness: .9 });
+      for (const x of [-.47 * this.cellSize, .47 * this.cellSize]) for (const z of [-.47 * this.cellSize, .47 * this.cellSize]) {
+        const tile = new Mesh(tileGeometry, tileMaterial); tile.name = 'foundation-tile';
+        tile.position.set(x, def.height / 2 + .013, z); tile.receiveShadow = !preview; mesh.add(tile);
       }
     }
     if (typeId === 'receiving-terminal') {
       const port = new Mesh(new BoxGeometry(.45 * this.cellSize, .3, .12),
-        new MeshStandardMaterial({ color: 0x59dce1, transparent: preview, opacity: preview ? .65 : 1 }));
+        new MeshStandardMaterial({ color: 0x59dce1, transparent: preview, opacity: preview ? .65 : 1, depthWrite: !preview }));
       port.position.set(0, BELT_HEIGHT - def.height / 2, this.cellSize); port.name = 'terminal-input-port'; mesh.add(port);
+      const panel = new Mesh(new BoxGeometry(1.25 * this.cellSize, .46, .08 * this.cellSize),
+        new MeshStandardMaterial({ color: 0x354a53, transparent: preview, opacity: preview ? .55 : 1, depthWrite: !preview }));
+      panel.position.set(0, .23 - def.height / 2, -this.cellSize); panel.name = 'terminal-panel'; mesh.add(panel);
+      const lid = new Mesh(new BoxGeometry(1.72 * this.cellSize, .12, 1.72 * this.cellSize),
+        new MeshStandardMaterial({ color: 0x93a4a1, transparent: preview, opacity: preview ? .55 : 1, depthWrite: !preview }));
+      lid.position.set(0, def.height / 2 - .06, 0); lid.name = 'terminal-lid'; mesh.add(lid);
     }
     // A contrasting north-edge stripe makes quarter-turns visible even for a square footprint.
     const stripe = new Mesh(new BoxGeometry(def.widthCells * this.cellSize * 0.55, 0.02, 0.08),
-      new MeshStandardMaterial({ color: 0xf1d66d, transparent: preview, opacity: preview ? 0.8 : 1 }));
+      new MeshStandardMaterial({ color: 0xf1d66d, transparent: preview, opacity: preview ? 0.8 : 1, depthWrite: !preview }));
     stripe.position.set(0, def.height / 2 + 0.015, -def.depthCells * this.cellSize * 0.35);
     stripe.name = 'orientation-marker'; mesh.add(stripe);
     return mesh;

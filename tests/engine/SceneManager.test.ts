@@ -185,3 +185,33 @@ describe('SceneManager', () => {
     manager.dispose();
   });
 });
+
+it('renders block-shaped deposits, natural rocks and props without changing logical world data', () => {
+  const { manager, world } = createHarness();
+  const snapshot = JSON.stringify({ deposits: world.deposits, obstacles: world.obstacleDefinitions, interactables: world.interactables });
+  const colors = new Map<string, number>();
+  const bodies: Mesh[] = [];
+  for (const deposit of world.deposits) {
+    const base = `environment:deposit:${deposit.id}`;
+    const body = findObject<Mesh>(manager, `${base}:body`), detail = findObject<Mesh>(manager, `${base}:detail`);
+    expect(body.geometry.type).toBe('BoxGeometry'); expect(detail.geometry.type).toBe('BoxGeometry');
+    expect(body.position.y - body.scale.y / 2).toBeCloseTo(0);
+    expect(detail.castShadow).toBe(true); expect(body.castShadow).toBe(true);
+    const color = (body.material as MeshStandardMaterial).color.getHex();
+    if (colors.has(deposit.itemId)) expect(color).toBe(colors.get(deposit.itemId));
+    colors.set(deposit.itemId, color); bodies.push(body);
+    expect(manager.scene.getObjectByName(`${base}:aura`)?.visible).toBe(true);
+    expect(manager.scene.getObjectByName(`${base}:ground-mark`)?.visible).toBe(true);
+  }
+  expect(new Set(colors.values()).size).toBe(colors.size);
+  expect(new Set(bodies.map((body) => body.geometry)).size).toBe(1);
+  const dispose = vi.spyOn(bodies[0]!.geometry, 'dispose');
+  for (const object of manager.scene.getObjectByName('environment:rocks')!.children) {
+    expect((object as InstancedMesh).geometry.type).toBe('BoxGeometry');
+  }
+  for (const prop of world.interactables) for (const part of ['base', 'mast', 'cap']) {
+    expect(findObject<Mesh>(manager, `environment:prop:${prop.id}:${part}`).geometry.type).toBe('BoxGeometry');
+  }
+  expect(JSON.stringify({ deposits: world.deposits, obstacles: world.obstacleDefinitions, interactables: world.interactables })).toBe(snapshot);
+  manager.dispose(); expect(dispose).toHaveBeenCalledOnce();
+});
