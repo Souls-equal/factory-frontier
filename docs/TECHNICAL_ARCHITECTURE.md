@@ -953,16 +953,18 @@ short incline and endpoint without introducing Phase 7 lifts or support structur
 adapts the real Miner inventory to a source and owns one-slot configurable terminal
 inventories. Terminal retrieval transfers only what fits. Demolition refuses
 occupied segments and nonempty inventories rather than deleting resources. An
-empty removed connection disconnects and freezes any remaining items until the
-route is restored. Only complete source-to-terminal routes run; topology is linear
-and acyclic. No save/load exists. The game fixed-step stage runs machines before
+route without a connected source freezes its items. A source-connected line
+runs even without a receiver; its front item stops at the open end and causes
+backpressure until a compatible receiver or extension is attached. Topology is
+linear and acyclic. No save/load exists. The game fixed-step stage runs machines before
 logistics and both pause during gameplay modals.
 
 Defaults are 1 m/s, 60 items/minute, 0.5 m spacing, and game ticks of 50 ms.
 Advancement is downstream first; one item cannot advance across multiple segments
 in a tick. Large steps can therefore under-run nominal rate. DISCONNECTED means no
-complete route, IDLE a complete empty route, RUNNING a complete moving/occupied
-route, BLOCKED a front item held by downstream capacity or spacing. INVALID and
+connected source, IDLE a source-connected empty route, RUNNING a source-connected
+moving/occupied route, BLOCKED a front item held by an open end, downstream
+capacity or spacing. INVALID and
 ERROR are reserved union values, not assigned runtime states; placement validation
 reports invalidity separately. No error-recovery model is implemented.
 
@@ -1047,3 +1049,18 @@ preview parts use the same valid/invalid tint and do not write depth. The
 renderers read authoritative gameplay state and do not alter placement, machines
 or transport. Scene graph and port-coordinate tests do not establish visual
 clarity or working WebGL; physical browser acceptance remains required.
+
+## Appendix — open-ended source-connected conveyor routes
+
+`ConveyorNetwork.refreshStates` builds routes from every output-free terminal
+segment, whether it has a receiver or not, and activates a route only if its
+upstream end has a source. Open ends hold items at the last path endpoint and
+propagate spacing backpressure. No resource is removed at an open end. Adding a
+compatible receiver reconnects on building revision, keeps existing item IDs,
+and resumes delivery. `LogisticsUI` distinguishes a missing source from an open
+output. This does not relax exact position/direction/height checks.
+
+The user-requested single auto-adapting conveyor has not yet been implemented.
+Changing occupied paths needs explicit conservation and spacing validation,
+including under topology rebuild, branching ambiguity, both turn directions and
+elevation changes. The current separate shapes remain available in the interim.

@@ -164,6 +164,12 @@ Chunks, persistence and terrain editing are not included in the current step.
 
 ## PHASE 5 — Conveyor foundation
 
+The user reports disconnected belts and requests a single self-adapting
+conveyor. A source-connected open line now runs and queues at its open end;
+other possible user layouts still need real-browser verification. A unified
+conveyor with automatic straight/turn/incline routing remains pending; retain
+linear, acyclic topology and item conservation rather than advancing Phase 7.
+
 Status: integration implemented and automated checks pass (410 tests / 46 files after the usability follow-up),
 and a real headless Chromium WebGL path/blockage run passed. The user reported
 basic controls, inventory and construction working but could not find iron; a

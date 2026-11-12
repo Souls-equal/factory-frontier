@@ -65,6 +65,11 @@ No save system exists: a reload resets all construction and inventory.
    connected and valid; C places. All building types stay selected for repeat
    placement; Escape cancels (also before interacting or demolishing). A cyan
    marker is the input and yellow is the output on the placed model. Expect the belt cyan input to meet the Miner yellow output.
+   Before adding a terminal, close placement mode and wait: the Miner should feed
+   items onto the connected belt; they should stop at the open end and inspection
+   should report BLOCKED with an open-end explanation, not DISCONNECTED. Confirm
+   items do not disappear or overlap. Add a correctly aligned belt or terminal;
+   expect them to resume. A belt with no source should say DISCONNECTED.
 5. Escape to exit repeat-placement, then Q → Conveyor: Right Curve. Place it immediately after the straight belt in
    the same orientation; expect its cyan inlet to meet the straight yellow outlet
    and its yellow outlet to turn right relative to travel. Escape, then Q → Conveyor: Incline;
@@ -116,9 +121,13 @@ No save system exists: a reload resets all construction and inventory.
     to reach the terminal again. Disable the Miner and empty its output, drain the
     terminal and wait for belts to empty before F-demolishing each building; expect
     the original cost refunded only when it fits. Removing an empty terminal while
-    items are on a belt should freeze them; replace it with a matching orientation
-    and expect those same items to resume without loss.
+    items are on a source-connected belt should let them queue at its open end;
+    replace it with a matching orientation and expect delivery to resume without loss.
+    If the source is disconnected, expect remaining items to freeze until restored.
 
 Record each result and any console errors/screenshots. Report separately whether
 pointer lock, every shape/rotation, blockage/recovery, partial retrieval and the
 complete chain passed. Do not infer acceptance from these instructions alone.
+
+The requested single self-adapting conveyor is not yet implemented; separate
+straight, right-curve and incline choices above are still required.

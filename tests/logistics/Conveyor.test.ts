@@ -55,11 +55,15 @@ describe('deterministic conveyor simulation', () => {
     destination.removeItem('iron-ore', 50); step(net, 300);
     expect(destination.getItemCount('iron-ore')).toBeGreaterThan(50); expect(total()).toBe(60);
   });
-  it('does not draw from disconnected paths and updates topology safely', () => {
-    const { net, source, total } = setup(10);
-    expect(net.remove('b')).toBe(true); step(net, 100);
-    expect(source.getItemCount('iron-ore')).toBe(10); expect(total()).toBe(10); expect(net.get('a')?.state).toBe('DISCONNECTED');
+  it('carries items to an open end, blocks safely and resumes when the route is completed', () => {
+    const { net, source, destination, total } = setup(10);
+    expect(net.remove('b')).toBe(true); step(net, 150);
+    const a = net.get('a')!;
+    expect(source.getItemCount('iron-ore')).toBeLessThan(10); expect(total()).toBe(10);
+    expect(a.state).toBe('BLOCKED'); expect(a.items[0]!.distance).toBeCloseTo(a.path.length);
     const b = net.add('b2', path(-2)); expect(net.connect('a', b.id)).toBe(true); expect(net.connect('a', b.id)).toBe(false);
+    expect(net.attachReceiver(b.id, new InventoryReceiver('receiver', { position: b.path.point(b.path.length), direction: b.path.direction('output') }, destination))).toBe(true);
+    step(net, 300); expect(destination.getItemCount('iron-ore')).toBeGreaterThan(0); expect(total()).toBe(10);
   });
   it('enforces throughput independent of available source stock', () => {
     const { net, source, destination, total } = setup(100); step(net, 1200);
@@ -134,7 +138,26 @@ it('preserves items already in flight if an empty middle segment is removed', ()
   const { net, source, destination, total } = setup(10); step(net, 5);
   expect(net.get('a')!.items).toHaveLength(1); expect(net.remove('b')).toBe(true);
   const before = net.get('a')!.items[0]!.distance;
-  step(net, 200); expect(net.get('a')!.items[0]!.distance).toBe(before);
+  step(net, 200); expect(net.get('a')!.items[0]!.distance).toBeGreaterThanOrEqual(before);
+  expect(net.get('a')!.items[0]!.distance).toBeCloseTo(net.get('a')!.path.length);
+  expect(net.get('a')!.state).toBe('BLOCKED');
   expect(source.getItemCount('iron-ore') + destination.getItemCount('iron-ore') + net.get('a')!.items.length).toBe(10);
   expect(total()).toBe(10); expect(net.remove('a')).toBe(false);
+});
+
+it('retains and freezes in-flight items when their source is removed and resumes on reattachment', () => {
+  const { net, source, destination, total } = setup(10);
+  step(net, 40); expect(net.get('a')!.items.length).toBeGreaterThan(0);
+  net.resetConnections();
+  expect(net.connect('a', 'b')).toBe(true);
+  const b = net.get('b')!;
+  expect(net.attachReceiver('b', new InventoryReceiver('receiver', { position: b.path.point(b.path.length), direction: b.path.direction('output') }, destination))).toBe(true);
+  const snapshot = net.all().flatMap((s) => s.items.map(({ id, distance }) => ({ id, distance })));
+  step(net, 100);
+  expect(net.get('a')!.state).toBe('DISCONNECTED'); expect(net.get('b')!.state).toBe('DISCONNECTED');
+  expect(net.all().flatMap((s) => s.items.map(({ id, distance }) => ({ id, distance })))).toEqual(snapshot);
+  expect(total()).toBe(10);
+  const a = net.get('a')!;
+  expect(net.attachSource('a', new InventorySource('miner', { position: a.path.point(0), direction: a.path.direction('input') }, source, 'iron-ore'))).toBe(true);
+  step(net, 250); expect(destination.getItemCount('iron-ore')).toBeGreaterThan(0); expect(total()).toBe(10);
 });

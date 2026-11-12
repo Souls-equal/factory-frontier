@@ -4,7 +4,7 @@
 **Version:** 0.3.0
 **Current Phase:** Phase 5 — Conveyor foundation (in progress)
 **Phase Status:** 🟡 In progress — headless WebGL path verified; user acceptance pending
-**Next Recommended Task:** Validate voxel visuals, bootstrap and the Phase 5 chain in a real WebGL browser and with the user
+**Next Recommended Task:** Implement the requested single self-adapting conveyor safely; verify the connectivity fix and Phase 5 chain in a real WebGL browser
 **Last Updated:** 2026-11-11
 
 ---
@@ -57,6 +57,25 @@
 
 ---
 
+## Phase 5 — open-ended conveyor fix (in progress)
+
+- The user reports conveyors saying DISCONNECTED despite being oriented correctly,
+  and requests one conveyor that adapts to neighbours. A demonstrated cause was
+  that routes ran only with both a source and a terminal, even when the input and
+  neighbouring belts were connected. Source-connected routes now run without a
+  terminal; items queue at the open end, which reports BLOCKED, and resume when a
+  receiver is attached. Routes without a connected source remain DISCONNECTED and
+  retain their items. Ports still require exact position, height and direction;
+  this addresses the demonstrated case, not necessarily every reported layout.
+  Typecheck, test, build and verify passed; 452 tests in 50 files.
+- The requested single self-adapting conveyor is **not implemented** yet: straight,
+  right-curve and incline remain separate menu choices. It needs a consistent
+  topology/preview algorithm, both turn directions and heights, and a safe policy
+  for changing paths that already hold items. Do not silently discard or overlap
+  items, bypass placement validation, or implement splitters/mergers (Phase 7).
+- This version has not been checked in real WebGL or physically by the user;
+  use the revised manual checklist. Phase 5 remains in progress.
+
 ## Phase 5 — Conveyor foundation (in progress, 2026-11-11)
 
 - The merged baseline was an isolated conveyor prototype, not a playable path.
@@ -69,7 +88,8 @@
   shares the authoritative placement validator. Ports are directional and
   height-matched; mismatched connections and loops are rejected before payment.
   Miner placement now validates adjacent ports even when the belt was placed first.
-  Disconnecting a route pauses its items rather than discarding them.
+  A source-connected open end now queues items; losing the source freezes that
+  disconnected section without discarding them.
 - A foundation may support a whole logistics footprint; removing a loaded
   foundation is refused. Otherwise placement follows terrain slope/variation
   limits, permits at most 0.12 m terrain penetration, and allows a connected
