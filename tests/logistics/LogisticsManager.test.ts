@@ -361,3 +361,76 @@ it.each([0, 1, 2, 3])('runs a connected Miner and open two-belt route at rotatio
   }
   expect(sink.getItemCount('iron-ore')).toBeGreaterThan(0);
 });
+
+it('runs an automatic conveyor chain through a turn and keeps items on a straight extension', () => {
+  const { buildings, machines, logistics } = setup();
+  const miner = place(buildings, 'miner-mk1', 0, 0);
+  const a = place(buildings, 'conveyor-auto', 0, -2, 2);
+  const turn = place(buildings, 'conveyor-auto', 0, -4, 2);
+  const b = place(buildings, 'conveyor-auto', 2, -4, 2);
+  const terminal = place(buildings, 'receiving-terminal', 4, -4, 3);
+  logistics.sync();
+  expect(buildings.get(turn.id)!.autoConveyor?.shape).toBe('curve-right');
+  expect(logistics.network.get(a.id)?.source?.id).toBe(miner.id);
+  expect(logistics.network.get(a.id)?.output).toBe(turn.id);
+  expect(logistics.network.get(turn.id)?.output).toBe(b.id);
+  expect(logistics.network.get(b.id)?.receiver?.id).toBe(terminal.id);
+  machines.get(miner.id)!.output.addItem('iron-ore', 10);
+  for (let i = 0; i < 300; i++) logistics.fixedUpdate(50);
+  expect(logistics.terminal(terminal.id)!.getItemCount('iron-ore')).toBe(10);
+});
+
+it('refuses to reshape an occupied automatic belt without changing stock or costs', () => {
+  const { buildings, machines, logistics, playerInventory } = setup();
+  const miner = place(buildings, 'miner-mk1', 0, 0), belt = place(buildings, 'conveyor-auto', 0, -2);
+  logistics.sync(); machines.get(miner.id)!.output.addItem('iron-ore', 3); logistics.fixedUpdate(50);
+  const before = playerInventory.snapshot(), item = logistics.network.get(belt.id)!.items[0]!;
+  expect(buildings.place('conveyor-auto', 2, -2, 0, player).reason).toBe('conveyor occupied');
+  expect(playerInventory.snapshot()).toEqual(before); expect(logistics.network.get(belt.id)!.items[0]).toEqual(item);
+  expect(buildings.get(belt.id)!.autoConveyor?.shape).toBe('straight');
+  // A straight extension does not reshape the occupied segment.
+  const next = place(buildings, 'conveyor-auto', 0, -4); logistics.sync();
+  expect(logistics.network.get(belt.id)!.items[0]).toEqual(item);
+  expect(logistics.network.get(belt.id)!.output).toBe(next.id);
+});
+
+it('attaches an automatic conveyor at a generated starting iron deposit', async () => {
+  const { createGameConfig } = await import('../../src/core/Configuration');
+  const { createWorld } = await import('../../src/world/World');
+  const items = createDefaultItemRegistry(), inventory = new Inventory(items, 24);
+  inventory.addItem('stone', 50); inventory.addItem('wood', 20);
+  const world = createWorld(createGameConfig(), inventory), deposit = world.deposits.find((d) => d.itemId === 'iron-ore')!;
+  const far = { x: 80, z: 80, radius: .4 };
+  const miner = world.buildings.place('miner-mk1', deposit.x, deposit.z, 0, far).building!;
+  expect(miner).toBeDefined();
+  const result = world.buildings.place('conveyor-auto', miner.transform.x, miner.transform.z - 2, 0, far);
+  expect(result.reason).toBe('valid');
+  const machines = new MachineManager(world.buildings, items, () => world.deposits);
+  const logistics = new LogisticsManager(world.buildings, machines, items); logistics.sync();
+  expect(logistics.network.get(result.building!.id)?.source?.id).toBe(miner.id);
+});
+
+it('refuses branches before payment and restores topology when empty tiles are demolished', () => {
+  const { buildings, logistics, playerInventory } = setup();
+  place(buildings, 'miner-mk1', 0, 0);
+  const a = place(buildings, 'conveyor-auto', 0, -2), b = place(buildings, 'conveyor-auto', 0, -4);
+  const c = place(buildings, 'conveyor-auto', 2, -4);
+  const before = playerInventory.snapshot();
+  expect(buildings.place('conveyor-auto', -2, -4, 0, player).reason).toBe('incompatible connection');
+  expect(playerInventory.snapshot()).toEqual(before);
+  expect(buildings.get(b.id)!.autoConveyor?.shape).toBe('curve-right');
+  expect(buildings.demolish(c.id)).toBe('removed'); logistics.sync();
+  expect(buildings.get(b.id)!.autoConveyor?.shape).toBe('straight');
+  expect(logistics.network.get(a.id)!.output).toBe(b.id);
+});
+
+it('anchors and previews a terminal at an elevated automatic conveyor outlet', () => {
+  const { buildings, logistics } = setup();
+  place(buildings, 'foundation', 4, 0);
+  const belt = place(buildings, 'conveyor-auto', 4, 0);
+  const preview = buildings.validate('receiving-terminal', 4, -2, 0, player);
+  expect(preview.reason).toBe('valid'); expect(preview.connection).toBe('connected');
+  expect(preview.transform.y).toBeCloseTo(.4);
+  const terminal = place(buildings, 'receiving-terminal', 4, -2);
+  logistics.sync(); expect(logistics.network.get(belt.id)!.receiver?.id).toBe(terminal.id);
+});

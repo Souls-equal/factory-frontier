@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — automatic conveyor
+
+- One construction choice resolves straight, left/right turns and height changes
+  from neighbouring conveyors and machine ports. Preview, rendering and transport
+  use the same paths. Branches, cycles and unsafe occupied-path reshapes are refused.
+- Existing explicit conveyor definitions remain internally available; automatic
+  and legacy tiles cannot be mixed as immediate neighbours. User acceptance pending.
+
 All notable changes to Factory Frontier are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
