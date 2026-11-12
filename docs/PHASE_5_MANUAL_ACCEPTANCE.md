@@ -2,8 +2,13 @@
 
 These are instructions, **not test results**. Run the actual PR #12 branch in a
 WebGL-capable desktop browser and record browser/OS, date, pass/fail and details.
-The agent has not executed these checks. No save system exists: a reload resets
-all construction and inventory.
+The agent ran a subset with headless Chromium 143, SwiftShader WebGL 2 and
+synthetic input: resource gathering, the default chain, terminal inspection and
+pause, 5-of-9 partial retrieval, full-terminal blockage, terminal demolition
+refusal and recovery. A separate run checked construction-menu pointer-lock
+release/restore. This is not physical user acceptance; all steps still need the
+user's results. The browser logged a Three.js PCFSoftShadowMap fallback warning.
+No save system exists: a reload resets all construction and inventory.
 
 ## Launch and controls
 

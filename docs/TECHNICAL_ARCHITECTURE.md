@@ -875,8 +875,10 @@ Automated tests exercise the registry, inventory conservation, seeded generation
 gathering and full/partial outcomes, drag/drop event handling, modal input, scene
 construction and the real bootstrap with a mocked WebGL engine. The user reports
 earlier Phase 2 browser acceptance passed overall, except full inventory; the new
-Phase 2.1 drag/drop and pointer-lock behavior has not been browser-verified by the
-agent. Native drag-and-drop currently has no keyboard move alternative.
+Phase 2.1 full browser acceptance was not verified at that time. A later Phase 5
+headless run exercised a native stack merge and construction-menu pointer-lock
+release/restore, not all inventory scenarios. Native drag-and-drop currently has
+no keyboard move alternative.
 
 
 ## Appendix E — Phase 3 construction integration
@@ -971,4 +973,8 @@ count, maximum throughput and status; terminal inventory can be collected.
 Tests cover real systems, scene graph and mocked-renderer bootstrap, not a real
 WebGL browser. Real-building chains have been tested at all four rotations and
 for 300 simulated seconds under repeated blockage and recovery, not exhaustively.
-Browser and user acceptance remain pending; Phase 5 is not complete.
+A separate headless Chromium / SwiftShader WebGL 2 run exercised actual UI
+gathering, the full chain, modal pause, partial retrieval, full-terminal
+backpressure, terminal demolition refusal and recovery. It used synthetic input
+and DevTools observation, and does not establish physical usability. Other
+browser scenarios and user acceptance remain pending; Phase 5 is not complete.

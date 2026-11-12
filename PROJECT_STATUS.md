@@ -3,8 +3,8 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 5 — Conveyor foundation (in progress)
-**Phase Status:** 🟡 In progress — integrated; browser and user acceptance pending
-**Next Recommended Task:** Run real-browser Phase 5 acceptance, fix any findings, then complete PR/CI and deployment verification
+**Phase Status:** 🟡 In progress — headless WebGL path verified; user acceptance pending
+**Next Recommended Task:** Complete remaining physical/user acceptance, fix findings, then finish PR/CI and deployment verification
 **Last Updated:** 2026-11-11
 
 ---
@@ -45,11 +45,25 @@
   Added rotation, placement-order, repeated topology rebuild, 300-second blocked/recovery,
   instanced growth and real-bootstrap modal regression coverage. These do not
   demonstrate browser/WebGL, pointer lock or actual usability.
-- **Browser/manual acceptance: not performed.** No browser executable is available;
-  an isolated Chromium package also could not start without NSS/NSPR system
-  libraries. The procedure is in `docs/PHASE_5_MANUAL_ACCEPTANCE.md`. All manual
-  Phase 5 checks remain pending. Consequently Phase 5 is **not complete or accepted**;
-  no Phase 6 scope has been started.
+- **Headless real-browser check:** Chromium 143 on Debian, WebGL 2 with
+  SwiftShader. The agent built NSS/NSPR from Mozilla source in temporary storage
+  to launch it; no project dependency changed. Using actual UI inputs, it gathered
+  resources, placed Miner → straight → right curve → incline → terminal, saw
+  transport and terminal receipt, and inspected the endpoint. Pointer lock released
+  and restored around construction in a separate run; the gameplay automation used
+  drag-look fallback. DevTools was used to observe, not mutate, logical state.
+- In that browser, a full 24-slot player inventory with 95 iron retrieved exactly
+  5 of 9 terminal iron, leaving 4. The terminal later reached 100; all three belt
+  segments reported BLOCKED, terminal demolition was refused, and after retrieval
+  flow resumed (13 items received). A 4-second terminal modal held item positions
+  and inventories unchanged. No page errors occurred; Three.js logged its existing
+  PCFSoftShadowMap fallback warning.
+- **Physical/user acceptance remains pending.** The headless run used one layout,
+  synthetic input and software rendering; it is not a manual usability assessment.
+  Other rotations, foundation interaction, invalid-payment behavior, belt/miner
+  demolition and disable/re-enable were not browser-tested. Follow
+  `docs/PHASE_5_MANUAL_ACCEPTANCE.md` and report results. Phase 5 is **not complete
+  or accepted**; no Phase 6 scope has been started.
 - Limits: only linear acyclic networks; no splitters/mergers or save/load. State
   ERROR is not detected/recovered. Tests do not prove universal non-overlap or
   absence of loss under all configurations. Large time steps can under-run nominal
@@ -93,8 +107,9 @@
 - `npm run typecheck`, `npm test`, `npm run build` and `npm run verify` passed:
   **353 tests in 39 files**, plus build, preview and dev-server checks.
 - **Browser acceptance remains pending.** The earlier Chromium attempt failed on
-  missing NSS/NSPR libraries; no browser executable is presently available here.
-  WebGL, native pointer lock and physical usability have not been agent-verified.
+  missing NSS/NSPR libraries at that time. A later Phase 5 headless run covered
+  portions of Miner operation and pointer lock, but not full Phase 4 acceptance.
+  Physical usability has not been agent-verified.
   No conveyors, recipes, power network, saves or Phase 5 work are included.
 
 ---
@@ -161,7 +176,9 @@
   **314 tests in 27 files**. Existing click-to-move UI test was updated because
   that behavior was intentionally replaced by drag-and-drop.
 - The agent did **not** perform browser-level verification of these changes:
-  headless Chromium in the sandbox is missing NSS/NSPR system libraries. Verify
+  at that time headless Chromium lacked NSS/NSPR system libraries. The later
+  Phase 5 headless run covered a stack merge and construction-menu pointer-lock
+  restoration, but not the full Phase 2.1 acceptance. Verify
   native drag-and-drop (including cancelling outside the panel), split/merge/swap,
   pointer-lock restore and denial fallback, and full/partial gathering in a real
   browser. Native HTML drag-and-drop has no dedicated keyboard move alternative.
@@ -396,9 +413,10 @@ This task's merge is deployed by the same pipeline; the result is recorded below
 
 ## Next Recommended Task
 
-Perform Phase 5 real-browser acceptance, including the full production path,
-placement, connection feedback, blocking/recovery and resource conservation.
-Also verify the outstanding Phase 4 and earlier browser checks. Fix findings and
+Complete Phase 5 physical/user acceptance, including remaining placement,
+connection, demolition and recovery scenarios. A subset passed headless browser
+automation as described above; repeat it for actual usability. Also verify the
+outstanding Phase 4 and earlier browser checks. Fix findings and
 complete CI, protection, PR and deployment checks before declaring acceptance.
 Do not start Phase 6 without authorization.
 

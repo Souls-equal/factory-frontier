@@ -19,10 +19,14 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
   preview and placement now reject incompatible direction/height before payment.
   Added four-rotation building chains, repeated topology changes, extended
   conservation/spacing, instanced growth and bootstrap modal tests.
-- Browser/WebGL and user acceptance are not performed. INVALID and ERROR states
-  are reserved, not currently assigned; linear acyclic routes only. Phase 5 is
-  in progress, not complete. The user authorized proceeding from Phase 4 while
-  its own real-browser verification remains pending.
+- Headless Chromium 143 / SwiftShader WebGL 2 exercised real gathering, building,
+  the full transport path, partial collection, full blockage, terminal demolition
+  refusal and recovery. Construction-menu pointer lock release/restore also passed
+  in a separate run; Three.js logged its existing PCFSoftShadowMap fallback warning.
+  Physical/user acceptance and other browser scenarios remain pending. INVALID
+  and ERROR are reserved, not currently assigned; linear acyclic routes only.
+  Phase 5 remains in progress, not complete. The user authorized proceeding
+  from Phase 4 while its own real-browser verification remains pending.
 
 ### Added — Phase 4 Miner Mk.1 (browser acceptance pending)
 
