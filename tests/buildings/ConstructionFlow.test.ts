@@ -197,3 +197,26 @@ it('rechecks escape movement against other solid buildings', () => {
   const result = collision.moveCircle(-.39, .5, -4, 0, .4, 0, 1.8);
   expect(result.x).toBeCloseTo(-.6); expect(result.collided).toBe(true);
 });
+
+describe('foundation height workflow', () => {
+  it('retains invalid adjustments, resets after success and follows the floating neighbour', () => {
+    const { controller, system, player } = setup();
+    const viewAt = (x: number, z: number) => ({ position: { x, y: 3, z }, yaw: 0, pitch: -Math.PI / 2 });
+    controller.select('foundation');
+    for (let i = 0; i < 4; i++) controller.adjustFoundationHeight(-1);
+    expect(controller.confirm(viewAt(0, 0), player)?.reason).toBe('unsupported height');
+    expect(controller.foundationHeightOffset).toBe(-.4);
+    for (let i = 0; i < 14; i++) controller.adjustFoundationHeight(1);
+    const preview = controller.preview(viewAt(0, 0), player)!;
+    const placed = controller.confirm(viewAt(0, 0), player)!;
+    expect(placed.transform).toEqual(preview.transform); expect(placed.transform.y).toBe(1);
+    expect(controller.foundationHeightOffset).toBe(0);
+    const neighbour = controller.preview(viewAt(2, 1), player)!;
+    expect(neighbour.reason).toBe('valid'); expect(neighbour.transform.y).toBe(1);
+    expect(controller.confirm(viewAt(2, 1), player)?.transform).toEqual(neighbour.transform);
+    const surface = new BuildingTerrain(terrain, system);
+    expect(surface.groundBelow(0, 0, 1.4, .2)).toBeCloseTo(1.4);
+    expect(surface.groundBelow(0, 0, .5, .2)).toBe(0);
+    controller.select('conveyor-cell'); controller.adjustFoundationHeight(1); expect(controller.foundationHeightOffset).toBe(0);
+  });
+});

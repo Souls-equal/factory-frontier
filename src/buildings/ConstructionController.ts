@@ -7,12 +7,15 @@ import type { BuildingSystem, PlacementResult, PlayerFootprint } from './Buildin
 export class ConstructionController {
   private typeId: string | null = null;
   private rotation = 0;
+  private foundationSteps = 0;
   constructor(readonly system: BuildingSystem, private readonly terrain: TerrainQuery, readonly reach = 6) {}
   get selected(): string | null { return this.typeId; }
   get active(): boolean { return this.typeId !== null; }
-  select(id: string): void { this.system.registry.get(id); this.typeId = id; this.rotation = 0; }
+  select(id: string): void { this.system.registry.get(id); this.typeId = id; this.rotation = 0; this.foundationSteps = 0; }
   cancel(): void { this.typeId = null; }
   rotate(): void { if (this.active) this.rotation = (this.rotation + 1) % 4; }
+  adjustFoundationHeight(direction: 1 | -1): void { if (this.typeId === 'foundation') this.foundationSteps += direction; }
+  get foundationHeightOffset(): number { return this.foundationSteps / 10; }
   aim(view: CameraView): { x: number; z: number } | null {
     const direction = forwardVector(view.yaw, view.pitch), origin = view.position;
     let prev = 0, prevHeight = origin.y - this.terrain.heightAt(origin.x, origin.z);
@@ -38,13 +41,14 @@ export class ConstructionController {
   preview(view: CameraView, player: PlayerFootprint): PlacementResult | null {
     if (!this.typeId) return null;
     const point = this.aim(view);
-    return point ? this.system.validate(this.typeId, point.x, point.z, this.facing(view), player) : null;
+    return point ? this.system.validate(this.typeId, point.x, point.z, this.facing(view), player, this.typeId === 'foundation' ? this.foundationHeightOffset : undefined) : null;
   }
   confirm(view: CameraView, player: PlayerFootprint) {
     if (!this.typeId) return null;
     const point = this.aim(view);
     if (!point) return null;
-    const result = this.system.place(this.typeId, point.x, point.z, this.facing(view), player);
+    const result = this.system.place(this.typeId, point.x, point.z, this.facing(view), player, this.typeId === 'foundation' ? this.foundationHeightOffset : undefined);
+    if (result.reason === 'valid' && this.typeId === 'foundation') this.foundationSteps = 0;
     return result;
   }
   /** Nearest intersection with a registered building's actual box, never terrain/props. */

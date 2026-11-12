@@ -212,6 +212,7 @@ async function boot(): Promise<void> {
         return true;
       }
       if (constructionUI?.isOpen) return true;
+      if ((code === 'PageUp' || code === 'PageDown') && construction.selected === 'foundation') { construction.adjustFoundationHeight(code === 'PageUp' ? 1 : -1); return true; }
       if (code === 'KeyR' && construction.active) { construction.rotate(); return true; }
       if (code === 'KeyC' && construction.active) { pendingConstruction = 'place'; return true; }
       if (code === 'KeyF' && !construction.active) { pendingConstruction = 'demolish'; return true; }
@@ -373,7 +374,7 @@ async function boot(): Promise<void> {
       engine.setBuildingPreview?.(construction.selected, preview ?? undefined);
       constructionStatus.hidden = !construction.active;
       if (construction.active) constructionStatus.textContent = preview
-        ? `${preview.reason === 'valid' ? 'Valid placement' : `Cannot place: ${preview.reason}`} · R rotate · C place again · Esc cancel${preview.connection ? ` · ${preview.connection} port` : ''}${construction.selected?.startsWith('conveyor-') ? ' · direction follows view; yellow = output · R rotates' : ''}${preview.snappedToConveyor ? ' · aligned to neighbour' : ''}${preview.conveyorPreviewChanges?.length ? ' · green preview shows belt after C' : ''}`
+        ? `${preview.reason === 'valid' ? 'Valid placement' : `Cannot place: ${preview.reason}`} · R rotate · C place again · Esc cancel${preview.connection ? ` · ${preview.connection} port` : ''}${construction.selected?.startsWith('conveyor-') ? ' · direction follows view; yellow = output · R rotates' : ''}${preview.snappedToConveyor || preview.snappedToFoundation ? ' · aligned to neighbour' : ''}${construction.selected === 'foundation' ? ` · Page Up/Down height (${construction.foundationHeightOffset >= 0 ? '+' : ''}${construction.foundationHeightOffset.toFixed(1)} m) · base ${preview.transform.y.toFixed(1)} m` : ''}${preview.conveyorPreviewChanges?.length ? ' · green preview shows belt after C' : ''}`
         : `Aim at ground within ${config.construction.reach} m · R rotate · Esc cancel`;
       const target = inventoryUI?.isOpen || constructionUI?.isOpen || machineUI?.isOpen || logisticsUI?.isOpen || construction.active ? null : interaction.target;
       engine.setHighlight?.(target?.id ?? null);
