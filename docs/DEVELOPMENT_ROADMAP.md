@@ -171,6 +171,11 @@ left/right and ascending/descending routing; topology stays linear and acyclic.
 Automated coverage is present; browser and user acceptance remain pending.
 Branches and mergers remain Phase 7 scope.
 
+The turn follow-up preserves an isolated tile's inlet on sideways placement and
+projects live items transactionally when a path changes. Conveyor presentation and
+daylight palette were also updated at the user's request; WebGL and physical user
+acceptance are still pending. No Phase 6 or Phase 7 systems were added.
+
 Status: integration implemented and automated checks pass (410 tests / 46 files after the usability follow-up),
 and a real headless Chromium WebGL path/blockage run passed. The user reported
 basic controls, inventory and construction working but could not find iron; a

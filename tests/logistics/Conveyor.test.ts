@@ -161,3 +161,35 @@ it('retains and freezes in-flight items when their source is removed and resumes
   expect(net.attachSource('a', new InventorySource('miner', { position: a.path.point(0), direction: a.path.direction('input') }, source, 'iron-ore'))).toBe(true);
   step(net, 250); expect(destination.getItemCount('iron-ore')).toBeGreaterThan(0); expect(total()).toBe(10);
 });
+
+it('rejects an unsafe shortening without a successor atomically', async () => {
+  const { DEFAULT_CONVEYOR_SETTINGS } = await import('../../src/logistics/ConveyorNetwork');
+  const items = createDefaultItemRegistry(), source = new Inventory(items, 1);
+  source.addItem('iron-ore', 5);
+  const net = new ConveyorNetwork(), belt = net.add('a', path(0));
+  net.attachSource('a', new InventorySource('source', { position: belt.path.point(0), direction: belt.path.direction('input') }, source, 'iron-ore'));
+  step(net, 200);
+  const before = belt.items.map((item) => ({ ...item })), oldPath = belt.path;
+  expect(before[0]!.distance).toBeCloseTo(2);
+  const shorter = new ConveyorPath({ shape: 'curve-right', x: 0, y: 0, z: 0, size: 2, rotation: 0 });
+  const proposed = new Map([['a', shorter]]);
+  expect(net.canReconfigure(proposed, DEFAULT_CONVEYOR_SETTINGS)).toBe(false);
+  expect(net.reconfigure(proposed, DEFAULT_CONVEYOR_SETTINGS)).toBe(false);
+  expect(belt.path).toBe(oldPath); expect(belt.items).toEqual(before);
+});
+
+it('rejects joining occupied lines when their endpoint items would overlap', async () => {
+  const { DEFAULT_CONVEYOR_SETTINGS } = await import('../../src/logistics/ConveyorNetwork');
+  const registry = createDefaultItemRegistry(), firstStock = new Inventory(registry, 1), secondStock = new Inventory(registry, 1);
+  firstStock.addItem('iron-ore', 1);
+  const net = new ConveyorNetwork(), first = net.add('first', path(0)), second = net.add('second', path(-2));
+  net.attachSource(first.id, new InventorySource('first-source', { position: first.path.point(0), direction: first.path.direction('input') }, firstStock, 'iron-ore'));
+  net.attachSource(second.id, new InventorySource('second-source', { position: second.path.point(0), direction: second.path.direction('input') }, secondStock, 'iron-ore'));
+  step(net, 50); secondStock.addItem('iron-ore', 1); net.fixedUpdate(50);
+  expect(first.items[0]!.distance).toBeCloseTo(first.path.length); expect(second.items[0]!.distance).toBe(0);
+  const snapshot = net.all().map((s) => s.items.map((item) => ({ ...item })));
+  const proposed = new Map([['first', first.path], ['second', second.path]]);
+  expect(net.canReconfigure(proposed, DEFAULT_CONVEYOR_SETTINGS)).toBe(false);
+  expect(net.reconfigure(proposed, DEFAULT_CONVEYOR_SETTINGS)).toBe(false);
+  expect(net.all().map((s) => s.items)).toEqual(snapshot);
+});

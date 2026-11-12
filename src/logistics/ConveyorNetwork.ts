@@ -45,18 +45,74 @@ export class ConveyorNetwork implements SimulationSystem {
       source: null, receiver: null, state: 'DISCONNECTED', nextInputMs: 0, nextOutputMs: 0 };
     this.segments.set(id, segment); this.refreshStates(); return segment;
   }
-  /** Change geometry only when empty; retain the segment's throughput clocks. */
-  reshape(id: string, path: ConveyorPath): boolean {
-    const segment = this.require(id);
-    if (segment.items.length || segment.settings.spacing > path.length) return false;
-    segment.path = path; return true;
+  /**
+   * Project every item onto a proposed topology without mutating the network.
+   * Distances remain measured from the inlet; a shortened tile can move an item
+   * onto its new successor. Reject any proposal that cannot preserve spacing.
+   */
+  private projectPaths(paths: ReadonlyMap<string, ConveyorPath>, newSettings: ConveyorSettings): Map<string, InternalItem[]> | null {
+    const projected = new Map<string, InternalItem[]>();
+    const successor = new Map<string, string>();
+    const predecessors = new Set<string>();
+    for (const [id, path] of paths) {
+      const settings = this.segments.get(id)?.settings ?? newSettings;
+      if (settings.spacing > path.length) return null;
+      projected.set(id, []);
+      for (const [nextId, next] of paths) {
+        if (id === nextId || !path.compatible(next)) continue;
+        if (successor.has(id) || predecessors.has(nextId)) return null;
+        successor.set(id, nextId); predecessors.add(nextId);
+      }
+    }
+    for (const segment of this.segments.values()) {
+      if (!paths.has(segment.id)) { if (segment.items.length) return null; continue; }
+      for (const item of segment.items) {
+        let id = segment.id, distance = item.distance;
+        const visited = new Set<string>();
+        while (distance > paths.get(id)!.length + 1e-9) {
+          if (visited.has(id)) return null;
+          visited.add(id); distance -= paths.get(id)!.length;
+          const next = successor.get(id); if (!next) return null;
+          id = next;
+        }
+        const path = paths.get(id)!;
+        distance = Math.min(distance, path.length);
+        const changed = id !== segment.id || JSON.stringify(path.spec) !== JSON.stringify(segment.path.spec);
+        projected.get(id)!.push({ ...item, distance, previousPosition: changed ? path.point(distance) : item.previousPosition });
+      }
+    }
+    for (const [id, items] of projected) {
+      items.sort((a, b) => b.distance - a.distance);
+      const settings = this.segments.get(id)?.settings ?? newSettings;
+      for (let i = 1; i < items.length; i++) if (items[i - 1]!.distance - items[i]!.distance < settings.spacing - 1e-8) return null;
+      const next = successor.get(id);
+      if (next && items[0] && projected.get(next)!.length) {
+        const back = projected.get(next)!.at(-1)!;
+        const gap = Math.max(settings.spacing, (this.segments.get(next)?.settings ?? newSettings).spacing);
+        if (paths.get(id)!.length - items[0]!.distance + back.distance < gap - 1e-8) return null;
+      }
+    }
+    return projected;
+  }
+  canReconfigure(paths: ReadonlyMap<string, ConveyorPath>, newSettings: ConveyorSettings): boolean {
+    return this.projectPaths(paths, newSettings) !== null;
+  }
+  /** Apply a validated projection atomically, keeping ids, ordering and clocks. */
+  reconfigure(paths: ReadonlyMap<string, ConveyorPath>, newSettings: ConveyorSettings): boolean {
+    const projected = this.projectPaths(paths, newSettings);
+    if (!projected || paths.size !== this.segments.size || [...paths.keys()].some((id) => !this.segments.has(id))) return false;
+    for (const [id, path] of paths) {
+      const segment = this.require(id);
+      segment.path = path; segment.items = projected.get(id)!;
+    }
+    return true;
   }
   private require(id: string): InternalSegment { const s = this.segments.get(id); if (!s) throw new RangeError(`Unknown conveyor: ${id}`); return s; }
   connect(fromId: string, toId: string): boolean {
     const from = this.require(fromId), to = this.require(toId);
     if (from === to || from.output || from.receiver || to.input || to.source || !from.path.compatible(to.path)) return false;
     const front = from.items[0], back = to.items.at(-1);
-    if (front && back && from.path.length - front.distance + back.distance < Math.max(from.settings.spacing, to.settings.spacing)) return false;
+    if (front && back && from.path.length - front.distance + back.distance < Math.max(from.settings.spacing, to.settings.spacing) - 1e-8) return false;
     for (let p: InternalSegment | undefined = to; p; p = p.output ? this.segments.get(p.output) : undefined) if (p === from) return false;
     from.output = to.id; to.input = from.id; this.refreshStates(); return true;
   }

@@ -52,3 +52,13 @@ describe('LightingManager', () => {
     expect(manager.group.children).toHaveLength(0);
   });
 });
+
+it('uses a brighter daylight fill while retaining a warm shadow-casting key', () => {
+  const manager = new LightingManager({ shadows: true });
+  const sky = manager.group.getObjectByName('lighting:hemisphere') as HemisphereLight;
+  const ambient = manager.group.getObjectByName('lighting:ambient') as AmbientLight;
+  const sun = manager.group.getObjectByName('lighting:key') as DirectionalLight;
+  expect(sky.intensity).toBeGreaterThan(1); expect(ambient.intensity).toBeGreaterThan(.35);
+  expect(sun.intensity).toBeGreaterThan(1); expect(sun.castShadow).toBe(true);
+  manager.dispose();
+});

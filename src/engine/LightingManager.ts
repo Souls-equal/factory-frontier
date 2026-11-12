@@ -7,8 +7,8 @@ export interface LightingOptions {
 /**
  * Scene lighting.
  *
- * A cool hemisphere fill plus a warm directional key light establishes the
- * "dawn on an industrial frontier" identity while keeping shadow configuration
+ * A bright sky fill plus a warm directional key light establishes a
+ * welcoming daytime frontier while keeping shadow configuration
  * in one place for later scalability work.
  */
 export class LightingManager {
@@ -21,13 +21,13 @@ export class LightingManager {
     this.group = new Group();
     this.group.name = 'lighting';
 
-    const hemisphere = new HemisphereLight(0x9dc9e8, 0x1b2a33, 0.6);
+    const hemisphere = new HemisphereLight(0xc7eaff, 0x879d76, 1.15);
     hemisphere.name = 'lighting:hemisphere';
 
-    const ambient = new AmbientLight(0x415666, 0.35);
+    const ambient = new AmbientLight(0xfff1d6, 0.45);
     ambient.name = 'lighting:ambient';
 
-    this.keyLight = new DirectionalLight(0xffe3b8, 2.4);
+    this.keyLight = new DirectionalLight(0xffedcc, 2.2);
     this.keyLight.name = 'lighting:key';
     this.keyLight.position.set(38, 52, 24);
     this.keyLight.castShadow = options.shadows;

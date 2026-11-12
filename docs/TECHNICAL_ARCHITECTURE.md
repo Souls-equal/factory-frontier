@@ -1060,10 +1060,8 @@ compatible receiver reconnects on building revision, keeps existing item IDs,
 and resumes delivery. `LogisticsUI` distinguishes a missing source from an open
 output. This does not relax exact position/direction/height checks.
 
-The user-requested single auto-adapting conveyor has not yet been implemented.
-Changing occupied paths needs explicit conservation and spacing validation,
-including under topology rebuild, branching ambiguity, both turn directions and
-elevation changes. The current separate shapes remain available in the interim.
+The later automatic conveyor follow-up supersedes the former separate menu choices;
+see the topology section below.
 
 ### Automatic conveyor topology (Phase 5 follow-up)
 
@@ -1077,9 +1075,18 @@ heights and mixing legacy conveyor tiles with automatic neighbours are rejected.
 Legacy types remain registered for compatibility, but are hidden from the menu.
 
 Building placement and demolition resolve and validate the complete proposed
-layout before payment/refund. The logistics topology guard refuses to reshape
-an occupied segment and checks spacing at proposed joins; straight extensions
-can connect occupied segments when spacing permits. Empty reshapes preserve the
-segment's throughput clocks. A blocked occupied end may need to be drained via a
-straight extension and receiver before it can become a turn. The game has not
-yet been physically verified by the user after this change.
+layout before payment/refund. An isolated tile preserves its selected inlet when
+a new tile appears to the side, so its shape becomes a turn. A pure network
+projection maps each item's inlet-relative distance to the proposed path; if a
+shorter path ends first, overflow moves to its successor. The guard checks every
+segment and join for available space before payment; invalid or ambiguous
+projections are refused. Applying a valid projection preserves item IDs, order,
+and throughput clocks. Render interpolation resets on moved paths, so items can
+visibly snap at the moment a live path is changed rather than interpolating
+through unrelated world geometry. Branches and cycles remain unsupported.
+
+The world palette, sky and fog now use a brighter daytime scheme, with brighter
+hemisphere and ambient fill. Conveyor surfaces have path-following coloured rails,
+treads and supports, using the same logical path for turns and inclines. These
+presentation changes do not change physics. WebGL and physical player acceptance
+remain pending.

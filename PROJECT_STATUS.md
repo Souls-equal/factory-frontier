@@ -4,7 +4,7 @@
 **Version:** 0.3.0
 **Current Phase:** Phase 5 — Conveyor foundation (in progress)
 **Phase Status:** 🟡 In progress — headless WebGL path verified; user acceptance pending
-**Next Recommended Task:** Implement the requested single self-adapting conveyor safely; verify the connectivity fix and Phase 5 chain in a real WebGL browser
+**Next Recommended Task:** Verify sideways turns with live items and the brighter visuals in a WebGL browser; complete Phase 5 player acceptance.
 **Last Updated:** 2026-11-11
 
 ---
@@ -72,10 +72,13 @@
   resolve into straight, left/right turns and rising or falling paths, with shared
   preview/render/simulation geometry. Lines remain linear and acyclic; branching,
   loops, unsupported height changes and mixed legacy/automatic neighbours are
-  rejected. A path with items cannot be reshaped; joining occupied paths also
-  checks spacing. Legacy definitions remain available internally. Physical user
-  validation of the new behaviour is pending. `npm run verify` passes with 466
-  tests across 51 files, plus build and server checks.
+  rejected. Sideways placement now turns even the first isolated tile, and live
+  items can be projected onto the new path and its successor. The proposed layout
+  is rejected only when item spacing or capacity cannot be preserved. Item IDs and
+  clocks remain stable; visible positions can jump at the instant of reshaping.
+  Legacy definitions remain available internally. Physical user validation of
+  the new behaviour and the brighter daytime visuals is pending. `npm run verify`
+  passes: 487 tests in 51 files, plus typecheck, build and server checks.
 - This version has not been checked in real WebGL or physically by the user;
   use the revised manual checklist. Phase 5 remains in progress.
 

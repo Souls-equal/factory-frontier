@@ -132,3 +132,18 @@ it('renders and previews the resolved automatic geometry, including reshapes and
   view.sync([{ ...belt, autoConveyor: { shape: 'straight', rotation: 0, rise: 0, offset: 0 } }]);
   expect(view.group.getObjectByName('auto')).not.toBe(previous); view.dispose();
 });
+
+it.each(['straight', 'curve-left', 'curve-right', 'incline'] as const)('adds path-following rails and treads for %s', (shape) => {
+  const registry = createDefaultBuildingRegistry(createDefaultItemRegistry()), view = new BuildingView(registry, 1);
+  const transform = snapFootprint(registry.get('conveyor-auto'), 0, 0, 0, 1);
+  const autoConveyor = { shape, rotation: 0, offset: 0, rise: shape === 'incline' ? 1 : 0 };
+  view.sync([{ id: 'belt', typeId: 'conveyor-auto', transform, autoConveyor }]);
+  const mesh = view.group.getObjectByName('belt')!;
+  const rails = mesh.children.filter((child) => child.name === 'conveyor-rail');
+  const treads = mesh.children.filter((child) => child.name === 'conveyor-tread');
+  expect(rails.length).toBe(shape.startsWith('curve-') ? 32 : 2); expect(treads).toHaveLength(5);
+  const railGeometry = (rails[0] as Mesh).geometry; const dispose = vi.spyOn(railGeometry, 'dispose');
+  view.setPreview('conveyor-auto', { reason: 'valid', transform, autoConveyor });
+  expect(view.group.getObjectByName('building-preview')!.getObjectByName('conveyor-rail')).toBeDefined();
+  view.sync([]); expect(dispose).toHaveBeenCalledOnce(); view.dispose();
+});

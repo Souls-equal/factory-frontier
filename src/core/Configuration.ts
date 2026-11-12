@@ -122,10 +122,10 @@ export const DEFAULT_RENDER_CONFIG = Object.freeze({
   fov: 60,
   near: 0.1,
   far: 600,
-  /** Scene clear color (deep twilight blue). */
-  backgroundColor: 0x0b1522,
+  /** Scene clear color (daytime sky blue). */
+  backgroundColor: 0xb8e0e8,
   /** Fog colour, matched to the sky horizon band. */
-  fogColor: 0x163039,
+  fogColor: 0xb8e0e8,
   /** Distance at which atmospheric fog starts, in metres. */
   fogNear: 55,
   /** Distance at which fog is fully opaque, in metres. */
