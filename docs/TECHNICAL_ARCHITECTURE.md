@@ -1216,3 +1216,17 @@ edge. Ground-drop coverage includes the raised inlet. Ambiguous multi-input
 junctions, turns and cells also climbing retain centre-entry transitions and
 their existing topology guards. Physics, capacity and grid occupancy do not
 change.
+
+### Look input and voxel contact stability
+
+`InputManager` filters isolated pointer-lock events exceeding 300 pixels, preserving
+normal accumulated motion and drag fallback, and discards queued look on blur, tab hiding and
+pointer-lock changes. This bounded per-event heuristic can also reject a genuine
+very large single mouse event. Physical-device verification remains necessary.
+
+`VoxelCollision` sweeps the player circle against column side faces and rounded
+corners, matching the circular support query instead of treating square expanded
+corners as solid. Initial overlaps project away inward motion without a positional
+push; natural/building collision composition and wall height filtering remain.
+The terrain contract advertises vertical voxel walls so `PlayerController` does
+not reject escape before the wall solver when already overlapping a column.

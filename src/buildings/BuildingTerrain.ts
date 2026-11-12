@@ -8,6 +8,7 @@ export class BuildingTerrain implements TerrainQuery {
   get size() { return this.terrain.size; }
   get resolution() { return this.terrain.resolution; }
   get cellSize() { return this.terrain.cellSize; }
+  get verticalWalls() { return this.terrain.verticalWalls ?? false; }
   contains(x: number, z: number): boolean { return this.terrain.contains(x, z); }
   clampXZ(x: number, z: number) { return this.terrain.clampXZ(x, z); }
   private topAt(x: number, z: number): number {

@@ -25,6 +25,7 @@ export interface VoxelSurfaceData {
 }
 
 export class VoxelTerrain implements TerrainQuery {
+  readonly verticalWalls = true;
   readonly bounds: TerrainBounds;
   readonly size: number;
   readonly resolution: number;

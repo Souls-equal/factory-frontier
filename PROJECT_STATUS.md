@@ -9,6 +9,21 @@
 
 ---
 
+## Player camera and voxel contacts (user validation pending)
+
+- Ignore individual pointer-lock motion events over 300 pixels and clear unconsumed look
+  deltas on blur, visibility loss and pointer-lock transitions. Drag fallback and
+  ordinary successive events remain unchanged; extremely fast single events may also be discarded. The
+  user's particular device spike has not been reproduced with physical hardware.
+- Voxel walls now use swept circle-to-column side and rounded-corner contacts,
+  consistent with circular ground support. Existing overlaps allow outward or
+  tangential motion without a corrective teleport; slope blocking no longer pins
+  a player already inside a voxel wall. Tall walls and obstacle collisions remain.
+  Tests cover corner clearance, wall sliding, overlap recovery, diagonal motion,
+  high-speed sweeps, jumping and natural obstacles. Headless Chromium loaded the
+  game and exercised synthetic look spikes and corner movement. Physical-device
+  and in-game user validation remain pending; Phase 5 is not complete.
+
 ## Phase 5 — aligned downhill conveyor fix (user validation pending)
 
 - Straight descending one-cell connections with one incoming route now form a
