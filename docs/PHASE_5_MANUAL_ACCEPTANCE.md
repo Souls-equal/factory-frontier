@@ -80,6 +80,11 @@ No save system exists: a reload resets all construction and inventory.
    the proposed ramps. Watch items follow the ramp without a height jump; terrain
    steps over one grid cell or unsafe reconfigurations must be refused.
 
+Before running the chain, place a conveyor as close as allowed beside the player,
+including near corners and next to another belt. Walk away and along it: the player
+must not become stuck, teleport, or pass through solid buildings. Repeat after
+jumping beside a belt and report the terrain and exact position if blocked.
+
 ## Run, inspect and recover
 
 7. Leave menus closed and watch the full chain. Expect individual ore items to
@@ -87,7 +92,9 @@ No save system exists: a reload resets all construction and inventory.
    record any visible jumps, overlap or disappearing items. E on a
    moving ore item should pick it up without opening a conveyor panel. With a full
    inventory it should remain on the belt. E on the terminal should show iron and
-   its single-slot capacity. Try feeding both lanes on each of its four cyan-marked
+   its single-slot capacity as an inventory-style slot. Select it to inspect the
+   stack, then use Retrieve contents; the slot should update and retain any amount
+   that does not fit. Try feeding both lanes on each of its four cyan-marked
    sides, with the terminal placed before and after the belt. Observe the turn
    skin and opened side rail for left/right and multi-input turns, including ramps.
 8. With a gameplay panel open, wait and try WASD, Q, C and F. Expect player

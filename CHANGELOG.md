@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — terminal slots and building contact
+
+- Render the terminal's actual slot inventory with the shared player-inventory
+  slot component, item details and existing partial-safe Retrieve contents action.
+  The deployed terminal still has one slot; future capacities render dynamically.
+- Allow movement out of an existing building collision overlap and sliding along
+  its nearest face without generating a positional push or allowing inward motion.
+  Existing placement and swept collision protections remain in force.
+
 ## Unreleased — Phase 5 feedback
 
 - Add distinctive guided turn skins and open side rails on directional cells.

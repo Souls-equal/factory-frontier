@@ -441,3 +441,7 @@ to Phase 6 without Phase 5 acceptance and explicit authorization.
 Turn skins, four-sided cell terminal intake, E pickup of moving belt items, and
 additional starter resources are implemented for testing. Phase 5 remains in
 progress until the player validates the scenarios; do not start Phase 6.
+
+The Phase 5 receiving terminal now displays inventory slots and building collision
+recovers from overlapping contacts. The terminal still has one slot and no upgrade
+system; in-game validation of both changes and Phase 5 acceptance remain pending.
