@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — refined construction models
+
+- Refresh the foundation, Miner, one-cell conveyor and receiving terminal with
+  batched block-style mechanical details, frames, panels and reinforced supports.
+- Keep placement, collision, item paths, state lights and port positions unchanged;
+  the Q menu and placement ghosts use the same updated models.
+
 ## Unreleased — construction menu previews
 
 - Show a static isometric thumbnail of each selectable building in the Q menu,

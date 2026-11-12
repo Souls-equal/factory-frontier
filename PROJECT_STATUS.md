@@ -9,6 +9,18 @@
 
 ---
 
+## Phase 5 — construction model refresh (user validation pending)
+
+- Refined the four selectable construction models: reinforced foundation corners,
+  Miner gantry and vents, conveyor feet and chassis, and terminal frame and
+  controls. Decorative blocks are batched per material and released with their
+  meshes. Junction entry ramps omit the added conveyor chassis to stay clear.
+- Placement, collisions, logical ports, machine states and logistics paths remain
+  unchanged; existing ghosts and Q-menu thumbnails use the updated meshes. Scene
+  graph tests cover detail disposal and preview colors. Chromium with software
+  WebGL rendered all four models and opened the Q menu without page errors;
+  hands-on user validation remains pending. Phase 5 remains open.
+
 ## Phase 5 — construction menu thumbnails (user validation pending)
 
 - The Q menu shows static isometric previews generated from the existing placed

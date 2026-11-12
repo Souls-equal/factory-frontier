@@ -913,6 +913,11 @@ modal/pointer-lock input suspension. The construction menu generates and caches
 static isometric SVG thumbnails from `BuildingView` meshes using Three.js's CPU
 SVG renderer; geometry/materials are disposed immediately and no extra WebGL
 context is created. Thumbnails are decorative; labels and costs remain text.
+The current block models add batched decorative meshes via `BuildingDetails`;
+preview tinting and disposal still operate on the direct mesh children. Conveyor
+junctions omit the extra low chassis where it could obstruct an entry ramp. The
+terminal shell is inset within its unchanged collision footprint; logical ports,
+transport and machine state indicators remain authoritative.
 Demolition targeting does not perform
 terrain/prop line-of-sight occlusion. Real-browser verification remains pending.
 
