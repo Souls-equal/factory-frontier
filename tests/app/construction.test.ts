@@ -63,7 +63,11 @@ describe('construction bootstrap wiring', () => {
     window.dispatchEvent(new MouseEvent('mouseup'));
     frame(66);
     expect(state.selected).toBe('foundation'); expect(state.preview?.reason).toBe('valid');
-    key('KeyR'); frame(116); expect(state.preview?.transform.rotation).toBe(1);
+    const initialHeight = state.preview!.transform.y;
+    key('PageUp'); frame(91); expect(state.preview!.transform.y).toBeCloseTo(initialHeight + .1);
+    expect(document.querySelector('[data-ui="construction-status"]')?.textContent).toContain('Page Up/Down');
+    key('PageDown'); key('KeyR'); frame(116); expect(state.preview?.transform.rotation).toBe(1);
+    expect(state.preview!.transform.y).toBeCloseTo(initialHeight);
     const transform = state.preview!.transform;
     key('KeyC'); key('KeyC', true); frame(166);
     expect(state.buildings).toHaveLength(1); expect(state.buildings[0]?.transform).toEqual(transform);

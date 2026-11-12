@@ -162,6 +162,9 @@ now includes integrated terrain, wall collisions, placement checks, starter
 resources and block-style current models. Browser and user acceptance remain pending.
 Chunks, persistence and terrain editing are not included in the current step.
 
+Foundation placement has adjustable burial and elevation with neighbour alignment;
+a hands-on browser check remains pending. This does not complete Phase 5.
+
 ## PHASE 5 — Conveyor foundation
 
 The user reports disconnected belts and requests a single self-adapting

@@ -896,6 +896,13 @@ intersecting terrain triangle to the footprint; generic terrain implementations
 fall back to finite samples. Natural solids/deposits, buildings, the player,
 world bounds and material availability are checked. Placement/demolition requests
 are consumed in the fixed-step stage.
+Foundation mode passes a height offset to the same authoritative validator for
+preview and commit. It aligns unoccupied partial edge contacts to the nearest
+foundation on the grid, inheriting that neighbour's base height; otherwise the
+reference is the terrain minimum. Page Up/Down changes the offset by 0.1 m and
+successful placement resets it. The highest terrain point may cover at most 75%
+of the foundation height. Slope, footprint, player and material restrictions still
+apply even when floating. Aiming still uses the terrain ray, not a platform ray.
 
 `BuildingCollision` composes existing natural sweeps with conservative expanded
 rectangle sweeps. `BuildingTerrain` exposes foundation tops to the player; both

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — adjustable foundation platforms
+
+- Adjust foundation base height with Page Up/Down in 0.1 m steps; allow floating
+  platforms and at most 0.3 m burial, checked against the highest terrain.
+- Snap partial edge contacts to neighbouring foundations and inherit their level;
+  reset the adjustment after placement. Preview and confirmation share validation.
+
 ## Unreleased — camera and voxel movement stability
 
 - Ignore extreme single-event pointer-lock mouse deltas and clear pending look input on focus,

@@ -346,7 +346,13 @@
   and deposit collision, other buildings, player footprint and resources. The
   production heightfield is checked by clipping all intersecting triangles; generic
   `TerrainQuery` implementations fall back to finite samples. Terrain variation
-  is limited to 0.12 m; the base is at the minimum, so up to 0.12 m may be buried.
+  is limited to 0.12 m. Foundation height is adjustable with Page Up/Down in
+  0.1 m steps, up to 0.3 m below the highest terrain point, or above ground.
+  Adjacent foundations snap edge-to-edge and inherit a neighbour's base height;
+  the height adjustment resets after successful placement. Aim still targets ground
+  within 6 m; all existing slope, overlap and resource checks remain in force.
+  Automated coverage includes burial limits, alignment, floating support and UI
+  keys; hands-on browser acceptance of this new workflow remains pending.
 - The fixed-step stage consumes queued placement/demolition presses. Inventory
   exchange is all-or-nothing. Demolition refunds all original materials or fails
   without removing the building if they cannot all fit. Rendering and collision

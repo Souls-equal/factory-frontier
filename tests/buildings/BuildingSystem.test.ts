@@ -86,3 +86,40 @@ describe('building placement and refund model', () => {
     expect(inventory.snapshot()).toEqual([null]);
   });
 });
+
+describe('adjustable and aligned foundations', () => {
+  it('allows three quarters burial, rejects more without charging and checks the highest terrain', () => {
+    const { inventory, system } = setup(); stock(inventory);
+    const before = inventory.snapshot();
+    const preview = system.validate('foundation', 0, 0, 0, player, -.3);
+    expect(preview.reason).toBe('valid'); expect(preview.transform.y).toBeCloseTo(-.3);
+    expect(system.place('foundation', 0, 0, 0, player, -.4).reason).toBe('unsupported height');
+    expect(inventory.snapshot()).toEqual(before);
+    expect(system.place('foundation', 0, 0, 0, player, -.3).transform).toEqual(preview.transform);
+    expect(() => system.validate('foundation', 4, 0, 0, player, NaN)).toThrow();
+    const uneven = setup({ terrain: { ...terrain, heightAt: (x) => x > 0 ? .1 : 0 } }); stock(uneven.inventory);
+    expect(uneven.system.validate('foundation', 0, 0, 0, player, -.2).reason).toBe('valid');
+    expect(uneven.system.validate('foundation', 0, 0, 0, player, -.3).reason).toBe('unsupported height');
+  });
+  it('snaps partial side contact and copies a floating neighbour level while rejecting overlaps', () => {
+    const { inventory, system } = setup(); inventory.addItem('stone', 50); inventory.addItem('wood', 25);
+    const first = system.place('foundation', 0, 0, 0, player, 1.2);
+    expect(first.reason).toBe('valid');
+    const preview = system.validate('foundation', 2, 1, 0, player, 0);
+    expect(preview.reason).toBe('valid'); expect(preview.snappedToFoundation).toBe(true);
+    expect(preview.transform.x).toBe(2); expect(preview.transform.z).toBe(0); expect(preview.transform.y).toBeCloseTo(1.2);
+    expect(system.place('foundation', 2, 1, 0, player, 0).transform).toEqual(preview.transform);
+    expect(system.validate('foundation', 0, 0, 0, player, 0).reason).toBe('occupied space');
+    const next = system.validate('foundation', 4, 0, 0, player, -.2);
+    expect(next.transform.y).toBeCloseTo(1); expect(next.reason).toBe('valid');
+  });
+  it('preserves support and demolition guards for logistics on elevated foundations', () => {
+    const { inventory, system } = setup(); inventory.addItem('stone', 30); inventory.addItem('wood', 15);
+    const foundation = system.place('foundation', 0, 0, 0, player, 1).building!;
+    const terminal = system.place('receiving-terminal', 0, 0, 0, player);
+    expect(terminal.reason).toBe('valid'); expect(terminal.transform.y).toBeCloseTo(1.4);
+    expect(system.demolish(foundation.id)).toBe('building supports another');
+    expect(system.demolish(terminal.building!.id)).toBe('removed');
+    expect(system.demolish(foundation.id)).toBe('removed');
+  });
+});

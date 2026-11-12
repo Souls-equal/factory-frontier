@@ -32,6 +32,7 @@ export interface PlacementResult {
   /** Existing belts whose shape would change if this valid placement is confirmed. */
   readonly conveyorPreviewChanges?: readonly BuildingInstance[];
   readonly snappedToConveyor?: boolean;
+  readonly snappedToFoundation?: boolean;
 }
 export interface PlayerFootprint { readonly x: number; readonly z: number; readonly radius: number }
 
@@ -100,13 +101,35 @@ export class BuildingSystem {
     return candidates.length === 1 ? candidates[0]! : base;
   }
 
-  validate(typeId: string, x: number, z: number, rotation: number, player: PlayerFootprint): PlacementResult {
+  /** Align a neighbouring tile edge to edge without shifting an occupied preview. */
+  private alignFoundation(base: BuildingTransform, definition: BuildingDefinition, x: number, z: number): { transform: BuildingTransform; neighbour?: BuildingInstance } {
+    const foundations = this.all().filter((b) => b.typeId === 'foundation');
+    if (foundations.some((b) => intersects(base.footprint, b.transform.footprint))) return { transform: base };
+    const span = 2 * this.cellSize, epsilon = 1e-7;
+    const candidates: { transform: BuildingTransform; neighbour: BuildingInstance; distance: number }[] = [];
+    for (const neighbour of foundations) {
+      const dx = base.x - neighbour.transform.x, dz = base.z - neighbour.transform.z;
+      const vertical = Math.abs(Math.abs(dz) - span) < epsilon && Math.abs(dx) < span - epsilon;
+      const horizontal = Math.abs(Math.abs(dx) - span) < epsilon && Math.abs(dz) < span - epsilon;
+      if (!vertical && !horizontal) continue;
+      const transform = snapFootprint(definition, vertical ? neighbour.transform.x : base.x,
+        horizontal ? neighbour.transform.z : base.z, base.rotation, this.cellSize);
+      if (foundations.some((b) => intersects(transform.footprint, b.transform.footprint))) continue;
+      candidates.push({ transform, neighbour, distance: Math.hypot(x - transform.x, z - transform.z) });
+    }
+    candidates.sort((a, b) => a.distance - b.distance || a.neighbour.id.localeCompare(b.neighbour.id));
+    return candidates[0] ?? { transform: base };
+  }
+
+  validate(typeId: string, x: number, z: number, rotation: number, player: PlayerFootprint, foundationOffset?: number): PlacementResult {
     if (![player.x, player.z, player.radius].every(Number.isFinite) || player.radius < 0) {
       throw new RangeError('Invalid player footprint.');
     }
     const definition = this.registry.get(typeId);
     const snapped = snapFootprint(definition, x, z, rotation, this.cellSize);
-    const base = typeId === 'conveyor-auto' ? this.alignConveyor(snapped, definition) : snapped;
+    if (foundationOffset !== undefined && (!Number.isFinite(foundationOffset) || typeId !== 'foundation')) throw new RangeError('Invalid foundation height offset.');
+    const foundationSnap = typeId === 'foundation' && foundationOffset !== undefined ? this.alignFoundation(snapped, definition, x, z) : undefined;
+    const base = foundationSnap?.transform ?? (typeId === 'conveyor-auto' ? this.alignConveyor(snapped, definition) : snapped);
     const f = base.footprint;
     const fail = (reason: PlacementReason, transform = base): PlacementResult => ({ reason, transform });
     if (!this.terrain.contains(f.minX, f.minZ) || !this.terrain.contains(f.maxX, f.maxZ) ||
@@ -116,7 +139,9 @@ export class BuildingSystem {
     const support = terrainSupport(this.terrain, f);
     if (!support) return fail('invalid terrain support');
     // Sink a limited amount into terrain rather than floating above its lowest edge.
-    let transform = { ...base, y: support.low };
+    let transform = { ...base, y: typeId === 'foundation' && foundationOffset !== undefined
+      ? (foundationSnap?.neighbour?.transform.y ?? support.low) + foundationOffset : support.low };
+    if (typeId === 'foundation' && support.high - transform.y > definition.height * .75 + 1e-7) return fail('unsupported height', transform);
     const intersecting = this.all().filter((building) => intersects(f, building.transform.footprint));
     let supportingFoundation: BuildingInstance | undefined;
     if (definition.placement === 'logistics') {
@@ -224,12 +249,13 @@ export class BuildingSystem {
       (JSON.stringify(byId.get(b.id)!.autoConveyor) !== JSON.stringify(b.autoConveyor) || JSON.stringify(byId.get(b.id)!.cellConveyor) !== JSON.stringify(b.cellConveyor)));
     return { reason: 'valid', transform, ...(autoConveyor ? { autoConveyor } : {}), ...(cellConveyor ? { cellConveyor } : {}), ...(connection ? { connection } : {}),
       ...(conveyorPreviewChanges.length ? { conveyorPreviewChanges } : {}),
-      ...(base !== snapped ? { snappedToConveyor: true } : {}),
+      ...(typeId === 'conveyor-auto' && base !== snapped ? { snappedToConveyor: true } : {}),
+      ...(foundationSnap?.neighbour ? { snappedToFoundation: true } : {}),
       ...(deposit ? { depositId: deposit.id, depositItemId: deposit.itemId } : {}) };
   }
 
-  place(typeId: string, x: number, z: number, rotation: number, player: PlayerFootprint): PlacementResult & { readonly building?: BuildingInstance } {
-    const result = this.validate(typeId, x, z, rotation, player);
+  place(typeId: string, x: number, z: number, rotation: number, player: PlayerFootprint, foundationOffset?: number): PlacementResult & { readonly building?: BuildingInstance } {
+    const result = this.validate(typeId, x, z, rotation, player, foundationOffset);
     if (result.reason !== 'valid') return result;
     const definition = this.registry.get(typeId);
     const building: BuildingInstance = Object.freeze({ id: `building-${this.nextId}`, typeId, ...(result.depositId && result.depositItemId ? { depositId: result.depositId, depositItemId: result.depositItemId } : {}),
