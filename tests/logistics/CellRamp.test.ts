@@ -67,13 +67,19 @@ describe('one-cell height transitions', () => {
           previous = p; sawTarget ||= segment.id === b.id; sawRamp ||= !!item.transition;
         }
       }
-      expect(sawTarget).toBe(true); if (!(relative === 0 && up)) expect(sawRamp).toBe(true);
+      expect(sawTarget).toBe(true); if (relative !== 0) expect(sawRamp).toBe(true); else expect(sawRamp).toBe(false);
       if (relative !== 2) expect(ground.all()).toHaveLength(1); // opposite faces form a cycle
       if (!up) {
-        expect(b.cellConveyor!.entries[0]!.startHeight).toBeCloseTo(1);
         const view = new BuildingView(buildings.registry, 1); view.sync(buildings.all());
-        if (relative !== 2) expect(view.group.getObjectByName(b.id)!.getObjectByName('conveyor-entry-ramp')).toBeDefined();
-        else expect(b.cellConveyor!.rise).toBeCloseTo(1); // the main deck is already the shared ramp
+        if (relative === 0) {
+          expect(b.cellConveyor!.offset).toBeCloseTo(1); expect(b.cellConveyor!.rise).toBeCloseTo(-1);
+          expect(b.cellConveyor!.entries).toHaveLength(0);
+          expect(view.group.getObjectByName(b.id)!.getObjectByName('conveyor-entry-ramp')).toBeUndefined();
+        } else {
+          expect(b.cellConveyor!.entries[0]!.startHeight).toBeCloseTo(1);
+          if (relative !== 2) expect(view.group.getObjectByName(b.id)!.getObjectByName('conveyor-entry-ramp')).toBeDefined();
+          else expect(b.cellConveyor!.rise).toBeCloseTo(1); // the main deck is already the shared ramp
+        }
         view.dispose();
       } else expect(pathForBuilding(buildings.get(a.id)!, 1)!.rise).toBeGreaterThan(0);
       expect(second.path.spec.size).toBe(1);
@@ -175,7 +181,7 @@ it.each([0, 1, 2, 3])('matches the rendered ramp top to the simulation path in r
   view.dispose();
 });
 
-it.each([0, 1, 3])('renders a downward entry surface matching its simulated transition, relative direction %i', (relative) => {
+it.each([1, 3])('renders a downward entry surface matching its simulated transition, relative direction %i', (relative) => {
   const { buildings, far, a, d } = setup(0, false);
   const b = buildings.place('conveyor-cell', .5 + d.x, .5 + d.z, relative, far).building!;
   const source = pathForBuilding(buildings.get(a.id)!, 1)!, destination = pathForBuilding(b, 1)!;
@@ -194,4 +200,117 @@ it.each([0, 1, 3])('renders a downward entry surface matching its simulated tran
   expect(box.max.x).toBeLessThanOrEqual(b.transform.footprint.maxX + 1e-6);
   expect(box.min.z).toBeGreaterThanOrEqual(b.transform.footprint.minZ - 1e-6);
   expect(box.max.z).toBeLessThanOrEqual(b.transform.footprint.maxZ + 1e-6); view.dispose();
+});
+
+it.each([0, 1, 2, 3])('renders an aligned descent as one full-width deck following the item path, rotation %i', (r) => {
+  const { buildings, far, a, d } = setup(r, false);
+  const preview = buildings.validate('conveyor-cell', .5 + d.x, .5 + d.z, r, far);
+  expect(preview.reason).toBe('valid');
+  expect(preview.cellConveyor).toMatchObject({ offset: 1, rise: -1, entries: [] });
+  const view = new BuildingView(buildings.registry, 1);
+  view.sync(buildings.all()); view.setPreview('conveyor-cell', preview);
+  const previewSurface = view.group.getObjectByName('building-preview')!.getObjectByName('conveyor-surface');
+  expect(previewSurface).toBeDefined();
+  expect(view.group.getObjectByName('building-preview')!.getObjectByName('conveyor-entry-ramp')).toBeUndefined();
+  const b = buildings.place('conveyor-cell', .5 + d.x, .5 + d.z, r, far).building!;
+  expect(b.cellConveyor).toEqual(preview.cellConveyor);
+  const first = pathForBuilding(buildings.get(a.id)!, 1)!, second = pathForBuilding(b, 1)!;
+  expect(first.point(first.length)).toEqual(second.point(0));
+  expect(second.point(0).y - second.point(second.length).y).toBeCloseTo(1);
+  view.setPreview(null); view.sync(buildings.all()); view.group.updateMatrixWorld(true);
+  const surface = view.group.getObjectByName(b.id)!.getObjectByName('conveyor-surface') as import('three').Mesh;
+  const vertices = surface.geometry.attributes.position!;
+  for (let i = 0; i < vertices.count; i++) {
+    const p = new Vector3().fromBufferAttribute(vertices, i).applyMatrix4(surface.matrixWorld);
+    const t = Math.max(0, Math.min(1, .5 + (p.x - b.transform.x) * d.x + (p.z - b.transform.z) * d.z));
+    expect(Math.abs(p.y - second.point(t * second.length).y)).toBeCloseTo(.06, 5);
+  }
+  const model = view.group.getObjectByName(b.id)!, box = new Box3().setFromObject(model), f = b.transform.footprint;
+  expect(box.min.x).toBeGreaterThanOrEqual(f.minX - 1e-6); expect(box.max.x).toBeLessThanOrEqual(f.maxX + 1e-6);
+  expect(box.min.z).toBeGreaterThanOrEqual(f.minZ - 1e-6); expect(box.max.z).toBeLessThanOrEqual(f.maxZ + 1e-6);
+  expect(model.children.filter(child => child.name === 'conveyor-rail')).toHaveLength(2);
+  expect(model.children.filter(child => child.name === 'conveyor-tread')).toHaveLength(5);
+  view.dispose();
+});
+
+it('previews and restores an existing lower belt when placing and removing the higher neighbour', () => {
+  const { buildings, far, a, d } = setup(0, false);
+  const lower = buildings.place('conveyor-cell', .5 + d.x, .5 + d.z, 0, far).building!;
+  expect(buildings.demolish(a.id)).toBe('removed');
+  expect(buildings.get(lower.id)!.cellConveyor!.rise).toBe(0);
+  const preview = buildings.validate('conveyor-cell', .5, .5, 0, far);
+  expect(preview.reason).toBe('valid');
+  const changed = preview.conveyorPreviewChanges!.find(b => b.id === lower.id)!;
+  expect(changed.cellConveyor).toMatchObject({ offset: 1, rise: -1 });
+  const higher = buildings.place('conveyor-cell', .5, .5, 0, far).building!;
+  expect(buildings.get(lower.id)!.cellConveyor).toEqual(changed.cellConveyor);
+  expect(buildings.demolish(higher.id)).toBe('removed');
+  expect(buildings.get(lower.id)!.cellConveyor).toEqual({ rise: 0, entries: [] });
+});
+
+it('falls back safely to separate entry ramps for a lower belt with multiple incoming routes', () => {
+  const { buildings, far, a, d, logistics, items, ground } = setup(0, false);
+  const lower = buildings.place('conveyor-cell', .5 + d.x, .5 + d.z, 0, far).building!;
+  // A perpendicular high-side feeder makes a full-width descending deck ambiguous.
+  const feeder = buildings.place('conveyor-cell', 1.5, -.5, 1, far);
+  expect(feeder.reason).toBe('valid');
+  const shape = buildings.get(lower.id)!.cellConveyor!;
+  expect(shape.offset).toBeUndefined(); expect(shape.entries).toHaveLength(2);
+  logistics.sync();
+  const source = new Inventory(items, 1); source.addItem('iron-ore', 3);
+  const segment = logistics.network.get(a.id)!;
+  logistics.network.attachCellSource(a.id, new InventorySource('junction-source', { position: segment.path.point(0), direction: segment.path.direction('input') }, source, 'iron-ore'), 0);
+  for (let i = 0; i < 250; i++) logistics.fixedUpdate(50);
+  expect(source.getItemCount('iron-ore') + ground.all().length + logistics.network.all().reduce((sum, s) => sum + s.items.length, 0)).toBe(3);
+});
+
+it('smoothly descends from a foundation onto the ground and conserves transported items', () => {
+  const terrain = new VoxelTerrain({ originX: -10, originZ: -10, columnsX: 20, columnsZ: 20, blockSize: 1, bottomLevel: -2, sampleHeight: () => 0 });
+  const items = createDefaultItemRegistry(), bag = new Inventory(items, 10); bag.addItem('stone', 100); bag.addItem('wood', 100);
+  const buildings = new BuildingSystem(createDefaultBuildingRegistry(items), bag, terrain, [], 1, 9);
+  const machines = new MachineManager(buildings, items, () => []), ground = new GroundItems(() => 0);
+  const logistics = new LogisticsManager(buildings, machines, items, () => false, 1, undefined, ground);
+  const far = { x: 8, z: 8, radius: .2 };
+  expect(buildings.place('foundation', 0, 0, 0, far).reason).toBe('valid');
+  const high = buildings.place('conveyor-cell', .5, -.5, 0, far).building!;
+  const low = buildings.place('conveyor-cell', .5, -1.5, 0, far).building!;
+  expect(high.transform.y).toBeCloseTo(.4); expect(low.transform.y).toBe(0);
+  expect(low.cellConveyor!.offset).toBeCloseTo(.4); expect(low.cellConveyor!.rise).toBeCloseTo(-.4);
+  logistics.sync(); const upstream = logistics.network.get(high.id)!, downstream = logistics.network.get(low.id)!;
+  expect(upstream.path.point(upstream.path.length)).toEqual(downstream.path.point(0));
+  const stock = new Inventory(items, 1); stock.addItem('iron-ore', 5);
+  logistics.network.attachCellSource(high.id, new InventorySource('foundation-source', { position: upstream.path.point(0), direction: upstream.path.direction('input') }, stock, 'iron-ore'), 0);
+  for (let i = 0; i < 300; i++) {
+    logistics.fixedUpdate(50);
+    expect(stock.getItemCount('iron-ore') + ground.all().length + logistics.network.all().reduce((n, belt) => n + belt.items.length, 0)).toBe(5);
+  }
+  expect(ground.all()).toHaveLength(5);
+});
+
+it('handles successive descending cells with matched edges', () => {
+  const terrain = new VoxelTerrain({ originX: -10, originZ: -10, columnsX: 20, columnsZ: 20, blockSize: 1, bottomLevel: -2,
+    sampleHeight: (_x, z) => Math.max(0, Math.min(3, Math.floor(z + 3))) });
+  const items = createDefaultItemRegistry(), bag = new Inventory(items, 10); bag.addItem('stone', 100); bag.addItem('wood', 100);
+  const buildings = new BuildingSystem(createDefaultBuildingRegistry(items), bag, terrain, [], 1, 9), far = { x: 8, z: 8, radius: .2 };
+  for (let i = 0; i < 4; i++) expect(buildings.place('conveyor-cell', .5, .5 - i, 0, far).reason).toBe('valid');
+  const belts = buildings.all();
+  for (let i = 1; i < belts.length; i++) {
+    const previous = pathForBuilding(belts[i - 1]!, 1)!, current = pathForBuilding(belts[i]!, 1)!;
+    expect(previous.point(previous.length)).toEqual(current.point(0));
+    expect(current.rise).toBeCloseTo(-1);
+  }
+});
+
+it('preserves an occupied lower belt when a downhill deck is added or removed', () => {
+  const { buildings, far, a, d, logistics } = setup(0, false);
+  const lower = buildings.place('conveyor-cell', .5 + d.x, .5 + d.z, 0, far).building!;
+  expect(buildings.demolish(a.id)).toBe('removed'); logistics.sync();
+  expect(logistics.network.insertDropped('existing-item', 'iron-ore', lower.id)).toBe(true);
+  const higher = buildings.place('conveyor-cell', .5, .5, 0, far);
+  expect(higher.reason).toBe('valid'); logistics.sync();
+  expect(logistics.network.get(lower.id)!.items.map(item => item.id)).toEqual(['existing-item']);
+  expect(logistics.network.get(lower.id)!.path.rise).toBeCloseTo(-1);
+  expect(buildings.demolish(higher.building!.id)).toBe('removed'); logistics.sync();
+  expect(logistics.network.get(lower.id)!.items.map(item => item.id)).toEqual(['existing-item']);
+  expect(logistics.network.get(lower.id)!.path.rise).toBe(0);
 });

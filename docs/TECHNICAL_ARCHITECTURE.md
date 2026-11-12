@@ -1205,3 +1205,14 @@ Starter resources use shared bark, foliage and stone textures and grouped parts;
 visibility, targeting, collision and collection continue to use gatherable state.
 Generated textures are explicitly disposed with the view. Decorative rock
 colliders remain approximate cylinders, not precise faceted meshes.
+
+### Aligned downhill cell decks
+
+`resolveCellConveyors` uses an inlet offset and negative rise to put an aligned
+straight descent on the full lower cell when it has only one incoming cell, no
+Miner input and no need to climb toward its output. `ConveyorPath`, preview and
+placed mesh consume the same offset and rise; the two decks meet at the shared
+edge. Ground-drop coverage includes the raised inlet. Ambiguous multi-input
+junctions, turns and cells also climbing retain centre-entry transitions and
+their existing topology guards. Physics, capacity and grid occupancy do not
+change.
