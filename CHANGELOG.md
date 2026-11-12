@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — camera and voxel movement stability
+
+- Ignore extreme single-event pointer-lock mouse deltas and clear pending look input on focus,
+  visibility and pointer-lock changes; normal multi-event fast turns still accumulate.
+- Sweep the circular player footprint against actual rounded voxel corners instead
+  of expanded square corners. Permit outward/tangential recovery from an existing
+  overlap without teleportation while still blocking movement into walls.
+
 ## Unreleased — aligned downhill conveyor decks
 
 - Use the entire lower tile as a railed sloping deck for an unambiguous,

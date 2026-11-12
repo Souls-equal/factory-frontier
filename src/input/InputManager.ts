@@ -36,6 +36,9 @@ const RIGHT_CODES = new Set(['KeyD']);
 const SPRINT_CODES = new Set(['ShiftLeft', 'ShiftRight']);
 const JUMP_CODES = new Set(['Space']);
 const INTERACT_CODES = new Set(['KeyE']);
+// Browser/device pointer warps can report enormous deltas in one event.
+// Filter individual outliers, not the sum of normal fast mouse events.
+const MAX_LOOK_EVENT_PIXELS = 300;
 
 export class InputManager {
   private readonly element: HTMLElement;
@@ -230,8 +233,7 @@ export class InputManager {
     if (this.isPointerLocked) {
       const movementX = Number.isFinite(event.movementX) ? event.movementX : 0;
       const movementY = Number.isFinite(event.movementY) ? event.movementY : 0;
-      this.lookX += movementX;
-      this.lookY += movementY;
+      this.addLook(movementX, movementY, true);
       return;
     }
 
@@ -239,11 +241,16 @@ export class InputManager {
       return;
     }
 
-    this.lookX += event.clientX - this.lastPointerX;
-    this.lookY += event.clientY - this.lastPointerY;
+    const dx = event.clientX - this.lastPointerX, dy = event.clientY - this.lastPointerY;
     this.lastPointerX = event.clientX;
     this.lastPointerY = event.clientY;
+    this.addLook(dx, dy);
   };
+
+  private addLook(x: number, y: number, locked = false): void {
+    if (!Number.isFinite(x) || !Number.isFinite(y) || (locked && Math.hypot(x, y) > MAX_LOOK_EVENT_PIXELS)) return;
+    this.lookX += x; this.lookY += y;
+  }
 
   private readonly handleKeyDown = (event: KeyboardEvent): void => {
     if (isTypingTarget(event.target)) {
@@ -288,6 +295,7 @@ export class InputManager {
   };
 
   private readonly handleBlur = (): void => {
+    this.lookX = 0; this.lookY = 0;
     this.keys.clear();
     this.dragging = false;
     this.jumpQueued = false;
@@ -296,6 +304,7 @@ export class InputManager {
 
   private readonly handleVisibilityChange = (): void => {
     if (this.document.visibilityState === 'hidden') {
+      this.lookX = 0; this.lookY = 0;
       this.keys.clear();
       this.dragging = false;
       this.jumpQueued = false;
@@ -308,6 +317,7 @@ export class InputManager {
       return;
     }
     this.dragging = false;
+    this.lookX = 0; this.lookY = 0;
     // A pending pointer-lock request may resolve after the inventory opens.
     if (!this.gameplayEnabled && this.isPointerLocked) {
       try { this.document.exitPointerLock(); } catch { /* release remains best effort */ }

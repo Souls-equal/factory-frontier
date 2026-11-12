@@ -294,7 +294,10 @@ export class PlayerController {
       const climbsTooSteeply = rise > 0.02 && segmentSlope > maxTangent;
       const climbsTooHigh = rise > this.physics.maxStepHeight && segmentSlope > maxTangent * 0.5;
 
-      if (climbsTooSteeply || climbsTooHigh) {
+      // If already overlapping a voxel column, the wall solver must be allowed
+      // to permit escape or sliding; rejecting the whole move would pin us.
+      const recoveringVoxelOverlap = this.terrain.verticalWalls === true && this.terrain.heightAt(startX, startZ) > this.y + 0.02;
+      if (!recoveringVoxelOverlap && (climbsTooSteeply || climbsTooHigh)) {
         nextX = startX;
         nextZ = startZ;
         this.velocityX = 0;

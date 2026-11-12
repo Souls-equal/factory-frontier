@@ -362,3 +362,30 @@ describe('pointer lock restoration around the inventory', () => {
     Reflect.deleteProperty(document, 'exitPointerLock');
   });
 });
+
+describe('look discontinuities', () => {
+  it('discards isolated pointer-lock spikes but preserves ordinary fast events', () => {
+    input = new InputManager(canvas); setPointerLockElement(canvas);
+    lockedMouseMove(12, -4); lockedMouseMove(4000, -8000); lockedMouseMove(180, 20);
+    expect(input.consumeLookDelta()).toEqual({ x: 192, y: 16 });
+    for (let i = 0; i < 5; i++) lockedMouseMove(100, 0);
+    expect(input.consumeLookDelta()).toEqual({ x: 500, y: 0 });
+  });
+  it('preserves large deliberate drag movements when pointer lock is unavailable', () => {
+    input = new InputManager(canvas); mouseDown(10, 10);
+    mouseMove(20, 14); mouseMove(1200, 700); mouseMove(1210, 705);
+    expect(input.consumeLookDelta()).toEqual({ x: 1200, y: 695 });
+  });
+  it('clears pending look on blur, visibility loss and pointer-lock changes', () => {
+    input = new InputManager(canvas); setPointerLockElement(canvas);
+    lockedMouseMove(20, 5); window.dispatchEvent(new Event('blur'));
+    expect(input.consumeLookDelta()).toEqual({ x: 0, y: 0 });
+    lockedMouseMove(20, 5); setPointerLockElement(null);
+    expect(input.consumeLookDelta()).toEqual({ x: 0, y: 0 });
+    setPointerLockElement(canvas); lockedMouseMove(20, 5);
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' });
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(input.consumeLookDelta()).toEqual({ x: 0, y: 0 });
+    Reflect.deleteProperty(document, 'visibilityState');
+  });
+});

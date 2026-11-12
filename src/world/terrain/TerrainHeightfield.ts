@@ -61,6 +61,8 @@ export interface TerrainQuery {
   readonly size: number;
   readonly resolution: number;
   readonly cellSize: number;
+  /** True when paired wall collisions resolve vertical column edges. */
+  readonly verticalWalls?: boolean;
   heightAt(x: number, z: number): number;
   /** Optional footprint-aware support below the current feet (for stepped terrain). */
   groundBelow?(x: number, z: number, feetY: number, radius: number): number;
