@@ -8,10 +8,15 @@ export const CONTROLS_HINT_UNLOCKED =
   'Click to capture mouse · WASD move · Space jump · Shift sprint · E interact · Q build · F demolish · Tab inventory';
 export const CONTROLS_HINT_LOCKED =
   'WASD move · Space jump · Shift sprint · E interact · Q build · F demolish · Tab inventory · Esc releases mouse';
+export const CONSTRUCTION_HINT_UNLOCKED =
+  'Left click place · Drag to look · Right click capture mouse · R rotate · Esc cancel';
+export const CONSTRUCTION_HINT_LOCKED =
+  'Left click place · Mouse look · R rotate · Esc cancel';
 
 export class ControlsHint {
   private readonly element: HTMLElement;
   private locked = false;
+  private constructing = false;
 
   private constructor(element: HTMLElement) {
     this.element = element;
@@ -38,8 +43,16 @@ export class ControlsHint {
     this.render();
   }
 
+  setConstructionActive(active: boolean): void {
+    if (this.constructing === active) return;
+    this.constructing = active;
+    this.render();
+  }
+
   private render(): void {
-    this.element.textContent = this.locked ? CONTROLS_HINT_LOCKED : CONTROLS_HINT_UNLOCKED;
+    this.element.textContent = this.constructing
+      ? (this.locked ? CONSTRUCTION_HINT_LOCKED : CONSTRUCTION_HINT_UNLOCKED)
+      : (this.locked ? CONTROLS_HINT_LOCKED : CONTROLS_HINT_UNLOCKED);
     this.element.classList.toggle('is-locked', this.locked);
     this.element.setAttribute('data-locked', String(this.locked));
   }

@@ -61,10 +61,10 @@ press **E** when the prompt appears; **Tab** opens the inventory. Drag items to
 move, merge or swap, and select an item to split it. Closing attempts to restore
 previous pointer lock; if denied, click the viewport to recapture the mouse.
 Press **Q** to open construction. Gather 10 stone and 5 wood to select a foundation,
-aim at nearby ground, press **R** to rotate and **C** to place. Aim at a placed
+aim at nearby ground, press **R** to rotate and **left-click** to place. Aim at a placed
 foundation and press **F** to demolish it for a full refund; if the full refund
 does not fit, demolition is refused. **Escape** cancels placement.
-Click-drag look works even if pointer lock is denied. Add `?debug=1` to the URL to show live engine statistics (FPS, frame time,
+If the mouse is not captured during placement, drag to look and right-click to request capture; a short left click places. Add `?debug=1` to the URL to show live engine statistics (FPS, frame time,
 simulation time, ticks, draw calls, triangles, frame systems).
 
 ### Controls
@@ -78,7 +78,8 @@ simulation time, ticks, draw calls, triangles, frame systems).
 | E | Interact with the highlighted target |
 | Q | Open/close construction menu or cancel placement |
 | R | Rotate placement preview by 90° |
-| C | Confirm valid placement |
+| Left click | Confirm valid placement |
+| Right click (during placement, unlocked) | Capture the mouse |
 | F | Demolish targeted building (full refund if it fits) |
 | Tab | Open or close inventory |
 | Esc | Close a menu, cancel placement, or release pointer lock |

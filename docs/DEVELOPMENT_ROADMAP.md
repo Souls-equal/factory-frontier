@@ -162,6 +162,7 @@ now includes integrated terrain, wall collisions, placement checks, starter
 resources and block-style current models. Browser and user acceptance remain pending.
 Chunks, persistence and terrain editing are not included in the current step.
 
+Construction now confirms with left click rather than C; hands-on input acceptance remains pending.
 The four selectable building models have a block-style detail refresh; user visual acceptance remains pending.
 The Q menu now includes model-based building thumbnails; browser acceptance remains pending.
 Foundation placement has adjustable burial and elevation with neighbour alignment;

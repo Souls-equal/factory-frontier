@@ -389,3 +389,54 @@ describe('look discontinuities', () => {
     Reflect.deleteProperty(document, 'visibilityState');
   });
 });
+
+describe('construction mouse gestures', () => {
+  const release = (x = 100, y = 100, button = 0, target: EventTarget = canvas) =>
+    target.dispatchEvent(new MouseEvent('mouseup', { button, clientX: x, clientY: y, bubbles: true }));
+
+  it('places once per press when locked and never on right click or holding', () => {
+    const place = vi.fn(); input = new InputManager(canvas, { isConstructionActive: () => true, onConstructionClick: place });
+    setPointerLockElement(canvas);
+    mouseDown(); mouseDown(); expect(place).toHaveBeenCalledTimes(1);
+    release(); mouseDown(100, 100, 2); release(100, 100, 2); expect(place).toHaveBeenCalledTimes(1);
+    mouseDown(); expect(place).toHaveBeenCalledTimes(2); release();
+  });
+  it('uses a short unlocked click to place, but never treats a drag as a placement', () => {
+    const place = vi.fn(), request = vi.fn();
+    Object.defineProperty(canvas, 'requestPointerLock', { configurable: true, value: request });
+    input = new InputManager(canvas, { isConstructionActive: () => true, onConstructionClick: place });
+    mouseDown(); release(); expect(place).toHaveBeenCalledOnce(); expect(request).not.toHaveBeenCalled();
+    mouseDown(); mouseMove(120, 100); mouseMove(100, 100); release(); expect(place).toHaveBeenCalledOnce();
+    expect(input.consumeLookDelta()).toEqual({ x: 0, y: 0 });
+    mouseDown(); release(120, 100); expect(place).toHaveBeenCalledOnce();
+    mouseDown(); release(100, 100, 0, document.body); expect(place).toHaveBeenCalledOnce();
+  });
+  it('cancels gestures on modal suspension, blur, capture changes and mode cancellation', () => {
+    let active = true; const place = vi.fn();
+    input = new InputManager(canvas, { isConstructionActive: () => active, onConstructionClick: place });
+    mouseDown(); input.suspendForModal(); release(); input.resumeFromModal();
+    mouseDown(); window.dispatchEvent(new Event('blur')); release();
+    mouseDown(); setPointerLockElement(canvas); release(); setPointerLockElement(null);
+    mouseDown(); active = false; release();
+    mouseDown(); active = true; release();
+    expect(place).not.toHaveBeenCalled();
+  });
+  it('offers right click to recapture during placement without building', () => {
+    const request = vi.fn(), place = vi.fn();
+    Object.defineProperty(canvas, 'requestPointerLock', { configurable: true, value: request });
+    input = new InputManager(canvas, { isConstructionActive: () => true, onConstructionClick: place });
+    mouseDown(100, 100, 2); release(100, 100, 2);
+    const menu = new MouseEvent('contextmenu', { button: 2, bubbles: true, cancelable: true });
+    canvas.dispatchEvent(menu);
+    expect(request).toHaveBeenCalledOnce(); expect(place).not.toHaveBeenCalled(); expect(menu.defaultPrevented).toBe(true);
+    input.suspendForModal();
+    const modalMenu = new MouseEvent('contextmenu', { button: 2, bubbles: true, cancelable: true });
+    canvas.dispatchEvent(modalMenu); expect(modalMenu.defaultPrevented).toBe(false);
+  });
+  it('retains pointer capture on regular non-construction clicks', () => {
+    const request = vi.fn(), place = vi.fn();
+    Object.defineProperty(canvas, 'requestPointerLock', { configurable: true, value: request });
+    input = new InputManager(canvas, { isConstructionActive: () => false, onConstructionClick: place });
+    mouseDown(); release(); expect(request).toHaveBeenCalledOnce(); expect(place).not.toHaveBeenCalled();
+  });
+});

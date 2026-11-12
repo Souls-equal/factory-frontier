@@ -895,7 +895,10 @@ validation for preview and placement. TerrainHeightfield support clips every
 intersecting terrain triangle to the footprint; generic terrain implementations
 fall back to finite samples. Natural solids/deposits, buildings, the player,
 world bounds and material availability are checked. Placement/demolition requests
-are consumed in the fixed-step stage.
+are consumed in the fixed-step stage. Construction confirmation is a primary
+mouse press while captured; when unlocked, the input layer distinguishes a short
+click from drag-look and requests pointer capture on right click. Modal suspension,
+focus loss and capture changes cancel incomplete gestures. C no longer places.
 Foundation mode passes a height offset to the same authoritative validator for
 preview and commit. It aligns unoccupied partial edge contacts to the nearest
 foundation on the grid, inheriting that neighbour's base height; otherwise the

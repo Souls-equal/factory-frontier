@@ -3,6 +3,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
+  CONSTRUCTION_HINT_LOCKED,
+  CONSTRUCTION_HINT_UNLOCKED,
   CONTROLS_HINT_LOCKED,
   CONTROLS_HINT_UNLOCKED,
   ControlsHint,
@@ -30,6 +32,14 @@ describe('ControlsHint', () => {
     expect(element?.textContent).toBe(CONTROLS_HINT_UNLOCKED);
     expect(element?.getAttribute('data-locked')).toBe('false');
     expect(element?.classList.contains('is-locked')).toBe(false);
+  });
+
+  it('shows placement-specific instructions for captured and fallback mouse', () => {
+    const hint = ControlsHint.fromDocument(document);
+    const element = document.querySelector<HTMLElement>('[data-ui="controls-hint"]')!;
+    hint.setConstructionActive(true); expect(element.textContent).toBe(CONSTRUCTION_HINT_UNLOCKED);
+    hint.setPointerLocked(true); expect(element.textContent).toBe(CONSTRUCTION_HINT_LOCKED);
+    hint.setConstructionActive(false); expect(element.textContent).toBe(CONTROLS_HINT_LOCKED);
   });
 
   it('updates the text and state when pointer lock changes', () => {

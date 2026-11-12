@@ -9,6 +9,18 @@
 
 ---
 
+## Phase 5 — mouse construction placement (user validation pending)
+
+- Left click now confirms placement instead of C. Captured mouse uses a single
+  press; without capture, a short click places and a drag only moves the view.
+  Right click requests capture in placement mode. Gestures are cancelled by
+  modal suspension, blur or pointer-lock changes; costs and validation are unchanged.
+- Automated tests cover locked and unlocked input, invalid placements, cancellation,
+  inventory costs and UI hints. A Chromium software-WebGL run with a test-stocked
+  inventory checked captured placement, C inactivity, duplicate rejection, unlocked
+  drag/click and right-click recapture; physical/user acceptance remains pending.
+  Phase 5 remains open.
+
 ## Phase 5 — construction model refresh (user validation pending)
 
 - Refined the four selectable construction models: reinforced foundation corners,
@@ -237,7 +249,7 @@
   rendering and interaction. Phase 4 was accepted by the user for proceeding
   with its browser verification still pending.
 - The construction menu exposes one automatic conveyor and a minimal
-  receiving terminal (each 4 stone and 2 wood). R rotates, C places repeatedly
+  receiving terminal (each 4 stone and 2 wood). R rotates, left click places repeatedly
   for all buildings, Escape exits before interaction/demolition; invalid, disconnected and connected preview feedback
   shares the authoritative placement validator. Ports are directional and
   height-matched; mismatched connections and loops are rejected before payment.
@@ -359,7 +371,7 @@
   structural foundation is 2 × 2 one-metre grid cells, 0.4 m tall and costs 10
   stone and 5 wood. IDs are unique for the world session, not saved on reload.
 - Q opens the construction menu. Selecting an affordable foundation enters
-  placement; aim at ground within 6 m, R rotates 90°, C confirms, Escape cancels.
+  placement; aim at ground within 6 m, R rotates 90°, left click confirms, Escape cancels.
   F demolishes a targeted registered building. Menus suspend gameplay input and
   pause player physics; opening a menu also clears horizontal momentum.
 - Preview and confirmation share snapped transforms and the same validation:

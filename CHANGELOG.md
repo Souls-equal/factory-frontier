@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — mouse construction placement
+
+- Confirm construction with left click instead of C. In uncaptured mode, drag
+  to look without placing, or right click to request mouse capture.
+- Keep placement edge-triggered, modal-safe and subject to the existing validation.
+
 ## Unreleased — refined construction models
 
 - Refresh the foundation, Miner, one-cell conveyor and receiving terminal with
