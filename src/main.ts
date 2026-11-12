@@ -187,7 +187,7 @@ async function boot(): Promise<void> {
   constructionUI = new ConstructionUI(constructionRoot, buildingRegistry, inventory, (id) => {
     construction.select(id); closeConstruction();
     interactionPrompt.showFeedback('Aim at nearby ground. R rotates · C places repeatedly · Esc cancels.');
-  }, closeConstruction);
+  }, closeConstruction, buildings.cellSize);
   createdInput = new InputManager(canvas as HTMLCanvasElement, {
     onPointerLockChange: (locked) => controlsHint.setPointerLocked(locked),
     onInventoryToggle: () => {

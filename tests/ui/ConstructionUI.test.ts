@@ -41,3 +41,30 @@ it('offers all Phase 5 entries with exact costs and rejects unaffordable selecti
   }
   ui.dispose();
 });
+
+it('renders distinct model thumbnails for every visible entry, caches them and keeps nested clicks safe', () => {
+  document.body.innerHTML = '<section hidden><button data-construction-close>Close</button><div data-construction-list></div></section>';
+  const root = document.querySelector('section')!, inventory = new Inventory(createDefaultItemRegistry(), 4), select = vi.fn();
+  const ui = new ConstructionUI(root, createDefaultBuildingRegistry(inventory.registry), inventory, select, vi.fn());
+  ui.open();
+  const ids = ['foundation', 'miner-mk1', 'conveyor-cell', 'receiving-terminal'];
+  const thumbnails = ids.map((id) => {
+    const entry = root.querySelector<HTMLButtonElement>(`[data-building="${id}"]`)!;
+    const svg = entry.querySelector('svg')!;
+    expect(svg.getAttribute('aria-hidden')).toBe('true');
+    expect(svg.querySelectorAll('path').length).toBeGreaterThan(0);
+    expect(entry.disabled).toBe(true);
+    svg.querySelector('path')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(select).not.toHaveBeenCalled();
+    return svg.outerHTML;
+  });
+  expect(new Set(thumbnails).size).toBe(ids.length);
+  inventory.addItem('stone', 10); inventory.addItem('wood', 10); ui.update();
+  const foundation = root.querySelector<HTMLButtonElement>('[data-building="foundation"]')!;
+  expect(foundation.querySelector('svg')!.outerHTML).toBe(thumbnails[0]);
+  foundation.querySelector('path')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  expect(select).toHaveBeenCalledExactlyOnceWith('foundation');
+  ui.closePanel(); ui.open();
+  expect(root.querySelector('[data-building="foundation"] svg')!.outerHTML).toBe(thumbnails[0]);
+  ui.dispose();
+});

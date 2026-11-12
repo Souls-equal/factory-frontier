@@ -9,6 +9,15 @@
 
 ---
 
+## Phase 5 — construction menu thumbnails (user validation pending)
+
+- The Q menu shows static isometric previews generated from the existing placed
+  building meshes for each visible entry, including unaffordable entries. Cached
+  SVG thumbnails need no additional WebGL context; model resources are disposed
+  after rendering. Costs, selection, keyboard focus and inventory checks remain.
+- Automated UI tests cover visible distinct thumbnails, inventory refresh and
+  nested clicks. Manual browser acceptance is still pending; Phase 5 remains open.
+
 ## Player camera and voxel contacts (user validation pending)
 
 - Ignore individual pointer-lock motion events over 300 pixels and clear unconsumed look
