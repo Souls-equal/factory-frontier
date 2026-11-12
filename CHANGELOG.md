@@ -7,14 +7,18 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
-### Work in progress — Phase 5 conveyor simulation (not playable)
+### Work in progress — Phase 5 integrated conveyor foundation
 
-- Added an isolated, renderer-free path/port/transport prototype and focused tests.
-  Construction, machine connection, receiver gameplay, rendering and inspection
-  are **not integrated**; this is not a completed logistics network. Typecheck,
-  tests, build and verify passed: 366 tests across 41 files.
-- The user explicitly accepted Phase 4 for proceeding while acknowledging that
-  real-browser acceptance remains pending; no browser success is implied.
+- Reused the merged path, ports and fixed-step conveyor prototype; connected real
+  building placement, Miner inventory, oriented topology, terminal collection,
+  inspection, modal pause, procedural visuals and interpolated transport items.
+- Added building-backed end-to-end, blockage/recovery and conservation tests,
+  construction/bootstrap, UI and Three.js scene-graph tests. Typecheck, tests,
+  build and verify pass: **382 tests across 45 files**.
+- Browser/WebGL and user acceptance are not performed. INVALID and ERROR states
+  are reserved, not currently assigned; linear acyclic routes only. Phase 5 is
+  in progress, not complete. The user authorized proceeding from Phase 4 while
+  its own real-browser verification remains pending.
 
 ### Added — Phase 4 Miner Mk.1 (browser acceptance pending)
 

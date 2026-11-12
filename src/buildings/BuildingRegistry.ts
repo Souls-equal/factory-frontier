@@ -13,7 +13,7 @@ export interface BuildingDefinition {
   readonly maxSlope: number;
   readonly maxGroundVariation: number;
   readonly color: number;
-  readonly placement?: 'deposit';
+  readonly placement?: 'deposit' | 'logistics';
   readonly category?: string;
 }
 
@@ -62,5 +62,13 @@ export function createDefaultBuildingRegistry(items: ItemRegistry): BuildingRegi
     cost: [{ itemId: 'iron-ore', quantity: 20 }, { itemId: 'stone', quantity: 10 }, { itemId: 'wood', quantity: 10 }],
     widthCells: 2, depthCells: 2, height: 2.4, maxSlope: 0.58, maxGroundVariation: 0.8,
     color: 0xb58b42, placement: 'deposit' });
+  for (const [id, name, description, height] of [
+    ['conveyor-straight', 'Conveyor: Straight', 'Straight belt; arrow points in item direction.', .55],
+    ['conveyor-curve', 'Conveyor: Right Curve', 'Quarter-turn belt; input at rear, output at right.', .55],
+    ['conveyor-incline', 'Conveyor: Incline', 'Ascending belt; output is one metre above input.', 1.55],
+    ['receiving-terminal', 'Receiving Terminal', 'Small collection endpoint for conveyor output.', 1.2],
+  ] as const) registry.register({ id, name, description, category: 'Logistics', placement: 'logistics',
+    cost: [{ itemId: 'stone', quantity: 4 }, { itemId: 'wood', quantity: 2 }], widthCells: 2, depthCells: 2,
+    height, maxSlope: .58, maxGroundVariation: .8, color: 0x697f83 });
   return registry;
 }

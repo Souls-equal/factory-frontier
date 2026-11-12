@@ -3,35 +3,54 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 5 — Conveyor foundation (in progress)
-**Phase Status:** 🟡 In progress — isolated simulation only; not playable
-**Next Recommended Task:** Integrate conveyor construction, machine/receiver ports, rendering and UI, then verify the complete playable path
+**Phase Status:** 🟡 In progress — integrated; browser and user acceptance pending
+**Next Recommended Task:** Run real-browser Phase 5 acceptance, fix any findings, then complete PR/CI and deployment verification
 **Last Updated:** 2026-11-11
 
 ---
 
 ## Phase 5 — Conveyor foundation (in progress, 2026-11-11)
 
-- The user explicitly accepted Phase 4 and authorized Phase 5 **with Phase 4
-  browser verification still pending**. This is not a report that browser checks
-  passed. The Phase 5 baseline passed typecheck, 353 tests in 39 files, build and
-  verify before changes.
-- An **isolated, not-yet-integrated** simulation prototype adds straight,
-  right-curve and incline centreline geometry; grid-aligned directional port
-  matching; single-input/single-output acyclic routes; one-item inventory source
-  and receiver adapters; fixed-step movement with spacing, throughput limits,
-  backpressure and refusal to remove occupied segments. These are not yet
-  available in the game, construction menu, renderer or interaction UI.
-- Tests cover the prototype's geometry, selected spacing and conservation cases,
-  blocking and recovery, one real Miner instance in an isolated test, topology
-  removal and frame partitioning. This is not evidence of an end-to-end playable
-  Miner → conveyor → receiver path, nor a comprehensive conservation proof.
-- Current verification: `npm run typecheck`, `npm test`, `npm run build`, and
-  `npm run verify` pass; **366 tests in 41 files**, including the prototype tests.
-- Still required: integrate building validation/placement and foundation support,
-  Miner output and a player-accessible receiving endpoint, topology lifecycle,
-  construction workflow, inspection, state-driven visuals, item interpolation,
-  browser acceptance and full integration/regression verification. No Phase 5 PR
-  or deployment should be considered complete until these are done.
+- The merged baseline was an isolated conveyor prototype, not a playable path.
+  This branch integrates it into construction, the game loop, machine inventory,
+  rendering and interaction. Phase 4 was accepted by the user for proceeding
+  with its browser verification still pending.
+- The construction menu exposes straight, right curve, incline and a minimal
+  receiving terminal (each 4 stone and 2 wood). R rotates, C places repeatedly
+  for belts, Escape exits; invalid, disconnected and connected preview feedback
+  shares the authoritative placement validator. Ports are directional and
+  height-matched; mismatched connections and loops are rejected before payment.
+  Disconnecting a route pauses its items rather than discarding them.
+- A foundation may support a whole logistics footprint; removing a loaded
+  foundation is refused. Otherwise placement follows terrain slope/variation
+  limits, permits at most 0.12 m terrain penetration, and allows a connected
+  elevated end up to 2 m above terrain for inclines. This bounded temporary
+  support policy enables incline-to-terminal construction without a lift system.
+- Stable building IDs link a real Miner output inventory, belt segments and a
+  one-slot, configurable, inspectable terminal. Partial player retrieval conserves
+  remainders; occupied belts, non-empty miner/terminal inventories and refunds
+  that cannot fit block demolition. Shared additive guards preserve all checks.
+- Fixed-step transport uses the existing prototype's one-input/one-output acyclic
+  routes, 1 m/s speed, 60 items/minute and 0.5 m spacing by default, with
+  downstream blockage and recovery. Rendered instances interpolate logical
+  positions; cyan input and yellow output markers, shapes and state lamps are
+  presentation only. Modal panels pause production/transport. DISCONNECTED,
+  IDLE, RUNNING and BLOCKED are assigned; INVALID and ERROR are reserved, not
+  currently runtime states (invalid placement has explicit feedback).
+- **Automated:** typecheck, test, build and verify pass: 382 tests in 45 files.
+  Coverage includes a real Miner → straight → curve → incline → terminal,
+  conservation, full/recovery, disabled source, removal, terrain support,
+  construction/UI and bootstrap (mock renderer), and Three.js scene graph tests.
+  These do not demonstrate browser/WebGL, pointer lock or actual usability.
+- **Browser/manual acceptance: not performed.** No browser executable is available;
+  a previous isolated Chromium launch lacked NSS/NSPR libraries. All manual Phase 5
+  checks remain pending. Consequently Phase 5 is **not complete or accepted**;
+  no Phase 6 scope has been started.
+- Limits: only linear acyclic networks; no splitters/mergers or save/load. State
+  ERROR is not detected/recovered. Tests do not prove universal non-overlap or
+  absence of loss under all configurations. Large time steps can under-run nominal
+  throughput; standard game simulation uses fixed 50 ms steps. Disconnected items
+  cannot be manually collected from belts and must be reconnected before removal.
 
 ---
 
@@ -359,8 +378,8 @@ This task's merge is deployed by the same pipeline; the result is recorded below
 6. **Two interactable props exist as environment content.** They demonstrate the
    interaction contract (ping log, relay channel) and are not resource/gameplay
    systems.
-7. **No save system, machines or power** — by design. Buildings and inventory exist in memory only.
-8. **Source maps (~3.11 MB) ship with the production build** for debuggability.
+7. **No save system or power network** — by design. Machines, buildings and inventory exist in memory only.
+8. **Source maps (~3.27 MB) ship with the production build** for debuggability.
 9. **Collision bounds:** a deeply embedded spawn or pathological intersecting
    cylinder cluster may need a noticeable depenetration correction or remain
    overlapped. Remaining movement is conservatively stopped when the bounded
@@ -373,10 +392,11 @@ This task's merge is deployed by the same pipeline; the result is recorded below
 
 ## Next Recommended Task
 
-1. Perform and record browser checks for Phase 3 and the remaining Phase 2.1 UX; investigate any failures.
-2. Address any constrained-generation or reachability issues discovered during
-   testing. Do not start Phase 3 without explicit authorization and validated
-   Phase 2 acceptance.
+Perform Phase 5 real-browser acceptance, including the full production path,
+placement, connection feedback, blocking/recovery and resource conservation.
+Also verify the outstanding Phase 4 and earlier browser checks. Fix findings and
+complete CI, protection, PR and deployment checks before declaring acceptance.
+Do not start Phase 6 without authorization.
 
 ---
 

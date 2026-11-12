@@ -26,7 +26,7 @@ detailed evidence and verification results live in `PROJECT_STATUS.md`.
 | 2 — Resources and inventory | 🟡 Acceptance pending | Registry, deposits and inventory implemented; user reports earlier browser checks passed overall; 2.1 drag/drop, pointer lock and full-inventory browser checks remain |
 | 3 — Building and placement | 🟡 Acceptance pending | Construction menu, preview, validation, grid, rotation, registration and demolition implemented; real-browser acceptance pending |
 | 4 — First automated extractor | 🟡 User accepted | Browser verification remains pending |
-| 5 — Conveyor foundation | 🟡 In progress | Isolated simulation prototype only; not playable |
+| 5 — Conveyor foundation | 🟡 In progress | Integrated path implemented; browser and user acceptance pending |
 | 6 — First production chain | ◻ Planned | — |
 | 7 — Advanced logistics | ◻ Planned | — |
 | 8 — Electricity | ◻ Planned | — |
@@ -145,6 +145,12 @@ Acceptance criteria:
 - No items are created when output is blocked.
 
 ## PHASE 5 — Conveyor foundation
+
+Status: integration implemented and automated checks pass (382 tests / 45 files),
+but real-browser and user acceptance are pending. The previous prototype alone
+was not playable. INVALID/ERROR runtime handling remains reserved, not implemented.
+Do not advance to Phase 6 until Phase 5 is accepted and explicitly authorized.
+
 
 Objectives:
 

@@ -1,11 +1,11 @@
 import type { SimulationSystem } from '../core/Game';
 import { matchesPort, type ItemReceiver, type ItemSource } from './Ports';
-import { ConveyorPath } from './ConveyorPath';
+import { ConveyorPath, type Point3 } from './ConveyorPath';
 
 export interface ConveyorSettings { readonly speed: number; readonly throughputPerMinute: number; readonly spacing: number }
 export const DEFAULT_CONVEYOR_SETTINGS: ConveyorSettings = Object.freeze({ speed: 1, throughputPerMinute: 60, spacing: .5 });
-export type ConveyorState = 'DISCONNECTED' | 'IDLE' | 'RUNNING' | 'BLOCKED';
-export interface TransportItem { readonly id: string; readonly itemId: string; readonly distance: number; }
+export type ConveyorState = 'DISCONNECTED' | 'IDLE' | 'RUNNING' | 'BLOCKED' | 'INVALID' | 'ERROR';
+export interface TransportItem { readonly id: string; readonly itemId: string; readonly distance: number; readonly previousPosition: Point3; }
 export interface ConveyorSegment {
   readonly id: string;
   readonly path: ConveyorPath;
@@ -64,6 +64,13 @@ export class ConveyorNetwork implements SimulationSystem {
     if (s.output || s.receiver || !matchesPort(receiver.pose, s.path.point(s.path.length), s.path.direction('output')) || this.all().some((entry) => entry.receiver?.id === receiver.id)) return false;
     s.receiver = receiver; this.refreshStates(); return true;
   }
+  /** Clear only links, preserving segment ownership, items and cooldowns. */
+  resetConnections(): void {
+    for (const segment of this.segments.values()) {
+      segment.input = null; segment.output = null; segment.source = null; segment.receiver = null;
+    }
+    this.refreshStates();
+  }
   /** Refuse destruction while items remain; disconnect neighbours synchronously. */
   remove(id: string): boolean {
     const s = this.require(id); if (s.items.length) return false;
@@ -89,6 +96,7 @@ export class ConveyorNetwork implements SimulationSystem {
     if (!Number.isFinite(deltaMs) || deltaMs < 0) throw new RangeError('Invalid conveyor tick.');
     if (deltaMs === 0 || this.paused()) return;
     this.timeMs += deltaMs;
+    for (const segment of this.segments.values()) for (const item of segment.items) item.previousPosition = segment.path.point(item.distance);
     // Walk each path downstream-to-upstream. Newly transferred items do not move twice.
     for (const route of this.routes) for (const segment of route) this.advance(segment, deltaMs);
     for (const s of this.segments.values()) {
@@ -97,7 +105,7 @@ export class ConveyorNetwork implements SimulationSystem {
       if (first && first.distance < s.settings.spacing) continue;
       const itemId = s.source.peek();
       if (itemId && s.source.take(itemId)) {
-        s.items.push({ id: `transport-${this.nextItem++}`, itemId, distance: 0 });
+        s.items.push({ id: `transport-${this.nextItem++}`, itemId, distance: 0, previousPosition: s.path.point(0) });
         s.nextInputMs = this.timeMs + 60000 / s.settings.throughputPerMinute;
       }
     }
