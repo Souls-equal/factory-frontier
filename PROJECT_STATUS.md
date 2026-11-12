@@ -4,8 +4,32 @@
 **Version:** 0.3.0
 **Current Phase:** Phase 5 — Conveyor foundation (in progress)
 **Phase Status:** 🟡 In progress — headless WebGL path verified; user acceptance pending
-**Next Recommended Task:** Complete remaining physical/user acceptance, fix findings, then finish PR/CI and deployment verification
+**Next Recommended Task:** Integrate voxel terrain, collision and jumping, then the new bootstrap resource loop and voxel visuals without losing Phase 5 functionality
 **Last Updated:** 2026-11-11
+
+---
+
+## Voxel transition — foundation only (in progress)
+
+- The user chose an indestructible voxel terrain, voxel-style resources and
+  machines, and starting resources from breakable trees, branches and small
+  loose stones rather than digging terrain. A first Miner that needs no iron is
+  proposed to avoid an iron bootstrap deadlock; its exact cost is not implemented.
+- `VoxelTerrain` is a standalone, Three-free, finite, immutable column model. It
+  quantizes sampled heights, answers occupancy and column queries, and produces
+  exposed voxel faces with a bounded allocation. It can use the existing seeded
+  terrain as a deterministic input. This is **not yet connected to the game**.
+  Typecheck, test, build and verify pass (416 tests in 47 files); these checks
+  do not demonstrate playable voxel collision, rendering or usability.
+- The playable world is still the existing smooth heightfield: the transition
+  has not delivered voxel rendering, wall collisions/jump traversal, collectible
+  trees/branches/stones, new Miner cost, or voxel-style models. The current
+  resource interactions and Phase 5 chain have not been changed.
+- Next, integrate an authoritative block surface with swept wall collision,
+  jumping/landing and terrain-aware placement; implement the new starting loop;
+  adapt visuals; rerun gameplay and browser/manual acceptance. No caves,
+  terrain destruction, chunk streaming or saving are implied by this stage.
+  Phase 5 physical acceptance remains pending, not waived.
 
 ---
 

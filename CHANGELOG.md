@@ -7,6 +7,17 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### In progress — voxel transition foundation (not connected to gameplay)
+
+- Added a read-only, finite column voxel data model with deterministic sampling,
+  occupancy queries and exposed-face buffers; added unit tests for coordinates,
+  culling, winding, repeatability and allocation limits. The playable world still
+  uses the smooth heightfield; collision, controls, resource loop and visuals
+  have not been migrated. Typecheck, tests, build and verify passed (416 tests
+  in 47 files).
+- Recorded the user's non-destructible terrain, tree/branch/stone starting
+  resources and voxel-style machine direction. Phase 5 acceptance remains pending.
+
 ### Changed — Phase 5 usability follow-up
 
 - Added resource-coloured aura rings and terrain-following ground traces, keeping

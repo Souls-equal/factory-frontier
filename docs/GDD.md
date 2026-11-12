@@ -289,6 +289,16 @@ The world should be reproducible using a world seed.
 
 The same seed and generation configuration should produce the same initial world.
 
+### Voxel direction (transition in progress)
+
+The user has chosen a block-style world with non-destructible terrain. Trees may
+be broken and branches and small loose stones collected for initial materials;
+factory machines remain interactable. Resources, buildings and machines should
+also adopt a voxel-like style. The first automation must be obtainable without
+manually digging terrain or requiring iron before iron extraction. This is a
+change of direction, not a claim that the current game implements it; see
+`PROJECT_STATUS.md` for migration progress and outstanding acceptance checks.
+
 ## 4.2 Terrain generation
 
 Generate terrain using procedural noise.
