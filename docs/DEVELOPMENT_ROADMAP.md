@@ -445,3 +445,6 @@ progress until the player validates the scenarios; do not start Phase 6.
 The Phase 5 receiving terminal now displays inventory slots and building collision
 recovers from overlapping contacts. The terminal still has one slot and no upgrade
 system; in-game validation of both changes and Phase 5 acceptance remain pending.
+
+Phase 5 feedback: directional cells and terminals recover covered dropped items;
+the terminal shows both inventories. Re-test in the actual game before acceptance.

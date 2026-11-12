@@ -29,6 +29,19 @@ export class GroundItems {
       this.items.set(item.id, { ...item, previousPosition: item.position, position: { ...item.position, y }, velocityY: y <= floor ? 0 : velocityY });
     }
   }
+  /** Keep an uncollected item visible above a building placed over it. */
+  lift(id: string, minimumY: number): void {
+    const item = this.items.get(id);
+    if (!item || item.position.y >= minimumY) return;
+    const position = { ...item.position, y: minimumY };
+    this.items.set(id, { ...item, position, previousPosition: position, velocityY: 0 });
+  }
+  /** Transfer ownership only if the destination synchronously accepts the item. */
+  transfer(id: string, accept: (item: GroundItem) => boolean): boolean {
+    const item = this.items.get(id);
+    if (!item || !accept(item)) return false;
+    this.items.delete(id); return true;
+  }
   pickup(id: string, inventory: Inventory): boolean {
     const item = this.items.get(id);
     if (!item || inventory.addItem(item.itemId, 1).moved !== 1) return false;

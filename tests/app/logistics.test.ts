@@ -106,14 +106,15 @@ it('real bootstrap starts a Miner-to-belt line before a terminal exists (mock re
   expect(state.sawItem).toBe(true); expect(segment.state).not.toBe('BLOCKED');
   expect(state.ground.length).toBeGreaterThan(0);
   expect(state.ground.every((item) => item.itemId === 'iron-ore')).toBe(true);
-  const original = segment.items.map((item) => item.id);
+  const original = segment.items.map((item) => item.id), originalGround = state.ground.length;
   const terminal = world.buildings.place('receiving-terminal', miner.transform.x, miner.transform.z - 4, 0, far);
   expect(terminal.reason).toBe('valid');
   frame();
   const remaining = state.segments[0]!.items.map((item) => item.id);
   const received = (state.segments[0]!.receiver as InventoryReceiver).inventory.getItemCount('iron-ore');
   expect(remaining.every((id) => original.includes(id))).toBe(true);
-  expect(remaining.length + received).toBe(original.length);
+  expect(received).toBeGreaterThan(0);
+  expect(remaining.length + received + state.ground.length).toBe(original.length + originalGround);
   for (let i = 0; i < 220; i++) frame();
   expect((state.segments[0]!.receiver as InventoryReceiver).inventory.getItemCount('iron-ore')).toBeGreaterThan(0);
 });
@@ -131,4 +132,23 @@ it('connects the new one-cell menu belt to the generated Miner and renders dropp
   for (let i = 0; i < 250; i++) frame();
   expect(state.segments[0]!.source?.id).toBe(miner.id); expect(state.sawItem).toBe(true);
   expect(state.ground.length).toBeGreaterThan(0); expect(state.ground[0]!.itemId).toBe('iron-ore');
+});
+
+it('extends a live cell belt over its dropped items without duplicate interaction IDs', async () => {
+  vi.spyOn(console, 'info').mockImplementation(() => undefined);
+  await import('../../src/main'); await vi.waitFor(() => expect(state.init).toBe(1)); frame();
+  const world = state.world!, deposit = world.deposits.find((entry) => entry.itemId === 'iron-ore')!;
+  const far = { x: 80, z: 80, radius: .4 };
+  const miner = world.buildings.place('miner-mk1', deposit.x, deposit.z, 0, far).building!;
+  const candidate = [-.5, .5].map((lane) => world.buildings.validate('conveyor-cell', miner.transform.x + lane, miner.transform.z - 1.5, 0, far)).find((entry) => entry.reason === 'valid')!;
+  expect(candidate).toBeDefined();
+  const first = world.buildings.place('conveyor-cell', candidate.transform.x, candidate.transform.z, 0, far);
+  expect(first.reason).toBe('valid');
+  for (let i = 0; i < 300; i++) frame();
+  const fallen = state.ground.map((item) => item.id); expect(fallen.length).toBeGreaterThan(0);
+  const second = world.buildings.place('conveyor-cell', first.transform.x, first.transform.z - 1, 0, far);
+  expect(second.reason).toBe('valid');
+  let recovered = false;
+  for (let i = 0; i < 100; i++) { frame(); recovered ||= state.segments.some((s) => s.id === second.building!.id && s.items.some((item) => fallen.includes(item.id))); }
+  expect(recovered).toBe(true);
 });

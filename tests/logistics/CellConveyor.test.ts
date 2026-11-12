@@ -209,3 +209,103 @@ it.each([1, 3])('shows a turn guide and opens the incoming rail for rotation %i'
   const straight = view.group.getObjectByName(a.id)!;
   expect(straight.getObjectByName('conveyor-turn-guide')).toBeUndefined(); view.dispose();
 });
+
+it('collects items covered by a newly placed terminal without losing full or incompatible leftovers', () => {
+  const { place, ground, logistics } = setup();
+  for (let i = 0; i < 102; i++) ground.drop(`ore-${i}`, 'iron-ore', { x: .2, y: .15, z: .2 });
+  ground.drop('coal', 'coal', { x: .2, y: .15, z: .2 });
+  ground.drop('outside', 'stone', { x: 2, y: .15, z: 0 });
+  ground.drop('above', 'stone', { x: 0, y: 5, z: 0 });
+  const terminal = place('receiving-terminal', 0, 0); logistics.fixedUpdate(50);
+  const inv = logistics.terminal(terminal.id)!;
+  expect(inv.getItemCount('iron-ore')).toBe(100);
+  expect(ground.all().map((i) => i.id)).toEqual(['ore-100', 'ore-101', 'coal', 'outside', 'above']);
+  inv.removeItem('iron-ore', 2); logistics.fixedUpdate(50);
+  expect(inv.getItemCount('iron-ore')).toBe(100);
+  expect(ground.get('coal')).toBeDefined(); expect(ground.get('outside')).toBeDefined();
+});
+
+it.each([0, 1, 2, 3])('captures a pile on a newly placed conveyor and prioritizes it over upstream, rotation %i', (rotation) => {
+  const { place, ground, logistics } = setup();
+  const d = [{ x: 0, z: -1 }, { x: -1, z: 0 }, { x: 0, z: 1 }, { x: 1, z: 0 }][rotation]!;
+  const a = place('conveyor-cell', .5, .5, rotation); logistics.sync();
+  expect(logistics.network.insertDropped('upstream', 'coal', a.id)).toBe(true);
+  for (let i = 0; i < 100; i++) { logistics.fixedUpdate(50); if (ground.get('upstream')) break; }
+  expect(ground.get('upstream')).toBeDefined();
+  for (let i = 0; i < 4; i++) ground.drop(`pile-${i}`, 'iron-ore', { x: .5 + d.x, y: .15, z: .5 + d.z });
+  const b = place('conveyor-cell', .5 + d.x, .5 + d.z, rotation);
+  logistics.fixedUpdate(50);
+  expect(logistics.network.findItem('upstream')).toBeDefined();
+  expect(logistics.network.findItem('upstream')!.item.itemId).toBe('coal');
+  let groundPriority = 4, held = false;
+  for (let i = 0; i < 400; i++) {
+    logistics.fixedUpdate(50);
+    const remaining = ground.all().filter((item) => item.id.startsWith('pile-') && Math.hypot(item.position.x - b.transform.x, item.position.z - b.transform.z) < .1).length;
+    if (remaining > 0) {
+      groundPriority = remaining;
+      // Incoming new source items do not consume the target's insertion opportunity.
+      held = true;
+    }
+    if (remaining === 0) break;
+  }
+  expect(held).toBe(true); expect(groundPriority).toBeGreaterThan(0);
+  expect(ground.all().filter((item) => item.id.startsWith('pile-') && Math.hypot(item.position.x - b.transform.x, item.position.z - b.transform.z) < .1)).toHaveLength(0);
+  const ids = [...ground.all().map((i) => i.id), ...logistics.network.all().flatMap((s) => s.items.map((i) => i.id))];
+  expect(new Set(ids).size).toBe(5); expect(ids.length).toBe(5);
+});
+
+it('leaves drops in place while paused and respects unrelated height layers', () => {
+  const items = createDefaultItemRegistry(), bag = new Inventory(items, 4); bag.addItem('stone', 20); bag.addItem('wood', 20);
+  const buildings = new BuildingSystem(createDefaultBuildingRegistry(items), bag, terrain, [], 1, 29, [deposit]);
+  const ground = new GroundItems(() => 0), machines = new MachineManager(buildings, items, () => [deposit]); let paused = true;
+  const logistics = new LogisticsManager(buildings, machines, items, () => paused, 1, undefined, ground);
+  const foundation = buildings.place('foundation', 2, 2, 0, player); expect(foundation.reason).toBe('valid');
+  const belt = buildings.place('conveyor-cell', 2.5, 2.5, 0, player); expect(belt.reason).toBe('valid');
+  ground.drop('under', 'iron-ore', { x: 2.5, y: .15, z: 2.5 });
+  ground.drop('on', 'stone', { x: 2.5, y: belt.transform.y + .15, z: 2.5 });
+  logistics.fixedUpdate(50); expect(ground.all()).toHaveLength(2);
+  paused = false; logistics.fixedUpdate(0); expect(ground.all()).toHaveLength(2);
+  logistics.fixedUpdate(50); expect(ground.get('under')).toBeDefined(); expect(ground.get('on')).toBeUndefined();
+  expect(logistics.network.findItem('on')).toBeDefined();
+});
+
+it('serves covered drops before live upstream input, then resumes the line', async () => {
+  const { InventorySource } = await import('../../src/logistics/Ports');
+  const { place, logistics, ground, items } = setup();
+  const a = place('conveyor-cell', .5, 1.5, 0), b = place('conveyor-cell', .5, .5, 0);
+  logistics.sync(); const source = new Inventory(items, 1); source.addItem('coal', 5);
+  const path = logistics.network.get(a.id)!.path;
+  logistics.network.attachCellSource(a.id, new InventorySource('source', { position: path.point(0), direction: path.direction('input') }, source, 'coal'), 0);
+  for (let i = 0; i < 5; i++) ground.drop(`covered-${i}`, 'iron-ore', { x: .5, y: .15, z: .5 });
+  let sawWaitingUpstream = false;
+  for (let i = 0; i < 180; i++) {
+    const pending = ground.all().some((item) => item.id.startsWith('covered-') && item.position.z === .5);
+    logistics.fixedUpdate(50);
+    if (pending) {
+      expect(logistics.network.get(b.id)!.items.every((item) => item.itemId === 'iron-ore')).toBe(true);
+      sawWaitingUpstream ||= logistics.network.get(a.id)!.state === 'BLOCKED';
+    }
+  }
+  expect(sawWaitingUpstream).toBe(true);
+  expect(ground.all().filter((item) => item.id.startsWith('covered-') && item.position.z === .5)).toHaveLength(0);
+  expect(ground.all().some((item) => item.itemId === 'coal')).toBe(true);
+  const count = source.getItemCount('coal') + ground.all().length + logistics.network.all().reduce((n, s) => n + s.items.length, 0);
+  expect(count).toBe(10);
+});
+
+it('keeps unaccepted drops visible above a full terminal until space becomes available', async () => {
+  const { BuildingTerrain } = await import('../../src/buildings/BuildingTerrain');
+  const items = createDefaultItemRegistry(), bag = new Inventory(items, 5); bag.addItem('stone', 20); bag.addItem('wood', 20);
+  const buildings = new BuildingSystem(createDefaultBuildingRegistry(items), bag, terrain, [], 1, 29);
+  const surface = new BuildingTerrain(terrain, buildings);
+  const ground = new GroundItems((x, z, y) => surface.groundBelow(x, z, y, 0));
+  const machines = new MachineManager(buildings, items, () => []), logistics = new LogisticsManager(buildings, machines, items, () => false, 1, undefined, ground);
+  ground.drop('ore', 'iron-ore', { x: 0, y: .15, z: 0 }); ground.drop('coal', 'coal', { x: .2, y: .15, z: .2 });
+  const placed = buildings.place('receiving-terminal', 0, 0, 0, player); expect(placed.reason).toBe('valid');
+  for (let i = 0; i < 100; i++) logistics.fixedUpdate(50);
+  expect(logistics.terminal(placed.building!.id)!.getItemCount('iron-ore')).toBe(1);
+  expect(ground.get('coal')!.position.y).toBeGreaterThanOrEqual(placed.transform.y + 1.2 + .15 - 1e-6);
+  logistics.terminal(placed.building!.id)!.removeItem('iron-ore', 1);
+  logistics.fixedUpdate(50); expect(ground.get('coal')).toBeUndefined();
+  expect(logistics.terminal(placed.building!.id)!.getItemCount('coal')).toBe(1);
+});

@@ -12,7 +12,7 @@ import type { TerrainQuery } from '../../src/world/terrain/TerrainHeightfield';
 const terrain: TerrainQuery = { bounds: { minX: -20, maxX: 20, minZ: -20, maxZ: 20 }, size: 40, resolution: 20, cellSize: 2,
   contains: () => true, clampXZ: (x,z) => ({x,z}), heightAt: () => 0, slopeAt: () => 0, normalAt: () => ({ x: 0, y: 1, z: 0 }) };
 it('inspects real segment state and retrieves only what fits from a terminal', () => {
-  document.body.innerHTML = '<section hidden><h2 data-logistics-title></h2><button data-logistics-close>close</button><p data-logistics-details></p><div data-logistics-grid hidden></div><p data-logistics-slot-detail></p><button data-logistics-retrieve>retrieve</button><p data-logistics-notice></p></section>';
+  document.body.innerHTML = '<section hidden><h2 data-logistics-title></h2><button data-logistics-close>close</button><p data-logistics-details></p><div data-logistics-grid hidden></div><p data-logistics-slot-detail></p><div data-logistics-player-pane><div data-logistics-player-grid></div><p data-logistics-player-capacity></p><p data-logistics-player-detail></p></div><button data-logistics-retrieve>retrieve</button><p data-logistics-notice></p></section>';
   const root = document.querySelector('section')!, items = createDefaultItemRegistry(), builder = new Inventory(items, 5);
   builder.addItem('stone', 20); builder.addItem('wood', 10);
   const buildings = new BuildingSystem(createDefaultBuildingRegistry(items), builder, terrain, [], 1, 19);
@@ -26,18 +26,26 @@ it('inspects real segment state and retrieves only what fits from a terminal', (
   expect(root.textContent).toContain('DISCONNECTED'); expect(root.textContent).toContain(terminal.id); expect(root.textContent).toContain('60 items/min');
   expect(root.querySelector<HTMLButtonElement>('[data-logistics-retrieve]')!.hidden).toBe(true);
   ui.open(terminal.id); expect(root.querySelector('[data-logistics-grid]')!.textContent).toContain('Iron Ore ×10');
+  expect(root.querySelector('[data-logistics-player-grid]')!.textContent).toContain('Iron Ore ×97');
+  expect(root.querySelector('[data-logistics-player-capacity]')!.textContent).toContain('1 / 1');
+  root.querySelector<HTMLButtonElement>('[data-logistics-player-grid] [data-slot="0"]')!.click();
+  expect(root.querySelector('[data-logistics-player-detail]')!.textContent).toContain('97 / 100');
   root.querySelector<HTMLButtonElement>('[data-logistics-grid] [data-slot="0"]')!.click();
   expect(root.querySelector('[data-logistics-slot-detail]')!.textContent).toContain('10 / 100');
   root.querySelector<HTMLButtonElement>('[data-logistics-retrieve]')!.click();
   expect(root.textContent).toContain('Transferred 3; 7 remain.');
   expect(logistics.terminal(terminal.id)!.getItemCount('iron-ore')).toBe(7);
   expect(playerInventory.getItemCount('iron-ore')).toBe(100);
+  expect(root.querySelector('[data-logistics-player-grid]')!.textContent).toContain('Iron Ore ×100');
+  playerInventory.removeItem('iron-ore', 100); ui.update();
+  expect(root.querySelector('[data-logistics-player-grid]')!.textContent).toContain('Empty');
+  expect(root.querySelector('[data-logistics-player-capacity]')!.textContent).toContain('0 / 1');
   root.querySelector<HTMLButtonElement>('[data-logistics-close]')!.click(); expect(close).toHaveBeenCalledOnce();
   ui.closePanel(); expect(ui.isOpen).toBe(false); ui.dispose();
 });
 
 it('explains an open end and reports BLOCKED rather than disconnected when a source is connected', () => {
-  document.body.innerHTML = '<section hidden><h2 data-logistics-title></h2><button data-logistics-close>close</button><p data-logistics-details></p><div data-logistics-grid hidden></div><p data-logistics-slot-detail></p><button data-logistics-retrieve>retrieve</button><p data-logistics-notice></p></section>';
+  document.body.innerHTML = '<section hidden><h2 data-logistics-title></h2><button data-logistics-close>close</button><p data-logistics-details></p><div data-logistics-grid hidden></div><p data-logistics-slot-detail></p><div data-logistics-player-pane><div data-logistics-player-grid></div><p data-logistics-player-capacity></p><p data-logistics-player-detail></p></div><button data-logistics-retrieve>retrieve</button><p data-logistics-notice></p></section>';
   const root = document.querySelector('section')!, items = createDefaultItemRegistry(), builder = new Inventory(items, 5);
   builder.addItem('stone', 30); builder.addItem('wood', 20);
   const deposit = { id: 'ore', itemId: 'iron-ore', x: 0, y: 0, z: 0, radius: .8, purity: 'normal' as const, productionMultiplier: 1, extractionCompatible: true };
@@ -55,7 +63,7 @@ it('explains an open end and reports BLOCKED rather than disconnected when a sou
 });
 
 it('renders all configurable terminal slots, updates and preserves partial transfer', () => {
-  document.body.innerHTML = '<section hidden><h2 data-logistics-title></h2><button data-logistics-close>close</button><p data-logistics-details></p><div data-logistics-grid hidden></div><p data-logistics-slot-detail></p><button data-logistics-retrieve>retrieve</button><p data-logistics-notice></p></section>';
+  document.body.innerHTML = '<section hidden><h2 data-logistics-title></h2><button data-logistics-close>close</button><p data-logistics-details></p><div data-logistics-grid hidden></div><p data-logistics-slot-detail></p><div data-logistics-player-pane><div data-logistics-player-grid></div><p data-logistics-player-capacity></p><p data-logistics-player-detail></p></div><button data-logistics-retrieve>retrieve</button><p data-logistics-notice></p></section>';
   const root = document.querySelector('section')!, items = createDefaultItemRegistry(), builder = new Inventory(items, 5);
   builder.addItem('stone', 10); builder.addItem('wood', 10);
   const buildings = new BuildingSystem(createDefaultBuildingRegistry(items), builder, terrain, [], 1, 19);

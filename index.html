@@ -73,14 +73,25 @@
       </section>
 
       <section class="inventory" data-ui="logistics" role="dialog" aria-modal="true" aria-label="Logistics inspection" hidden>
-        <div class="inventory__panel">
-          <header class="inventory__header"><div><span class="inventory__eyebrow">LOGISTICS</span><h2 data-logistics-title>Conveyor</h2></div>
+        <div class="inventory__panel terminal">
+          <header class="inventory__header terminal__header"><div><span class="inventory__eyebrow">LOGISTICS / STORAGE</span><h2 data-logistics-title>Receiving Terminal</h2></div>
             <button type="button" data-logistics-close>Close · Esc</button></header>
-          <p class="inventory__detail" data-logistics-details></p>
-          <div class="inventory__grid" data-logistics-grid aria-label="Terminal storage slots" hidden></div>
-          <p class="inventory__detail" data-logistics-slot-detail></p>
-          <div class="inventory__footer"><button type="button" data-logistics-retrieve>Retrieve contents</button></div>
-          <p data-logistics-notice role="status" aria-live="polite"></p>
+          <div class="terminal__layout">
+            <section class="terminal__pane" aria-label="Terminal storage">
+              <div class="terminal__pane-heading"><div><span class="terminal__eyebrow">01 / STORAGE</span><h3>Terminal</h3></div><span class="terminal__badge">INPUT</span></div>
+              <p class="inventory__detail" data-logistics-details></p>
+              <div class="inventory__grid terminal__grid" data-logistics-grid aria-label="Terminal storage slots" hidden></div>
+              <p class="inventory__detail terminal__detail" data-logistics-slot-detail></p>
+              <div class="terminal__actions"><button type="button" class="terminal__retrieve" data-logistics-retrieve>Retrieve contents <span aria-hidden="true">→</span></button></div>
+              <p class="terminal__notice" data-logistics-notice role="status" aria-live="polite"></p>
+            </section>
+            <section class="terminal__pane" data-logistics-player-pane aria-label="Player inventory">
+              <div class="terminal__pane-heading"><div><span class="terminal__eyebrow">02 / FIELD KIT</span><h3>Inventory</h3></div><span class="terminal__badge">PLAYER</span></div>
+              <p class="inventory__detail" data-logistics-player-capacity></p>
+              <div class="inventory__grid terminal__grid" data-logistics-player-grid aria-label="Player inventory slots"></div>
+              <p class="inventory__detail terminal__detail" data-logistics-player-detail>Items carried by you.</p>
+            </section>
+          </div>
         </div>
       </section>
 
