@@ -95,7 +95,7 @@ export class BuildingView {
     const mesh = this.preview!; const definition = this.registry.get(typeId);
     mesh.position.set(placement.transform.x, placement.transform.y + definition.height / 2, placement.transform.z);
     mesh.rotation.y = (placement.autoConveyor?.rotation ?? placement.transform.rotation) * Math.PI / 2;
-    this.tintPreview(mesh, placement.reason === 'valid', typeId === 'conveyor-auto');
+    this.tintPreview(mesh, placement.reason === 'valid', (typeId === 'conveyor-auto' || typeId === 'conveyor-cell'));
   }
   private tintPreview(mesh: Mesh<BoxGeometry, MeshStandardMaterial>, valid: boolean, showPorts: boolean): void {
     const color = valid ? 0x55e8b2 : 0xff5363;
@@ -138,11 +138,11 @@ export class BuildingView {
     if (shape) {
       material.transparent = true; material.opacity = 0; material.depthWrite = false; mesh.castShadow = false;
       const path = new ConveyorPath({ shape, x: 0, y: BELT_HEIGHT + (auto?.offset ?? 0), z: 0, rotation: 0,
-        size: 2 * this.cellSize, ...(auto ? { rise: auto.rise } : shape === 'incline' ? { rise: this.cellSize } : {}) });
+        size: (typeId === 'conveyor-cell' ? 1 : 2) * this.cellSize, ...(auto ? { rise: auto.rise } : shape === 'incline' ? { rise: this.cellSize } : {}) });
       const count = shape.startsWith('curve-') ? 16 : 1;
-      const geometry = new BoxGeometry(.8 * this.cellSize, .12, path.length / count + .004);
+      const geometry = new BoxGeometry(.8 * this.cellSize, .12, path.length / count + (typeId === 'conveyor-cell' ? 0 : .004));
       const belt = new MeshStandardMaterial({ color: 0x377c82, roughness: .8, transparent: preview, opacity: preview ? .55 : 1, depthWrite: !preview });
-      const railGeometry = new BoxGeometry(.09 * this.cellSize, .17, path.length / count + .004);
+      const railGeometry = new BoxGeometry(.09 * this.cellSize, .17, path.length / count + (typeId === 'conveyor-cell' ? 0 : .004));
       const rails = new MeshStandardMaterial({ color: 0xf3b75d, roughness: .7, transparent: preview, opacity: preview ? .55 : 1, depthWrite: !preview });
       for (let i = 0; i < count; i++) {
         const a = path.point(i * path.length / count), b = path.point((i + 1) * path.length / count);
@@ -171,11 +171,11 @@ export class BuildingView {
       // Coloured end markers show flow: cyan = inlet, yellow = outlet.
       for (const [distance, color, name] of [[0, 0x59dce1, 'conveyor-input'], [path.length, 0xf5d056, 'conveyor-output']] as const) {
         const p = path.point(distance);
-        const marker = new Mesh(new BoxGeometry(.22, .12, .22), new MeshStandardMaterial({ color, transparent: preview, opacity: preview ? .65 : 1, depthWrite: !preview }));
-        marker.position.set(p.x, p.y - def.height / 2 + .1, p.z); marker.name = name; mesh.add(marker);
+        const marker = new Mesh(new BoxGeometry(.22 * (typeId === 'conveyor-cell' ? this.cellSize : 1), .12, .22 * (typeId === 'conveyor-cell' ? this.cellSize : 1)), new MeshStandardMaterial({ color, transparent: preview, opacity: preview ? .65 : 1, depthWrite: !preview }));
+        marker.position.set(typeId === 'conveyor-cell' ? p.x * .76 : p.x, p.y - def.height / 2 + .1, typeId === 'conveyor-cell' ? p.z * .76 : p.z); marker.name = name; mesh.add(marker);
       }
-      const lamp = new Mesh(new BoxGeometry(.18, .15, .18), new MeshStandardMaterial({ color: 0xdd6954, transparent: preview, opacity: preview ? .55 : 1, depthWrite: !preview }));
-      lamp.position.set(-.43 * this.cellSize, BELT_HEIGHT - def.height / 2 + .12, .6 * this.cellSize);
+      const lamp = new Mesh(new BoxGeometry(.18 * (typeId === 'conveyor-cell' ? this.cellSize : 1), .15, .18 * (typeId === 'conveyor-cell' ? this.cellSize : 1)), new MeshStandardMaterial({ color: 0xdd6954, transparent: preview, opacity: preview ? .55 : 1, depthWrite: !preview }));
+      lamp.position.set((typeId === 'conveyor-cell' ? -.38 : -.43) * this.cellSize, BELT_HEIGHT - def.height / 2 + .12, (typeId === 'conveyor-cell' ? .3 : .6) * this.cellSize);
       lamp.name = 'conveyor-indicator'; mesh.add(lamp);
       for (const fraction of [.2, .8]) {
         const p = path.point(path.length * fraction), height = Math.max(.12, p.y - .1);

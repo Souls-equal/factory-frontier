@@ -62,6 +62,7 @@ export function createDefaultBuildingRegistry(items: ItemRegistry): BuildingRegi
     cost: [{ itemId: 'stone', quantity: 10 }, { itemId: 'wood', quantity: 10 }],
     widthCells: 2, depthCells: 2, height: 2.4, maxSlope: 0.58, maxGroundVariation: 0.8,
     color: 0xb58b42, placement: 'deposit' });
+  registry.register({ id: 'conveyor-cell', name: 'Conveyor', description: 'One cell. Faces your view and transfers to the belt ahead.', category: 'Logistics', placement: 'logistics', cost: [{ itemId: 'stone', quantity: 4 }, { itemId: 'wood', quantity: 2 }], widthCells: 1, depthCells: 1, height: .55, maxSlope: .58, maxGroundVariation: .8, color: 0x697f83 });
   for (const [id, name, description, height] of [
     ['conveyor-auto', 'Conveyor', 'Automatically connects and turns toward adjacent conveyors.', .55],
     ['conveyor-straight', 'Conveyor: Straight', 'Straight belt; arrow points in item direction.', .55],

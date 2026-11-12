@@ -30,10 +30,17 @@ export class ConveyorNetwork implements SimulationSystem {
   readonly id = 'conveyors';
   private readonly segments = new Map<string, InternalSegment>();
   private nextItem = 1;
+  private readonly cells = new Set<string>();
+  private readonly cellInputDistance = new Map<string, number>();
+  private readonly cellObstacle = new Set<string>();
+  private cellOrder = 0;
   private timeMs = 0;
   private readonly active = new Set<string>();
   private routes: InternalSegment[][] = [];
-  constructor(private readonly paused: () => boolean = () => false) {}
+  constructor(private readonly paused: () => boolean = () => false,
+    private readonly drop?: (item: TransportItem, position: Point3) => void) {}
+  get dropsOpenEnds(): boolean { return !!this.drop; }
+  isCell(id: string): boolean { return this.cells.has(id); }
   get(id: string): ConveyorSegment | undefined { return this.segments.get(id); }
   all(): readonly ConveyorSegment[] { return [...this.segments.values()]; }
   add(id: string, path: ConveyorPath, settings: ConveyorSettings = DEFAULT_CONVEYOR_SETTINGS): ConveyorSegment {
@@ -45,27 +52,52 @@ export class ConveyorNetwork implements SimulationSystem {
       source: null, receiver: null, state: 'DISCONNECTED', nextInputMs: 0, nextOutputMs: 0 };
     this.segments.set(id, segment); this.refreshStates(); return segment;
   }
+  addCell(id: string, path: ConveyorPath, settings: ConveyorSettings): ConveyorSegment {
+    const segment = this.add(id, path, settings); this.cells.add(id); this.refreshStates(); return segment;
+  }
+  connectCell(fromId: string, toId: string, inputDistance: number): boolean {
+    const from = this.require(fromId), to = this.require(toId);
+    if (!this.cells.has(fromId) || !this.cells.has(toId) || fromId === toId || from.output || from.receiver || !Number.isFinite(inputDistance) || inputDistance < 0 || inputDistance > to.path.length) return false;
+    from.output = toId; to.input ??= fromId; this.cellInputDistance.set(fromId, inputDistance); this.refreshStates(); return true;
+  }
+  attachCellSource(id: string, source: ItemSource, distance: number): boolean {
+    const s = this.require(id);
+    if (!this.cells.has(id) || s.source || !Number.isFinite(distance) || distance < 0 || distance > s.path.length || this.all().some((entry) => entry.source?.id === source.id)) return false;
+    s.source = source; this.cellInputDistance.set(`source:${id}`, distance); this.refreshStates(); return true;
+  }
+  attachCellReceiver(id: string, receiver: ItemReceiver): boolean {
+    const s = this.require(id);
+    if (!this.cells.has(id) || s.output || s.receiver) return false;
+    s.receiver = receiver; this.refreshStates(); return true;
+  }
+  blockCellOutput(id: string): void { if (this.cells.has(id)) this.cellObstacle.add(id); }
   /**
    * Project every item onto a proposed topology without mutating the network.
    * Distances remain measured from the inlet; a shortened tile can move an item
    * onto its new successor. Reject any proposal that cannot preserve spacing.
    */
-  private projectPaths(paths: ReadonlyMap<string, ConveyorPath>, newSettings: ConveyorSettings): Map<string, InternalItem[]> | null {
+  private projectPaths(paths: ReadonlyMap<string, ConveyorPath>, newSettings: ConveyorSettings, cellIds: ReadonlySet<string> = this.cells): Map<string, InternalItem[]> | null {
     const projected = new Map<string, InternalItem[]>();
     const successor = new Map<string, string>();
     const predecessors = new Set<string>();
     for (const [id, path] of paths) {
       const settings = this.segments.get(id)?.settings ?? newSettings;
-      if (settings.spacing > path.length) return null;
+      if (!cellIds.has(id) && settings.spacing > path.length) return null;
       projected.set(id, []);
+      if (cellIds.has(id)) continue;
       for (const [nextId, next] of paths) {
-        if (id === nextId || !path.compatible(next)) continue;
+        if (id === nextId || cellIds.has(nextId) || !path.compatible(next)) continue;
         if (successor.has(id) || predecessors.has(nextId)) return null;
         successor.set(id, nextId); predecessors.add(nextId);
       }
     }
     for (const segment of this.segments.values()) {
       if (!paths.has(segment.id)) { if (segment.items.length) return null; continue; }
+      if (this.cells.has(segment.id)) {
+        if (JSON.stringify(paths.get(segment.id)!.spec) !== JSON.stringify(segment.path.spec) && segment.items.length) return null;
+        projected.set(segment.id, segment.items.map((item) => ({ ...item })));
+        continue;
+      }
       for (const item of segment.items) {
         let id = segment.id, distance = item.distance;
         const visited = new Set<string>();
@@ -81,8 +113,8 @@ export class ConveyorNetwork implements SimulationSystem {
         projected.get(id)!.push({ ...item, distance, previousPosition: changed ? path.point(distance) : item.previousPosition });
       }
     }
+    for (const items of projected.values()) items.sort((a, b) => b.distance - a.distance);
     for (const [id, items] of projected) {
-      items.sort((a, b) => b.distance - a.distance);
       const settings = this.segments.get(id)?.settings ?? newSettings;
       for (let i = 1; i < items.length; i++) if (items[i - 1]!.distance - items[i]!.distance < settings.spacing - 1e-8) return null;
       const next = successor.get(id);
@@ -94,8 +126,8 @@ export class ConveyorNetwork implements SimulationSystem {
     }
     return projected;
   }
-  canReconfigure(paths: ReadonlyMap<string, ConveyorPath>, newSettings: ConveyorSettings): boolean {
-    return this.projectPaths(paths, newSettings) !== null;
+  canReconfigure(paths: ReadonlyMap<string, ConveyorPath>, newSettings: ConveyorSettings, cellIds: ReadonlySet<string> = this.cells): boolean {
+    return this.projectPaths(paths, newSettings, cellIds) !== null;
   }
   /** Apply a validated projection atomically, keeping ids, ordering and clocks. */
   reconfigure(paths: ReadonlyMap<string, ConveyorPath>, newSettings: ConveyorSettings): boolean {
@@ -128,6 +160,7 @@ export class ConveyorNetwork implements SimulationSystem {
   }
   /** Clear only links, preserving segment ownership, items and cooldowns. */
   resetConnections(): void {
+    this.cellInputDistance.clear(); this.cellObstacle.clear();
     for (const segment of this.segments.values()) {
       segment.input = null; segment.output = null; segment.source = null; segment.receiver = null;
     }
@@ -136,15 +169,23 @@ export class ConveyorNetwork implements SimulationSystem {
   /** Refuse destruction while items remain; disconnect neighbours synchronously. */
   remove(id: string): boolean {
     const s = this.require(id); if (s.items.length) return false;
-    if (s.input) this.require(s.input).output = null;
-    if (s.output) this.require(s.output).input = null;
+    if (this.cells.has(id)) {
+      for (const other of this.segments.values()) {
+        if (other.output === id) other.output = null;
+        if (other.input === id) other.input = null;
+      }
+      this.cells.delete(id); this.cellInputDistance.delete(id); this.cellObstacle.delete(id);
+    } else {
+      if (s.input) this.require(s.input).output = null;
+      if (s.output) this.require(s.output).input = null;
+    }
     this.segments.delete(id); this.refreshStates(); return true;
   }
   /** Rebuild routes on topology changes, never while rendering or per item. */
   private refreshStates(): void {
     this.active.clear(); this.routes = [];
     for (const terminal of this.segments.values()) {
-      if (terminal.output) continue;
+      if (this.cells.has(terminal.id) || terminal.output) continue;
       const route: InternalSegment[] = [];
       let cursor: InternalSegment | undefined = terminal;
       while (cursor) { route.push(cursor); cursor = cursor.input ? this.segments.get(cursor.input) : undefined; }
@@ -152,17 +193,18 @@ export class ConveyorNetwork implements SimulationSystem {
       this.routes.push(route);
       for (const segment of route) this.active.add(segment.id);
     }
-    for (const s of this.segments.values()) s.state = !this.active.has(s.id) ? 'DISCONNECTED' : s.items.length ? 'RUNNING' : 'IDLE';
+    for (const s of this.segments.values()) s.state = this.cells.has(s.id) ? (s.items.length ? 'RUNNING' : 'IDLE') : !this.active.has(s.id) ? 'DISCONNECTED' : s.items.length ? 'RUNNING' : 'IDLE';
   }
   fixedUpdate(deltaMs: number): void {
     if (!Number.isFinite(deltaMs) || deltaMs < 0) throw new RangeError('Invalid conveyor tick.');
     if (deltaMs === 0 || this.paused()) return;
     this.timeMs += deltaMs;
     for (const segment of this.segments.values()) for (const item of segment.items) item.previousPosition = segment.path.point(item.distance);
+    this.advanceCells(deltaMs);
     // Walk each path downstream-to-upstream. Newly transferred items do not move twice.
     for (const route of this.routes) for (const segment of route) this.advance(segment, deltaMs);
     for (const s of this.segments.values()) {
-      if (!s.source || !this.active.has(s.id) || this.timeMs < s.nextInputMs) continue;
+      if (this.cells.has(s.id) || !s.source || !this.active.has(s.id) || this.timeMs < s.nextInputMs) continue;
       const first = s.items.at(-1);
       if (first && first.distance < s.settings.spacing) continue;
       const itemId = s.source.peek();
@@ -172,14 +214,66 @@ export class ConveyorNetwork implements SimulationSystem {
       }
     }
     for (const s of this.segments.values()) {
+      if (this.cells.has(s.id)) continue;
       if (!this.active.has(s.id)) { s.state = 'DISCONNECTED'; continue; }
       const first = s.items[0];
       const blocked = !!first && (s.output ? (() => {
         const next = this.require(s.output!); const back = next.items.at(-1);
         const gap = Math.max(s.settings.spacing, next.settings.spacing);
         return !!back && first.distance >= s.path.length + back.distance - gap - 1e-9;
-      })() : first.distance >= s.path.length - 1e-9 && (!s.receiver || !s.receiver.canAccept(first.itemId)));
+      })() : first.distance >= s.path.length - 1e-9 && (s.receiver ? !s.receiver.canAccept(first.itemId) : !this.drop));
       s.state = blocked ? 'BLOCKED' : s.items.length ? 'RUNNING' : 'IDLE';
+    }
+  }
+  /** Fixed-tick two-phase update: movement first, then deterministic transfers.
+   * This handles cycles and fan-in without moving an item twice in a tick. */
+  private advanceCells(deltaMs: number): void {
+    const cells = [...this.cells].map((id) => this.require(id));
+    for (const s of cells) {
+      let ahead = Infinity;
+      for (const item of s.items) {
+        item.distance = Math.min(s.path.length, item.distance + s.settings.speed * deltaMs / 1000, ahead - s.settings.spacing);
+        ahead = item.distance;
+      }
+    }
+    if (cells.length) this.cellOrder = (this.cellOrder + 1) % cells.length;
+    const ordered = [...cells.slice(this.cellOrder), ...cells.slice(0, this.cellOrder)];
+    for (const s of ordered) {
+      const item = s.items[0];
+      if (!item || item.distance < s.path.length - 1e-9 || this.timeMs < s.nextOutputMs) continue;
+      let transferred = false;
+      if (s.output) {
+        const next = this.require(s.output), distance = this.cellInputDistance.get(s.id)!;
+        const gap = Math.max(s.settings.spacing, next.settings.spacing);
+        if (next.items.every((other) => Math.abs(other.distance - distance) >= gap - 1e-8)) {
+          item.distance = distance; next.items.push(item); next.items.sort((a, b) => b.distance - a.distance);
+          transferred = true;
+        }
+      } else if (s.receiver) {
+        transferred = s.receiver.canAccept(item.itemId) && s.receiver.accept(item.itemId);
+      } else if (!this.cellObstacle.has(s.id) && this.drop) {
+        const end = s.path.point(s.path.length), d = s.path.direction('output');
+        this.drop(item, { x: end.x + .2 * d.x, y: end.y + .22, z: end.z + .2 * d.z }); transferred = true;
+      }
+      if (transferred) { s.items.shift(); s.nextOutputMs = this.timeMs + 60000 / s.settings.throughputPerMinute; }
+    }
+    for (const s of cells) {
+      if (s.source && this.timeMs >= s.nextInputMs) {
+        const distance = this.cellInputDistance.get(`source:${s.id}`) ?? 0;
+        if (s.items.every((other) => Math.abs(other.distance - distance) >= s.settings.spacing - 1e-8)) {
+          const itemId = s.source.peek();
+          if (itemId && s.source.take(itemId)) {
+            s.items.push({ id: `transport-${this.nextItem++}`, itemId, distance, previousPosition: s.path.point(distance) });
+            s.items.sort((a, b) => b.distance - a.distance); s.nextInputMs = this.timeMs + 60000 / s.settings.throughputPerMinute;
+          }
+        }
+      }
+      const first = s.items[0];
+      s.state = first && first.distance >= s.path.length - 1e-9 &&
+        (s.output ? (() => { const next = this.require(s.output!); const at = this.cellInputDistance.get(s.id)!;
+          return next.items.some((item) => Math.abs(item.distance - at) < Math.max(s.settings.spacing, next.settings.spacing) - 1e-8); })() :
+          s.receiver ? !s.receiver.canAccept(first.itemId) : this.cellObstacle.has(s.id) || !this.drop)
+        ? 'BLOCKED' : s.items.length ? 'RUNNING' : 'IDLE';
     }
   }
   private advance(s: InternalSegment, deltaMs: number): void {
@@ -201,6 +295,11 @@ export class ConveyorNetwork implements SimulationSystem {
           item.distance = Math.min(remainingSeconds * next.settings.speed, back ? back.distance - gap : next.path.length, next.path.length);
           next.items.push(item); s.items.splice(i, 1); i--;
           s.nextOutputMs = this.timeMs + 60000 / s.settings.throughputPerMinute; continue;
+        }
+        if (!next && !s.receiver && this.drop) {
+          const end = s.path.point(length), direction = s.path.direction('output');
+          this.drop(item, { x: end.x + direction.x * .2, y: end.y + .22, z: end.z + direction.z * .2 });
+          s.items.splice(i, 1); i--; s.nextOutputMs = this.timeMs + 60000 / s.settings.throughputPerMinute; continue;
         }
         if (!next && s.receiver?.canAccept(item.itemId) && s.receiver.accept(item.itemId)) {
           s.items.splice(i, 1); i--; s.nextOutputMs = this.timeMs + 60000 / s.settings.throughputPerMinute; continue;

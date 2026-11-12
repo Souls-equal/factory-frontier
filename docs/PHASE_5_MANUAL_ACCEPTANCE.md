@@ -61,36 +61,29 @@ No save system exists: a reload resets all construction and inventory.
    and C to place. Expect one Miner and a deduction of 10 stone and 10 wood, with no iron required.
    Escape exits placement; press E while targeting it: expect its deposit purity,
    output and running state.
-4. Q → Conveyor. Each logistics building costs 4 stone and 2 wood.
-   Place the first tile at the Miner's **yellow output**. Its cyan input should
-   meet the output regardless of the selected initial rotation. C places repeatedly;
-   Escape cancels placement. An isolated tile uses R for its initial direction.
-   Before adding a terminal, wait for items: they should queue at the open end,
-   which should report BLOCKED, not DISCONNECTED. An unsourced line is DISCONNECTED.
-5. Place more Conveyor tiles in a line and aim a new tile to either side. Before
-   pressing C, expect the preceding tile to be replaced visually by a green ghost
-   showing the planned turn; cyan is its input and yellow its output. Moving aim
-   away or cancelling restores the actual straight tile. Partially aligned edge
-   contacts may snap to a neighbour. C commits the same turn and the materials
-   should follow it. A red/invalid preview must not show neighbour changes.
-   Test all rotations and build some sections before attaching a Miner. Try rising
-   and falling terrain or foundations: the preview, surface and moving items must
-   agree. Place a Receiving Terminal facing the last output and observe transport.
-   Test a single isolated tile with an adjacent tile to the left and to the right;
-   the first tile should turn without having to connect a Miner first. Repeat with
-   a running Miner and a belt blocked full at its open end: adding a side tile
-   should immediately turn it, retain all items and resume transport. Items may
-   snap to the new path at construction. If a more complex arrangement cannot
-   preserve spacing, expect `conveyor occupied` and no payment. Record mismatches.
-6. Try a branch, cycle, overlap or excessive height difference. Expect an invalid
-   preview and no payment. Try an isolated tile, a foundation-supported tile and
-   demolishing its support, as well as repeated placement and cancellation.
+4. Q → Conveyor. Each belt occupies exactly one grid square and costs 4 stone
+   and 2 wood. Aim beside the Miner's yellow output; each half of its two-cell
+   edge has an available lane. The green preview faces the camera's horizontal
+   direction, yellow is the output, R adds a quarter turn, C places and Escape
+   cancels. Check all four directions and that the mesh stays within the square.
+5. Aim each belt's yellow output at the next square. Place a perpendicular belt
+   there and verify ore changes direction onto it; repeat on both sides, with
+   production already running and with a reverse-facing belt. Opposite belts can
+   form a cycle: check no ore disappears. Build several turns and route the last
+   belt to a matching Receiving Terminal. A full or incompatible machine blocks.
+6. Leave an output with nothing in front: ore should fall, remain visible on the
+   ground and be collectable with E. With a full inventory it must remain. Try
+   several inputs joining a belt and check resource conservation. Test foundation
+   support, blocked output, repeated placement, overlap and cancellation. Height
+   differences currently cause discontinuous transfer rather than a ramp; record
+   the result rather than treating it as a passed ramp criterion.
 
 ## Run, inspect and recover
 
 7. Leave menus closed and watch the full chain. Expect individual ore items to
-   move from the Miner, through straight tiles, turns and any slopes, into the
-   terminal, without visible jumps, overlap or disappearing mid-route. E on a
+   move from the Miner through directional tiles and turns into the terminal;
+   record any visible jumps, overlap or disappearing items. Height changes are
+   not yet rendered as ramps. E on a
    belt should show its shape, state, direction, input/output IDs, item count and
    maximum throughput. E on the terminal should show iron and its slot capacity.
 8. With a gameplay panel open, wait and try WASD, Q, C and F. Expect player
@@ -114,13 +107,12 @@ No save system exists: a reload resets all construction and inventory.
     terminal contents, then close the panel. Expect belt flow to resume and items
     to reach the terminal again. Disable the Miner and empty its output, drain the
     terminal and wait for belts to empty before F-demolishing each building; expect
-    the original cost refunded only when it fits. Removing an empty terminal while
-    items are on a source-connected belt should let them queue at its open end;
-    replace it with a matching orientation and expect delivery to resume without loss.
-    If the source is disconnected, expect remaining items to freeze until restored.
+    the original cost refunded only when it fits. Removing an empty terminal lets remaining items fall at the open end;
+    replace it with a matching orientation and expect new deliveries to resume.
+    Check already dropped items remain on the ground.
 
 Record each result and any console errors/screenshots. Report separately whether
 pointer lock, every shape/rotation, blockage/recovery, partial retrieval and the
 complete chain passed. Do not infer acceptance from these instructions alone.
 
-The single self-adapting conveyor requires physical validation; use the scenarios above.
+The one-cell directional conveyor requires physical validation; use the scenarios above.

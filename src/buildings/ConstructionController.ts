@@ -32,16 +32,19 @@ export class ConstructionController {
     }
     return null;
   }
+  private facing(view: CameraView): number {
+    return this.typeId === 'conveyor-cell' ? ((Math.round(view.yaw / (Math.PI / 2)) + this.rotation) % 4 + 4) % 4 : this.rotation;
+  }
   preview(view: CameraView, player: PlayerFootprint): PlacementResult | null {
     if (!this.typeId) return null;
     const point = this.aim(view);
-    return point ? this.system.validate(this.typeId, point.x, point.z, this.rotation, player) : null;
+    return point ? this.system.validate(this.typeId, point.x, point.z, this.facing(view), player) : null;
   }
   confirm(view: CameraView, player: PlayerFootprint) {
     if (!this.typeId) return null;
     const point = this.aim(view);
     if (!point) return null;
-    const result = this.system.place(this.typeId, point.x, point.z, this.rotation, player);
+    const result = this.system.place(this.typeId, point.x, point.z, this.facing(view), player);
     return result;
   }
   /** Nearest intersection with a registered building's actual box, never terrain/props. */

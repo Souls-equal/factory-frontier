@@ -1104,3 +1104,25 @@ same proposed shapes without a second topology solve. A partially touching belt 
 aligned to a neighbour only when the snapped footprint does not overlap a building
 and exactly one alignment is available; ambiguous contacts retain the grid position.
 The alignment still goes through normal terrain, collision, cost and topology guards.
+
+### One-cell directional conveyors (supersedes the menu design above)
+
+The construction menu exposes `conveyor-cell`, a 1×1 grid footprint. The controller
+quantizes camera yaw to four directions (R adds an offset), shared by preview and
+placement. Its straight path stays within the cell. Output targets the immediately
+adjacent cell regardless of the destination's heading: straight entry is at the
+inlet, side and opposite entry are at the centre. Existing legacy 2-cell paths
+remain separate and cannot connect to cells. Machine ports cover either one-cell
+lane across their 2-cell edge; a Miner uses one lane, while a terminal can receive
+from both. Non-accepting buildings at an output block instead of deleting items.
+
+The fixed tick moves cell contents first, then processes outputs in rotating order
+with capacity checks, so fan-in and cycles do not move items twice or duplicate
+them; full receivers apply backpressure. Old linear routes retain their prior
+simulation. A drop callback sends open-end resources into `GroundItems`, which
+owns item IDs, position and gravity separately from Three.js. Dropped items use the
+shared instanced mesh and interaction pickup; full inventory preserves the item.
+
+Ground items are session-only, unstacked and unbounded. Adjacent cells at different
+heights currently transfer with a height discontinuity, not a generated ramp;
+physical browser validation and user acceptance remain outstanding.

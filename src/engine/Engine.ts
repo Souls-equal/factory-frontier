@@ -1,3 +1,4 @@
+import type { GroundItem } from '../logistics/GroundItems';
 import { ConveyorItemsView } from './ConveyorItemsView';
 import type { ConveyorSegment, ConveyorState } from '../logistics/ConveyorNetwork';
 import { BuildingView } from './BuildingView';
@@ -93,9 +94,9 @@ export class Engine implements GameEngine {
   setBuildingPreview(typeId: string | null, result?: PlacementResult): void { this.buildingView?.setPreview(typeId, result); }
   setMachineStates(states: readonly { readonly id: string; readonly state: MachineState }[]): void { this.buildingView?.setMachineStates(states); }
 
-  syncConveyors(segments: readonly ConveyorSegment[], alpha: number): void {
+  syncConveyors(segments: readonly ConveyorSegment[], alpha: number, ground: readonly GroundItem[] = []): void {
     this.buildingView?.setConveyorStates(segments.map((segment) => ({ id: segment.id, state: segment.state as ConveyorState })));
-    this.conveyorItems?.sync(segments, alpha);
+    this.conveyorItems?.sync(segments, alpha, ground);
   }
 
   setHighlight(id: string | null): void {

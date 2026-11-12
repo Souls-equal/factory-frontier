@@ -4,7 +4,7 @@
 **Version:** 0.3.0
 **Current Phase:** Phase 5 — Conveyor foundation (in progress)
 **Phase Status:** 🟡 In progress — headless WebGL path verified; user acceptance pending
-**Next Recommended Task:** Verify the new turn preview and live material path in a real browser with the player; complete Phase 5 acceptance.
+**Next Recommended Task:** Validate the one-cell conveyor and dropped items in a real browser with the player; complete Phase 5 acceptance.
 **Last Updated:** 2026-11-11
 
 ---
@@ -56,6 +56,30 @@
   usability; phase 5 is not accepted and phase 6 is not started.
 
 ---
+
+## Phase 5 — one-cell directional conveyors (implementation; acceptance pending)
+
+- The user reports automatic turns still fail and requested one-cell tiles,
+  oriented by view, transferring into the tile ahead irrespective of its direction.
+  This deliberately supersedes the two-cell automatic menu behavior below. R adds
+  a manual quarter turn; the green preview and yellow marker show the tile's
+  selected output direction. Existing legacy models are retained internally.
+- The application transfers to adjacent one-cell belts, including side input,
+  opposite directions, fan-in and cycles; multiple inputs are arbitrated. A Miner
+  connects to one adjacent lane at its output; terminals accept the two lanes at
+  their input. Full receivers block; open ends drop items into the world where E
+  can collect them, without deleting them when the inventory is full.
+- `npm run verify` passed: 527 tests in 53 files, typecheck, production build,
+  build/preview and dev-server verification. Items and simulation are tested
+  independently of rendering, including occupied
+  placement, cycles, opposite directions, generated-world Miner, terminal
+  backpressure and Three.js bounds. Browser/WebGL and player acceptance are
+  **not yet verified**. Phase 5 remains open and Phase 6 has not started.
+- Limitations: ground items are session-only, unstacked and unbounded in number.
+  Different-height neighbours transfer without a ramp model: the item crosses a
+  height discontinuity, so this is not a replacement for the old automatic ramp.
+  Old two-cell belts do not connect to one-cell belts; only the new belt is in the
+  construction menu. Real browser play and slope behavior need further validation.
 
 ## Phase 5 — turn preview follow-up (in progress)
 

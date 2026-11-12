@@ -27,7 +27,7 @@ export class LogisticsUI {
       this.title.textContent = `Conveyor: ${segment.path.spec.shape}`;
       const d = segment.path.direction('output');
       const direction = d.x > 0 ? 'east' : d.x < 0 ? 'west' : d.z > 0 ? 'south' : 'north';
-      this.details.textContent = `State: ${segment.state} · Direction: ${direction} · Input: ${segment.input ?? segment.source?.id ?? 'not connected'} · Output: ${segment.output ?? segment.receiver?.id ?? 'not connected'} · Items: ${segment.items.length} · Maximum throughput: ${segment.settings.throughputPerMinute} items/min · ${segment.state === 'BLOCKED' ? (segment.output || segment.receiver ? 'Downstream is full or occupied.' : 'Open end: connect another belt or a receiver.') : segment.state === 'DISCONNECTED' ? 'Connect the input to a source.' : !segment.output && !segment.receiver ? 'Open end: items will stop here.' : ''}`;
+      this.details.textContent = `State: ${segment.state} · Direction: ${direction} · Input: ${segment.input ?? segment.source?.id ?? 'not connected'} · Output: ${segment.output ?? segment.receiver?.id ?? 'not connected'} · Items: ${segment.items.length} · Maximum throughput: ${segment.settings.throughputPerMinute} items/min · ${segment.state === 'BLOCKED' ? (segment.output || segment.receiver || this.logistics.network.isCell(segment.id) ? 'Downstream is full or occupied.' : 'Open end: connect another belt or a receiver.') : segment.state === 'DISCONNECTED' ? 'Connect the input to a source.' : !segment.output && !segment.receiver ? (this.logistics.network.dropsOpenEnds ? 'Open end: items fall off.' : 'Open end: items will stop here.') : ''}`;
       this.retrieve.hidden = true;
     } else if (receiver) {
       this.title.textContent = 'Receiving Terminal';

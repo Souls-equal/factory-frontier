@@ -1,3 +1,4 @@
+import { cellAhead, cellTouchesMachine } from '../logistics/CellConveyor';
 import { resolveAutoConveyors, type AutoConveyorShape } from '../logistics/AutoConveyor';
 import { BELT_HEIGHT, machinePort, pathForBuilding } from '../logistics/ConveyorDefinitions';
 import { matchesPort } from '../logistics/Ports';
@@ -120,14 +121,20 @@ export class BuildingSystem {
         const b = building.transform.footprint;
         return building.typeId === 'foundation' && b.minX <= f.minX && b.maxX >= f.maxX && b.minZ <= f.minZ && b.maxZ >= f.maxZ;
       });
-      let anchored = typeId === 'conveyor-auto' ? null : connectedHeight(typeId, transform, this.all().filter((b) => b.typeId !== 'conveyor-auto'), this.cellSize);
-      if (typeId === 'conveyor-auto') {
+      let anchored = typeId === 'conveyor-auto' || typeId === 'conveyor-cell' ? null : connectedHeight(typeId, transform, this.all().filter((b) => b.typeId !== 'conveyor-auto' && b.typeId !== 'conveyor-cell'), this.cellSize);
+      if (typeId === 'conveyor-cell') {
+        const candidate = { id: '__preview__', typeId, transform };
+        const source = this.all().find((b) => b.typeId === 'miner-mk1' && cellTouchesMachine(candidate, b, this.cellSize, 'source', true));
+        if (source) anchored = source.transform.y;
+      } else if (typeId === 'conveyor-auto') {
         const source = this.all().find((b) => {
           if (b.typeId !== 'miner-mk1') return false;
           const port = machinePort(b, this.cellSize, 'source');
           return Math.hypot(transform.x - (b.transform.x + 2 * this.cellSize * port.direction.x), transform.z - (b.transform.z + 2 * this.cellSize * port.direction.z)) < 1e-7;
         });
         if (source) anchored = source.transform.y;
+      } else if (typeId === 'receiving-terminal' && anchored === null && this.all().some((b) => b.typeId === 'conveyor-cell' && cellTouchesMachine(b, { id: '__preview__', typeId, transform }, this.cellSize, 'receiver', true))) {
+        anchored = this.all().find((b) => b.typeId === 'conveyor-cell' && cellTouchesMachine(b, { id: '__preview__', typeId, transform }, this.cellSize, 'receiver', true))!.transform.y;
       } else if (typeId === 'receiving-terminal' && anchored === null) {
         const port = machinePort({ id: '__preview__', typeId, transform }, this.cellSize, 'receiver');
         const upstream = this.all().find((b) => b.typeId === 'conveyor-auto' &&
@@ -160,7 +167,7 @@ export class BuildingSystem {
         [...this.obstacles, ...this.dynamicObstacles()].some((obstacle) => (!deposit || obstacle.id !== `${deposit.id}-collider`) && circleIntersects(f, obstacle.x, obstacle.z, obstacle.radius))) return fail('occupied space', transform);
     let connection: 'connected' | 'disconnected' | undefined;
     if (definition.placement === 'logistics' || typeId === 'miner-mk1') {
-      const result = typeId === 'conveyor-auto' ? 'disconnected' : connectionStatus(typeId, transform, this.all().filter((b) => b.typeId !== 'conveyor-auto'), this.cellSize);
+      const result = typeId === 'conveyor-auto' || typeId === 'conveyor-cell' ? 'disconnected' : connectionStatus(typeId, transform, this.all().filter((b) => b.typeId !== 'conveyor-auto' && b.typeId !== 'conveyor-cell'), this.cellSize);
       if (result === 'incompatible') return fail('incompatible connection', transform);
       connection = result;
     }
@@ -177,6 +184,12 @@ export class BuildingSystem {
        (Math.abs(Math.abs(b.transform.z - transform.z) - 2 * this.cellSize) < 1e-7 && Math.abs(b.transform.x - transform.x) < 1e-7)))) return fail('incompatible connection', transform);
     if (!this.safePlan(existing, planned)) return fail('conveyor occupied', transform);
     const autoConveyor = planned.find((b) => b.id === proposed.id)?.autoConveyor;
+    if (typeId === 'conveyor-cell') {
+      connection = planned.some((b) => b.id !== proposed.id && (
+        b.typeId === 'conveyor-cell' ? cellAhead(proposed, b, this.cellSize) || cellAhead(b, proposed, this.cellSize) :
+        b.typeId === 'miner-mk1' ? cellTouchesMachine(proposed, b, this.cellSize, 'source') :
+        b.typeId === 'receiving-terminal' ? cellTouchesMachine(proposed, b, this.cellSize, 'receiver') : false)) ? 'connected' : 'disconnected';
+    }
     if (typeId === 'conveyor-auto' && autoConveyor) {
       const path = pathForBuilding({ ...proposed, autoConveyor }, this.cellSize)!;
       connection = planned.some((b) => {

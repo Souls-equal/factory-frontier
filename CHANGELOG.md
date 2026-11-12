@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — directional one-cell conveyors
+
+- Replace the automatic belt menu option with a one-cell belt facing the player's
+  view. Its output passes resources to the next belt independent of its heading,
+  including fan-in and cycles, or to a compatible machine.
+- Open ends drop recoverable items; full machines block instead. Legacy two-cell
+  paths remain internal but do not connect to the new tiles. Height transitions
+  are discontinuous and real-browser and player verification remain pending.
+
 ## Unreleased — conveyor turn preview
 
 - Preview valid neighbour changes as green ghost belts, retaining cyan input and
