@@ -14,7 +14,7 @@
 ## PROGRESS TRACKER
 
 **Last updated:** 2026-11-11
-**Current phase:** Phase 4 implemented; browser acceptance pending (Phase 5 not authorized)
+**Current phase:** Phase 5 in progress; Phase 4 accepted by user with browser verification pending
 
 The phase definitions below are authoritative. This tracker only records status;
 detailed evidence and verification results live in `PROJECT_STATUS.md`.
@@ -25,8 +25,8 @@ detailed evidence and verification results live in `PROJECT_STATUS.md`.
 | 1 — Playable 3D environment | 🟡 Acceptance pending | Deterministic terrain, movement, collision and interaction implemented; user reports later browser checks passed overall |
 | 2 — Resources and inventory | 🟡 Acceptance pending | Registry, deposits and inventory implemented; user reports earlier browser checks passed overall; 2.1 drag/drop, pointer lock and full-inventory browser checks remain |
 | 3 — Building and placement | 🟡 Acceptance pending | Construction menu, preview, validation, grid, rotation, registration and demolition implemented; real-browser acceptance pending |
-| 4 — First automated extractor | ◻ Planned | — |
-| 5 — Conveyor foundation | ◻ Planned | — |
+| 4 — First automated extractor | 🟡 User accepted | Browser verification remains pending |
+| 5 — Conveyor foundation | 🟡 In progress | Isolated simulation prototype only; not playable |
 | 6 — First production chain | ◻ Planned | — |
 | 7 — Advanced logistics | ◻ Planned | — |
 | 8 — Electricity | ◻ Planned | — |

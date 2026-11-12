@@ -931,3 +931,24 @@ for a future power model and is not produced by a pretend network. Inspection is
 DOM-only; the procedural machine indicator reads authoritative state. Renderer
 objects and the placement preview have separate lifecycles and are disposed.
 There are no conveyors, machine recipes, power connections or persistence yet.
+
+
+## Appendix G — Phase 5 prototype (in progress; not integrated)
+
+`src/logistics` currently contains an isolated, Three-free prototype. Segment
+centreline paths are defined by a grid footprint, quarter-turn orientation and
+optional rise; curves use a quarter circle and inclines use three-dimensional path
+length. Ports use coincident positions, heights and matching directional tangents.
+Paths form explicit acyclic one-input/one-output routes, rebuilt only when topology
+changes. Inventory adapters move one whole item per successful synchronous transfer.
+Transport uses fixed simulation steps, per-segment speed, output/input cooldowns,
+minimum centreline spacing and downstream backpressure. Occupied segment removal
+is refused; disconnected items remain in their segments. Defaults are provisional:
+1 m/s, 60 items/minute and 0.5 m centreline spacing. Current algorithm advances at
+most one segment per tick, so very large simulation steps may under-run nominal
+speed or throughput; no wall-clock catch-up is promised.
+
+These modules are **not registered by the game**. There is no conveyor construction,
+physical machine port, player-accessible receiver, conveyor UI or conveyor/item
+rendering yet. The isolated tests do not establish playable integration or browser
+correctness, and the prototype must be reviewed and extended before adoption.
