@@ -2,10 +2,36 @@
 
 **Project:** Factory Frontier
 **Version:** 0.3.0
-**Current Phase:** Phase 4 — First automated extractor
-**Phase Status:** 🟡 Implemented and automated tests passed; browser acceptance pending
-**Next Recommended Task:** Browser acceptance of Miner Mk.1; await authorization before Phase 5
+**Current Phase:** Phase 5 — Conveyor foundation (in progress)
+**Phase Status:** 🟡 In progress — isolated simulation only; not playable
+**Next Recommended Task:** Integrate conveyor construction, machine/receiver ports, rendering and UI, then verify the complete playable path
 **Last Updated:** 2026-11-11
+
+---
+
+## Phase 5 — Conveyor foundation (in progress, 2026-11-11)
+
+- The user explicitly accepted Phase 4 and authorized Phase 5 **with Phase 4
+  browser verification still pending**. This is not a report that browser checks
+  passed. The Phase 5 baseline passed typecheck, 353 tests in 39 files, build and
+  verify before changes.
+- An **isolated, not-yet-integrated** simulation prototype adds straight,
+  right-curve and incline centreline geometry; grid-aligned directional port
+  matching; single-input/single-output acyclic routes; one-item inventory source
+  and receiver adapters; fixed-step movement with spacing, throughput limits,
+  backpressure and refusal to remove occupied segments. These are not yet
+  available in the game, construction menu, renderer or interaction UI.
+- Tests cover the prototype's geometry, selected spacing and conservation cases,
+  blocking and recovery, one real Miner instance in an isolated test, topology
+  removal and frame partitioning. This is not evidence of an end-to-end playable
+  Miner → conveyor → receiver path, nor a comprehensive conservation proof.
+- Current verification: `npm run typecheck`, `npm test`, `npm run build`, and
+  `npm run verify` pass; **366 tests in 41 files**, including the prototype tests.
+- Still required: integrate building validation/placement and foundation support,
+  Miner output and a player-accessible receiving endpoint, topology lifecycle,
+  construction workflow, inspection, state-driven visuals, item interpolation,
+  browser acceptance and full integration/regression verification. No Phase 5 PR
+  or deployment should be considered complete until these are done.
 
 ---
 
