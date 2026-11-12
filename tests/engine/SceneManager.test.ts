@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { Color, Fog, InstancedMesh, Mesh, MeshStandardMaterial } from 'three';
+import { Color, Fog, InstancedMesh, Mesh, MeshBasicMaterial, MeshStandardMaterial } from 'three';
 
 import { createGameConfig } from '../../src/core/Configuration';
 import { SceneManager } from '../../src/engine/SceneManager';
@@ -131,6 +131,35 @@ describe('SceneManager', () => {
     manager.setHighlight(deposit.id); expect(ring?.visible).toBe(true);
     manager.setHighlight(null); expect(ring?.visible).toBe(false);
     manager.dispose();
+  });
+
+  it('renders terrain-following resource markers independently of targeting and disposes them', () => {
+    const { manager, world } = createHarness();
+    const colors = new Map<string, number>();
+    const first = world.deposits[0]!;
+    const firstMark = findObject<Mesh>(manager, `environment:deposit:${first.id}:ground-mark`);
+    const firstAura = findObject<Mesh>(manager, `environment:deposit:${first.id}:aura`);
+    const geometryDispose = vi.spyOn(firstMark.geometry, 'dispose');
+    const materialDispose = vi.spyOn(firstAura.material as MeshBasicMaterial, 'dispose');
+    for (const deposit of world.deposits) {
+      const base = `environment:deposit:${deposit.id}`;
+      const aura = findObject<Mesh>(manager, `${base}:aura`);
+      const mark = findObject<Mesh>(manager, `${base}:ground-mark`);
+      expect(aura.visible).toBe(true); expect(mark.visible).toBe(true);
+      const color = (aura.material as MeshBasicMaterial).color.getHex();
+      if (colors.has(deposit.itemId)) expect(color).toBe(colors.get(deposit.itemId));
+      colors.set(deposit.itemId, color);
+      const positions = mark.geometry.getAttribute('position');
+      for (let i = 0; i < positions.count; i++) {
+        expect(positions.getY(i) + deposit.y).toBeCloseTo(
+          world.terrain.heightAt(deposit.x + positions.getX(i), deposit.z + positions.getZ(i)) + .035, 5);
+      }
+    }
+    expect(new Set(colors.values()).size).toBe(colors.size);
+    manager.setHighlight(first.id); manager.setHighlight(null);
+    expect(firstAura.visible).toBe(true); expect(firstMark.visible).toBe(true);
+    manager.dispose();
+    expect(geometryDispose).toHaveBeenCalledOnce(); expect(materialDispose).toHaveBeenCalledOnce();
   });
 
   it('does not mutate world data while building the scene', () => {

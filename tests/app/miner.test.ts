@@ -64,6 +64,7 @@ describe('miner through real bootstrap with mocked rendering', () => {
     expect(entry.disabled).toBe(false); entry.click(); frame();
     expect(state.preview?.reason).toBe('valid'); expect(state.preview?.depositId).toBe(deposit.id);
     key('KeyC'); frame(); expect(state.buildings).toHaveLength(1); expect(state.buildings[0]?.typeId).toBe('miner-mk1');
+    key('Escape'); frame();
     for (let i = 0; i < 200; i++) frame();
     key('KeyE'); frame(); const panel = document.querySelector<HTMLElement>('[data-ui="machine"]')!;
     expect(panel.hidden).toBe(false); expect(panel.textContent).toContain('Iron Ore'); expect(panel.textContent).toContain(deposit.purity);

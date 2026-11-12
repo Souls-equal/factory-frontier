@@ -7,6 +7,21 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Changed — Phase 5 usability follow-up
+
+- Added resource-coloured aura rings and terrain-following ground traces, keeping
+  deposit generation, harvesting, targeting and collision unchanged. Physical
+  readability still needs user/browser verification.
+- Typecheck, test, build and verify passed: 410 tests in 46 files, including
+  marker lifecycle and repeat validation/payment for every building type.
+- All building types now stay selected after placement; Escape cancels repeat
+  mode before interactions or demolition. Validation and payment remain per pose.
+- Select the supported Three.js PCF shadow mode directly instead of the removed
+  PCFSoft mode (which previously fell back to PCF).
+- User reported basic controls, inventory and construction working, did not notice
+  the disconnected hint and could not find iron. Iron-dependent manual acceptance
+  remains pending; the user reported the soft-shadow warning on the earlier build.
+
 ### Work in progress — Phase 5 integrated conveyor foundation
 
 - Reused the merged path, ports and fixed-step conveyor prototype; connected real

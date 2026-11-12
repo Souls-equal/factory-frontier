@@ -67,8 +67,10 @@ describe('construction bootstrap wiring', () => {
     const transform = state.preview!.transform;
     key('KeyC'); key('KeyC', true); frame(166);
     expect(state.buildings).toHaveLength(1); expect(state.buildings[0]?.transform).toEqual(transform);
-    expect(state.selected).toBeNull(); expect(state.preview).toBeNull();
-    key('KeyF'); frame(216); expect(state.buildings).toHaveLength(0);
+    expect(state.selected).toBe('foundation'); expect(state.preview?.reason).toBe('occupied space');
+    key('KeyF'); frame(191); expect(state.buildings).toHaveLength(1); // demolition is disabled while placing
+    key('KeyC'); key('Escape'); frame(216); expect(state.selected).toBeNull(); expect(state.buildings).toHaveLength(1);
+    key('KeyF'); frame(266); expect(state.buildings).toHaveLength(0);
     expect(document.querySelector('[data-ui="interaction-feedback"]')?.textContent).toContain('materials refunded');
     key('KeyQ'); expect(menu.textContent).toContain('Stone: 20 / 10');
     key('Escape'); expect(menu.hidden).toBe(true);

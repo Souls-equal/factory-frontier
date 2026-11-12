@@ -146,9 +146,11 @@ Acceptance criteria:
 
 ## PHASE 5 — Conveyor foundation
 
-Status: integration implemented and automated checks pass (402 tests / 45 files),
-and a real headless Chromium WebGL path/blockage run passed; physical/user
-acceptance and other browser scenarios remain pending. The previous prototype alone
+Status: integration implemented and automated checks pass (410 tests / 46 files after the usability follow-up),
+and a real headless Chromium WebGL path/blockage run passed. The user reported
+basic controls, inventory and construction working but could not find iron; a
+follow-up adds deposit markers and repeat placement for all buildings. Physical/user
+acceptance of the markers and remaining chain scenarios remains pending. The previous prototype alone
 was not playable. INVALID/ERROR runtime handling remains reserved, not implemented.
 See `docs/PHASE_5_MANUAL_ACCEPTANCE.md` for pending real-browser checks.
 Do not advance to Phase 6 until Phase 5 is accepted and explicitly authorized.

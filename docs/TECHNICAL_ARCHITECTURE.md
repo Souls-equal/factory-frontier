@@ -978,3 +978,16 @@ gathering, the full chain, modal pause, partial retrieval, full-terminal
 backpressure, terminal demolition refusal and recovery. It used synthetic input
 and DevTools observation, and does not establish physical usability. Other
 browser scenarios and user acceptance remain pending; Phase 5 is not complete.
+
+### Phase 5 usability follow-up
+
+`EnvironmentView` consumes the unchanged deposit data to draw per-resource
+coloured static aura rings and broken terrain-sampled ground traces. These
+meshes are presentation only: they have no influence on interaction volumes,
+physics, generation or placement. Geometries and shared per-type materials
+are disposed with the environment. The targeted interaction highlight remains
+a separate, initially hidden ring. `ConstructionController` retains any selected
+building and its rotation after placement; every confirmation still calls the
+authoritative validator and atomic payment. Escape cancels the mode and pending
+placement, allowing normal interaction and demolition. The renderer selects
+`PCFShadowMap` directly, matching Three.js's former deprecated-mode fallback.
