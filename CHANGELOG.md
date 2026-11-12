@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — conveyor turn preview
+
+- Preview valid neighbour changes as green ghost belts, retaining cyan input and
+  yellow output markers; cancellation or an invalid placement restores real models.
+- Align unambiguous partially touching belt footprints, and commit exactly the
+  topology validated for the preview. Tests cover live material flow in both turn
+  directions and four rotations, including a generated-world starting Miner.
+  Real-browser and player confirmation remain pending.
+
 ## Unreleased — side turns and brighter presentation
 
 - A sideways neighbour now turns an isolated conveyor and can reshape an occupied

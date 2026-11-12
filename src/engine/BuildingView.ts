@@ -15,6 +15,7 @@ export class BuildingView {
   private previewType: string | null = null;
   private readonly shapes = new Map<string, string>();
   private previewShape = '';
+  private readonly changedPreviews = new Map<string, { readonly mesh: Mesh<BoxGeometry, MeshStandardMaterial>; readonly key: string }>();
   constructor(private readonly registry: BuildingRegistry, private readonly cellSize: number) {}
 
   sync(buildings: readonly BuildingInstance[]): void {
@@ -56,6 +57,31 @@ export class BuildingView {
     }
   }
   setPreview(typeId: string | null, placement?: PlacementResult): void {
+    // Existing meshes remain authoritative; hide only those replaced by a valid
+    // hypothetical shape and restore them when the pointer or mode changes.
+    for (const mesh of this.meshes.values()) mesh.visible = true;
+    const changes = placement?.reason === 'valid' && typeId !== null ? placement.conveyorPreviewChanges ?? [] : [];
+    const wanted = new Set(changes.map((b) => b.id));
+    for (const [id, entry] of this.changedPreviews) if (!wanted.has(id) || !this.meshes.has(id)) {
+      this.release(entry.mesh); this.changedPreviews.delete(id);
+    }
+    for (const building of changes) {
+      const original = this.meshes.get(building.id);
+      if (!original) continue;
+      original.visible = false;
+      const key = JSON.stringify([building.typeId, building.autoConveyor, building.transform]);
+      let entry = this.changedPreviews.get(building.id);
+      if (entry && entry.key !== key) { this.release(entry.mesh); this.changedPreviews.delete(building.id); entry = undefined; }
+      if (!entry) {
+        const mesh = this.createMesh(building.typeId, true, building.autoConveyor);
+        mesh.name = `building-change-preview:${building.id}`;
+        entry = { mesh, key }; this.changedPreviews.set(building.id, entry); this.group.add(mesh);
+      }
+      const definition = this.registry.get(building.typeId);
+      entry.mesh.position.set(building.transform.x, building.transform.y + definition.height / 2, building.transform.z);
+      entry.mesh.rotation.y = (building.autoConveyor?.rotation ?? building.transform.rotation) * Math.PI / 2;
+      this.tintPreview(entry.mesh, true, true);
+    }
     if (typeId === null || !placement) {
       if (this.preview) this.release(this.preview);
       this.preview = null; this.previewType = null; return;
@@ -69,13 +95,21 @@ export class BuildingView {
     const mesh = this.preview!; const definition = this.registry.get(typeId);
     mesh.position.set(placement.transform.x, placement.transform.y + definition.height / 2, placement.transform.z);
     mesh.rotation.y = (placement.autoConveyor?.rotation ?? placement.transform.rotation) * Math.PI / 2;
-    const color = placement.reason === 'valid' ? 0x55e8b2 : 0xff5363;
+    this.tintPreview(mesh, placement.reason === 'valid', typeId === 'conveyor-auto');
+  }
+  private tintPreview(mesh: Mesh<BoxGeometry, MeshStandardMaterial>, valid: boolean, showPorts: boolean): void {
+    const color = valid ? 0x55e8b2 : 0xff5363;
     mesh.material.color.setHex(color);
-    for (const child of mesh.children) if (child instanceof Mesh && child.material instanceof MeshStandardMaterial) child.material.color.setHex(color);
+    for (const child of mesh.children) if (child instanceof Mesh && child.material instanceof MeshStandardMaterial) {
+      child.material.color.setHex(valid && showPorts && child.name === 'conveyor-input' ? 0x59dce1 :
+        valid && showPorts && child.name === 'conveyor-output' ? 0xf5d056 : color);
+    }
   }
   dispose(): void {
     for (const mesh of this.meshes.values()) this.release(mesh);
     this.meshes.clear();
+    for (const { mesh } of this.changedPreviews.values()) this.release(mesh);
+    this.changedPreviews.clear();
     if (this.preview) this.release(this.preview);
     this.preview = null; this.previewType = null; this.group.clear();
   }

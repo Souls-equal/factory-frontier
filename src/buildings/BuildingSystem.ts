@@ -19,7 +19,17 @@ export interface BuildingInstance {
   readonly depositItemId?: string;
 }
 export type PlacementReason = 'valid' | 'outside bounds' | 'invalid terrain support' | 'terrain too steep' | 'occupied space' | 'player overlap' | 'insufficient materials' | 'no compatible deposit' | 'multiple deposits' | 'incompatible connection' | 'unsupported height' | 'conveyor occupied';
-export interface PlacementResult { readonly reason: PlacementReason; readonly transform: BuildingTransform; readonly depositId?: string; readonly depositItemId?: string; readonly connection?: 'connected' | 'disconnected'; readonly autoConveyor?: AutoConveyorShape }
+export interface PlacementResult {
+  readonly reason: PlacementReason;
+  readonly transform: BuildingTransform;
+  readonly depositId?: string;
+  readonly depositItemId?: string;
+  readonly connection?: 'connected' | 'disconnected';
+  readonly autoConveyor?: AutoConveyorShape;
+  /** Existing belts whose shape would change if this valid placement is confirmed. */
+  readonly conveyorPreviewChanges?: readonly BuildingInstance[];
+  readonly snappedToConveyor?: boolean;
+}
 export interface PlayerFootprint { readonly x: number; readonly z: number; readonly radius: number }
 
 const intersects = (a: Footprint, b: Footprint): boolean =>
@@ -63,12 +73,36 @@ export class BuildingSystem {
   all(): readonly BuildingInstance[] { return [...this.buildings.values()]; }
   get(id: string): BuildingInstance | undefined { return this.buildings.get(id); }
 
+  /** Align a partially touching 2-cell belt with an unambiguous neighbouring belt.
+   * Exact grid positions and ambiguous contacts are left untouched. */
+  private alignConveyor(base: BuildingTransform, definition: BuildingDefinition): BuildingTransform {
+    const existing = this.all();
+    // Never move a preview that is already occupying a building footprint.
+    if (existing.some((b) => b.typeId !== 'foundation' && intersects(base.footprint, b.transform.footprint))) return base;
+    const belts = existing.filter((b) => b.typeId === 'conveyor-auto');
+    const span = 2 * this.cellSize, epsilon = 1e-7;
+    const candidates: BuildingTransform[] = [];
+    for (const belt of belts) {
+      const dx = base.x - belt.transform.x, dz = base.z - belt.transform.z;
+      const vertical = Math.abs(Math.abs(dz) - span) < epsilon && Math.abs(dx) < span - epsilon;
+      const horizontal = Math.abs(Math.abs(dx) - span) < epsilon && Math.abs(dz) < span - epsilon;
+      if (!vertical && !horizontal) continue;
+      if ((vertical && Math.abs(dx) < epsilon) || (horizontal && Math.abs(dz) < epsilon)) return base;
+      const candidate = snapFootprint(definition, vertical ? belt.transform.x : base.x,
+        horizontal ? belt.transform.z : base.z, base.rotation, this.cellSize);
+      if (existing.some((b) => b.typeId !== 'foundation' && intersects(candidate.footprint, b.transform.footprint))) continue;
+      if (!candidates.some((c) => Math.abs(c.x - candidate.x) < epsilon && Math.abs(c.z - candidate.z) < epsilon)) candidates.push(candidate);
+    }
+    return candidates.length === 1 ? candidates[0]! : base;
+  }
+
   validate(typeId: string, x: number, z: number, rotation: number, player: PlayerFootprint): PlacementResult {
     if (![player.x, player.z, player.radius].every(Number.isFinite) || player.radius < 0) {
       throw new RangeError('Invalid player footprint.');
     }
     const definition = this.registry.get(typeId);
-    const base = snapFootprint(definition, x, z, rotation, this.cellSize);
+    const snapped = snapFootprint(definition, x, z, rotation, this.cellSize);
+    const base = typeId === 'conveyor-auto' ? this.alignConveyor(snapped, definition) : snapped;
     const f = base.footprint;
     const fail = (reason: PlacementReason, transform = base): PlacementResult => ({ reason, transform });
     if (!this.terrain.contains(f.minX, f.minZ) || !this.terrain.contains(f.maxX, f.maxZ) ||
@@ -131,7 +165,7 @@ export class BuildingSystem {
       connection = result;
     }
     const existing = this.all();
-    const proposed: BuildingInstance = { id: '__preview__', typeId, transform };
+    const proposed: BuildingInstance = { id: `building-${this.nextId}`, typeId, transform };
     const planned = this.plan([...existing, proposed]);
     if (!planned) return fail('incompatible connection', transform);
     // Old conveyor variants remain loadable, but mixing them with automatic tiles
@@ -142,7 +176,7 @@ export class BuildingSystem {
       ((Math.abs(Math.abs(b.transform.x - transform.x) - 2 * this.cellSize) < 1e-7 && Math.abs(b.transform.z - transform.z) < 1e-7) ||
        (Math.abs(Math.abs(b.transform.z - transform.z) - 2 * this.cellSize) < 1e-7 && Math.abs(b.transform.x - transform.x) < 1e-7)))) return fail('incompatible connection', transform);
     if (!this.safePlan(existing, planned)) return fail('conveyor occupied', transform);
-    const autoConveyor = planned.find((b) => b.id === '__preview__')?.autoConveyor;
+    const autoConveyor = planned.find((b) => b.id === proposed.id)?.autoConveyor;
     if (typeId === 'conveyor-auto' && autoConveyor) {
       const path = pathForBuilding({ ...proposed, autoConveyor }, this.cellSize)!;
       connection = planned.some((b) => {
@@ -165,7 +199,13 @@ export class BuildingSystem {
     if (player.x > f.minX - player.radius && player.x < f.maxX + player.radius &&
         player.z > f.minZ - player.radius && player.z < f.maxZ + player.radius) return fail('player overlap', transform);
     if (definition.cost.some((entry) => !this.inventory.hasItem(entry.itemId, entry.quantity))) return fail('insufficient materials', transform);
-    return { reason: 'valid', transform, ...(autoConveyor ? { autoConveyor } : {}), ...(connection ? { connection } : {}), ...(deposit ? { depositId: deposit.id, depositItemId: deposit.itemId } : {}) };
+    const byId = new Map(existing.map((b) => [b.id, b]));
+    const conveyorPreviewChanges = planned.filter((b) => b.typeId === 'conveyor-auto' && byId.has(b.id) &&
+      JSON.stringify(byId.get(b.id)!.autoConveyor) !== JSON.stringify(b.autoConveyor));
+    return { reason: 'valid', transform, ...(autoConveyor ? { autoConveyor } : {}), ...(connection ? { connection } : {}),
+      ...(conveyorPreviewChanges.length ? { conveyorPreviewChanges } : {}),
+      ...(base !== snapped ? { snappedToConveyor: true } : {}),
+      ...(deposit ? { depositId: deposit.id, depositItemId: deposit.itemId } : {}) };
   }
 
   place(typeId: string, x: number, z: number, rotation: number, player: PlayerFootprint): PlacementResult & { readonly building?: BuildingInstance } {
@@ -175,10 +215,12 @@ export class BuildingSystem {
     const building: BuildingInstance = Object.freeze({ id: `building-${this.nextId}`, typeId, ...(result.depositId && result.depositItemId ? { depositId: result.depositId, depositItemId: result.depositItemId } : {}),
       transform: Object.freeze({ ...result.transform, footprint: Object.freeze({ ...result.transform.footprint }) }), ...(result.autoConveyor ? { autoConveyor: result.autoConveyor } : {}) });
     if (!this.inventory.exchange(definition.cost, [])) return { ...result, reason: 'insufficient materials' };
-    const planned = this.plan([...this.all(), building])!;
-    for (const entry of planned) this.buildings.set(entry.id, entry);
+    // Commit exactly the plan validated above, without resolving it a second
+    // time with a different preview identity or a different set of shapes.
+    for (const entry of result.conveyorPreviewChanges ?? []) this.buildings.set(entry.id, entry);
+    this.buildings.set(building.id, building);
     this.nextId++; this.revisionValue++;
-    return { ...result, building: this.buildings.get(building.id)! };
+    return { ...result, building };
   }
   /** Full original refund or no demolition: never discard an overflow remainder. */
   demolish(id: string): 'removed' | 'unknown building' | 'inventory full' | 'output not empty' | 'building supports another' | 'conveyor occupied' {

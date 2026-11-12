@@ -171,6 +171,10 @@ left/right and ascending/descending routing; topology stays linear and acyclic.
 Automated coverage is present; browser and user acceptance remain pending.
 Branches and mergers remain Phase 7 scope.
 
+The new preview follow-up displays the changed existing belt as well as the
+candidate and aligns unambiguous partial edge contacts. The reported in-game
+turn issue still requires a real browser/player retest.
+
 The turn follow-up preserves an isolated tile's inlet on sideways placement and
 projects live items transactionally when a path changes. Conveyor presentation and
 daylight palette were also updated at the user's request; WebGL and physical user

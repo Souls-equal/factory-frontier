@@ -1090,3 +1090,17 @@ hemisphere and ambient fill. Conveyor surfaces have path-following coloured rail
 treads and supports, using the same logical path for turns and inclines. These
 presentation changes do not change physics. WebGL and physical player acceptance
 remain pending.
+
+### Preview of neighbour changes
+
+Construction validation returns the proposed candidate plus any existing automatic
+conveyor shapes changed by the same topology plan. A valid preview temporarily
+replaces their displayed models with tinted ghost models; cyan and yellow markers
+identify inlet and outlet. No simulation or inventory changes occur from preview,
+and invalid previews never display proposed neighbour changes. Active items remain
+on their actual paths until placement, which can make their current positions differ
+from the ghost path. Confirmation uses the validated candidate ID and commits the
+same proposed shapes without a second topology solve. A partially touching belt is
+aligned to a neighbour only when the snapped footprint does not overlap a building
+and exactly one alignment is available; ambiguous contacts retain the grid position.
+The alignment still goes through normal terrain, collision, cost and topology guards.
