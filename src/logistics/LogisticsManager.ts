@@ -1,9 +1,11 @@
+import { cellAhead, cellEntryFraction, cellTouchesMachine } from './CellConveyor';
 import type { BuildingSystem } from '../buildings/BuildingSystem';
 import type { SimulationSystem } from '../core/Game';
 import { Inventory, type QuantityResult } from '../items/Inventory';
 import type { ItemRegistry } from '../items/ItemRegistry';
 import type { MachineManager } from '../machines/MachineManager';
 import { ConveyorNetwork, type ConveyorSettings, DEFAULT_CONVEYOR_SETTINGS } from './ConveyorNetwork';
+import type { GroundItems } from './GroundItems';
 import { InventoryReceiver, InventorySource } from './Ports';
 
 import { pathForBuilding, machinePort, RECEIVER_TYPE } from './ConveyorDefinitions';
@@ -16,17 +18,25 @@ export class LogisticsManager implements SimulationSystem {
   private seenRevision = -1;
   constructor(private readonly buildings: BuildingSystem, private readonly machines: MachineManager,
     private readonly items: ItemRegistry, private readonly paused: () => boolean = () => false,
-    private readonly terminalSlots = 1, private readonly settings: ConveyorSettings = DEFAULT_CONVEYOR_SETTINGS) {
+    private readonly terminalSlots = 1, private readonly settings: ConveyorSettings = DEFAULT_CONVEYOR_SETTINGS,
+    private readonly groundItems?: GroundItems) {
     if (!Number.isSafeInteger(terminalSlots) || terminalSlots < 1) throw new RangeError('Invalid receiver capacity');
-    this.network = new ConveyorNetwork();
+    this.network = new ConveyorNetwork(() => false, groundItems ? (item, position) => groundItems.drop(item.id, item.itemId, position) : undefined);
     buildings.addTopologyGuard((before, after) => {
       const relevant = (entries: typeof before) => entries.filter((b) => b.typeId.startsWith('conveyor-') || b.typeId === 'miner-mk1' || b.typeId === RECEIVER_TYPE)
-        .map((b) => [b.id, b.typeId, b.transform.x, b.transform.y, b.transform.z, b.transform.rotation, b.autoConveyor]);
+        .map((b) => [b.id, b.typeId, b.transform.x, b.transform.y, b.transform.z, b.transform.rotation, b.autoConveyor, b.cellConveyor]);
       if (JSON.stringify(relevant(before)) === JSON.stringify(relevant(after))) return true;
       this.sync();
+      // An entry ramp must not disappear under an item already travelling on it.
+      for (const old of before) {
+        if (old.typeId !== 'conveyor-cell') continue;
+        const next = after.find((b) => b.id === old.id);
+        if (next && JSON.stringify(old.cellConveyor?.entries) !== JSON.stringify(next.cellConveyor?.entries) &&
+            this.network.get(old.id)?.items.some((item) => item.transition)) return false;
+      }
       const paths = new Map(after.map((b) => [b.id, pathForBuilding(b, buildings.cellSize)] as const)
         .filter((entry): entry is readonly [string, NonNullable<typeof entry[1]>] => !!entry[1]));
-      return this.network.canReconfigure(paths, this.settings);
+      return this.network.canReconfigure(paths, this.settings, new Set(after.filter((b) => b.typeId === 'conveyor-cell').map((b) => b.id)));
     });
     buildings.addDemolitionGuard((building) => {
       const segment = this.network.get(building.id);
@@ -60,7 +70,10 @@ export class LogisticsManager implements SimulationSystem {
     }
     for (const building of buildings) {
       const path = pathForBuilding(building, this.buildings.cellSize);
-      if (path && !this.network.get(building.id)) this.network.add(building.id, path, this.settings);
+      if (path && !this.network.get(building.id)) {
+        if (building.typeId === 'conveyor-cell') this.network.addCell(building.id, path, { ...this.settings, spacing: Math.min(this.settings.spacing, path.length / 2) });
+        else this.network.add(building.id, path, this.settings);
+      }
       if (building.typeId === RECEIVER_TYPE && !this.terminals.has(building.id)) this.terminals.set(building.id, new Inventory(this.items, this.terminalSlots));
     }
     const paths = new Map(buildings.map((b) => [b.id, pathForBuilding(b, this.buildings.cellSize)] as const)
@@ -68,22 +81,47 @@ export class LogisticsManager implements SimulationSystem {
     if (!this.network.reconfigure(paths, this.settings)) throw new Error('Cannot safely reconfigure conveyor items');
     this.network.resetConnections();
     const segments = this.network.all();
-    for (const from of segments) for (const to of segments) if (from.id !== to.id && from.path.compatible(to.path)) this.network.connect(from.id, to.id);
+    const cells = buildings.filter((b) => b.typeId === 'conveyor-cell');
+    const legacy = segments.filter((s) => byId.get(s.id)?.typeId !== 'conveyor-cell');
+    for (const from of legacy) for (const to of legacy) if (from.id !== to.id && from.path.compatible(to.path)) this.network.connect(from.id, to.id);
+    for (const from of cells) {
+      const next = cells.find((to) => cellAhead(from, to, this.buildings.cellSize));
+      if (next) {
+        const b = pathForBuilding(next, this.buildings.cellSize)!;
+        this.network.connectCell(from.id, next.id, b.length * cellEntryFraction(from, next, this.buildings.cellSize));
+      }
+    }
     for (const building of buildings) {
       const miner = this.machines.get(building.id);
       if (miner) {
         const source = new InventorySource(building.id, machinePort(building, this.buildings.cellSize, 'source'), miner.output, miner.itemId);
         const conditional = { ...source, id: source.id, pose: source.pose,
           peek: () => miner.enabled ? source.peek() : null, take: (itemId: string) => miner.enabled && source.take(itemId) };
-        for (const segment of segments) if (this.network.attachSource(segment.id, conditional)) break;
+        const cell = cells.find((b) => cellTouchesMachine(b, building, this.buildings.cellSize, 'source'));
+        if (cell) {
+          const path = pathForBuilding(cell, this.buildings.cellSize)!, d = path.direction('input');
+          const port = conditional.pose.direction;
+          const distance = d.x === port.x && d.z === port.z ? 0 : path.length / 2;
+          const start = { x: cell.transform.x - port.x * this.buildings.cellSize / 2, y: conditional.pose.position.y,
+            z: cell.transform.z - port.z * this.buildings.cellSize / 2 };
+          this.network.attachCellSource(cell.id, conditional, distance, start);
+        } else for (const segment of legacy) if (this.network.attachSource(segment.id, conditional)) break;
       }
       const terminal = this.terminals.get(building.id);
       if (terminal) {
         const receiver = new InventoryReceiver(building.id, machinePort(building, this.buildings.cellSize, 'receiver'), terminal);
-        for (const segment of segments) if (this.network.attachReceiver(segment.id, receiver)) break;
+        for (const cell of cells) if (cellTouchesMachine(cell, building, this.buildings.cellSize, 'receiver')) this.network.attachCellReceiver(cell.id, receiver);
+        for (const segment of legacy) if (this.network.attachReceiver(segment.id, receiver)) break;
       }
+    }
+    // A non-accepting building directly ahead is not empty space.
+    for (const cell of cells) {
+      const segment = this.network.get(cell.id)!;
+      if (segment.output || segment.receiver) continue;
+      const d = segment.path.direction('output'), x = cell.transform.x + d.x * this.buildings.cellSize, z = cell.transform.z + d.z * this.buildings.cellSize;
+      if (buildings.some((b) => b.id !== cell.id && b.typeId !== 'foundation' && x > b.transform.footprint.minX && x < b.transform.footprint.maxX && z > b.transform.footprint.minZ && z < b.transform.footprint.maxZ)) this.network.blockCellOutput(cell.id);
     }
     this.seenRevision = this.buildings.revision;
   }
-  fixedUpdate(deltaMs: number): void { this.sync(); if (!this.paused()) this.network.fixedUpdate(deltaMs); }
+  fixedUpdate(deltaMs: number): void { this.sync(); if (!this.paused()) { this.groundItems?.fixedUpdate(deltaMs); this.network.fixedUpdate(deltaMs); } }
 }

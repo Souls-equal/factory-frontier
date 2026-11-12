@@ -4,12 +4,13 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { World } from '../../src/world/World';
+import type { GroundItem } from '../../src/logistics/GroundItems';
 import type { ConveyorSegment } from '../../src/logistics/ConveyorNetwork';
 import type { InventoryReceiver } from '../../src/logistics/Ports';
 import type { CameraView } from '../../src/engine/types';
 import { createGameConfig } from '../../src/core/Configuration';
 
-const state = vi.hoisted(() => ({ world: null as World | null, segments: [] as readonly ConveyorSegment[], view: null as CameraView | null, init: 0, sawItem: false }));
+const state = vi.hoisted(() => ({ world: null as World | null, segments: [] as readonly ConveyorSegment[], ground: [] as readonly GroundItem[], view: null as CameraView | null, init: 0, sawItem: false }));
 vi.mock('../../src/items/Inventory', async (load) => {
   const actual = await load<typeof import('../../src/items/Inventory')>();
   class Stocked extends actual.Inventory {
@@ -24,14 +25,14 @@ vi.mock('../../src/engine/Engine', () => ({ Engine: { create: (_canvas: unknown,
   state.world = world;
   return { init: () => { state.init++; }, resize: () => {}, applyView: (view: CameraView) => { state.view = view; }, setHighlight: () => {}, render: () => {},
     initBuildings: () => {}, syncBuildings: () => {}, setBuildingPreview: () => {}, setMachineStates: () => {},
-    syncConveyors: (segments: readonly ConveyorSegment[]) => { state.segments = segments; if (segments.some((s) => s.items.length)) state.sawItem = true; },
+    syncConveyors: (segments: readonly ConveyorSegment[], _alpha: number, ground: readonly GroundItem[]) => { state.segments = segments; state.ground = ground; if (segments.some((s) => s.items.length)) state.sawItem = true; },
     dispose: () => {}, stats: { drawCalls: 0, triangles: 0, geometries: 0, textures: 0 } };
 } } }));
 const html = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../../index.html'), 'utf8');
 let frames: Array<(time: number) => void> = [], time = 0;
 function frame() { time += 50; const next = frames.shift(); if (!next) throw new Error('Missing scheduled frame'); next(time); }
 beforeEach(() => {
-  vi.resetModules(); state.world = null; state.segments = []; state.view = null; state.init = 0; state.sawItem = false; frames = []; time = 0;
+  vi.resetModules(); state.world = null; state.segments = []; state.ground = []; state.view = null; state.init = 0; state.sawItem = false; frames = []; time = 0;
   document.body.innerHTML = /<body[^>]*>([\s\S]*)<\/body>/i.exec(html)?.[1] ?? '';
   vi.stubGlobal('requestAnimationFrame', vi.fn((callback: (time: number) => void) => { frames.push(callback); return frames.length; }));
   vi.stubGlobal('cancelAnimationFrame', vi.fn());
@@ -102,8 +103,9 @@ it('real bootstrap starts a Miner-to-belt line before a terminal exists (mock re
   for (let i = 0; i < 250; i++) frame();
   const segment = state.segments[0]!;
   expect(segment.source?.id).toBe(miner.building!.id); expect(segment.receiver).toBeNull();
-  expect(state.sawItem).toBe(true); expect(segment.state).toBe('BLOCKED');
-  expect(segment.items[0]!.distance).toBeCloseTo(segment.path.length);
+  expect(state.sawItem).toBe(true); expect(segment.state).not.toBe('BLOCKED');
+  expect(state.ground.length).toBeGreaterThan(0);
+  expect(state.ground.every((item) => item.itemId === 'iron-ore')).toBe(true);
   const original = segment.items.map((item) => item.id);
   const terminal = world.buildings.place('receiving-terminal', miner.transform.x, miner.transform.z - 4, 0, far);
   expect(terminal.reason).toBe('valid');
@@ -114,4 +116,19 @@ it('real bootstrap starts a Miner-to-belt line before a terminal exists (mock re
   expect(remaining.length + received).toBe(original.length);
   for (let i = 0; i < 220; i++) frame();
   expect((state.segments[0]!.receiver as InventoryReceiver).inventory.getItemCount('iron-ore')).toBeGreaterThan(0);
+});
+
+it('connects the new one-cell menu belt to the generated Miner and renders dropped ore', async () => {
+  vi.spyOn(console, 'info').mockImplementation(() => undefined);
+  await import('../../src/main'); await vi.waitFor(() => expect(state.init).toBe(1)); frame();
+  const world = state.world!, deposit = world.deposits.find((entry) => entry.itemId === 'iron-ore')!;
+  const far = { x: 80, z: 80, radius: .4 };
+  const miner = world.buildings.place('miner-mk1', deposit.x, deposit.z, 0, far).building!;
+  const candidates = [-.5, .5].map((lane) => world.buildings.validate('conveyor-cell', miner.transform.x + lane, miner.transform.z - 1.5, 0, far));
+  const candidate = candidates.find((result) => result.reason === 'valid')!; expect(candidate).toBeDefined();
+  const placed = world.buildings.place('conveyor-cell', candidate.transform.x, candidate.transform.z, 0, far);
+  expect(placed.reason).toBe('valid');
+  for (let i = 0; i < 250; i++) frame();
+  expect(state.segments[0]!.source?.id).toBe(miner.id); expect(state.sawItem).toBe(true);
+  expect(state.ground.length).toBeGreaterThan(0); expect(state.ground[0]!.itemId).toBe('iron-ore');
 });

@@ -1,3 +1,4 @@
+import { GroundItems } from './logistics/GroundItems';
 import './styles/main.css';
 
 import { VoxelCollision } from './world/terrain/VoxelCollision';
@@ -147,6 +148,12 @@ async function boot(): Promise<void> {
   const buildingRegistry = buildings.registry;
   const construction = new ConstructionController(buildings, world.terrain, config.construction.reach);
   engine.initBuildings?.(buildingRegistry, config.construction.gridSize);
+  const groundTerrain = new BuildingTerrain(world.terrain, buildings);
+  const groundItems = new GroundItems((x, z, y) => {
+    const p = world.terrain.clampXZ(x, z);
+    const below = groundTerrain.groundBelow(p.x, p.z, y, 0);
+    return Number.isFinite(below) ? below : world.terrain.heightAt(p.x, p.z);
+  });
   const player = new PlayerController({
     controls: config.controls, player: config.player, terrain: new BuildingTerrain(world.terrain, buildings),
     obstacles: new BuildingCollision(new VoxelCollision(world.terrain, new GatherableCollision(world.obstacles, world.gatherables)), buildings), spawn: world.spawn,
@@ -155,7 +162,7 @@ async function boot(): Promise<void> {
   const machines = new MachineManager(buildings, registry, () => world.deposits, config.miner,
     () => !!(machineUI?.isOpen || logisticsUI?.isOpen || constructionUI?.isOpen || inventoryUI?.isOpen));
   const logistics = new LogisticsManager(buildings, machines, registry,
-    () => !!(machineUI?.isOpen || logisticsUI?.isOpen || constructionUI?.isOpen || inventoryUI?.isOpen));
+    () => !!(machineUI?.isOpen || logisticsUI?.isOpen || constructionUI?.isOpen || inventoryUI?.isOpen), 1, undefined, groundItems);
   let pendingConstruction: 'place' | 'demolish' | null = null;
   let createdInput: InputManager;
   const closeInventory = (): void => {
@@ -247,6 +254,22 @@ async function boot(): Promise<void> {
     }
   };
 
+  const groundInteractions = new Map<string, () => void>();
+  const syncGroundItems = (): void => {
+    const active = new Set(groundItems.all().map((item) => item.id));
+    for (const [id, unregister] of groundInteractions) if (!active.has(id)) { unregister(); groundInteractions.delete(id); }
+    for (const item of groundItems.all()) {
+      if (groundInteractions.has(item.id)) continue;
+      const id = item.id;
+      groundInteractions.set(id, interaction.register({
+        get descriptor() { return { id, displayName: registry.get(item.itemId).name, hint: 'Pick up',
+          position: groundItems.get(id)?.position ?? item.position, targetRadius: .3, range: config.interaction.range }; },
+        isAvailable: () => !!groundItems.get(id),
+        interact: () => groundItems.pickup(id, inventory) ? { ok: true, message: 'Item picked up.' } : { ok: false, message: 'Inventory full.' },
+      }));
+    }
+  };
+
   const logisticsInteractions = new Map<string, () => void>();
   const syncLogistics = (): void => {
     logistics.sync();
@@ -290,7 +313,7 @@ async function boot(): Promise<void> {
           interactionPrompt.showFeedback(result === 'removed' ? 'Building demolished; materials refunded.' : `Cannot demolish: ${result}.`);
         }
       }
-      syncMachines(); syncLogistics();
+      syncMachines(); syncLogistics(); syncGroundItems();
       const interactPressed = createdInput.consumeInteract();
       if (interactPressed && action === null && !construction.active && !constructionUI?.isOpen && !inventoryUI?.isOpen && !machineUI?.isOpen && !logisticsUI?.isOpen) {
         interaction.requestInteraction();
@@ -328,12 +351,12 @@ async function boot(): Promise<void> {
       inventoryUI?.update(); constructionUI?.update(); machineUI?.update(); logisticsUI?.update();
       const preview = construction.preview(player.view, playerFootprint());
       engine.syncBuildings?.(buildings.all());
-      engine.syncConveyors?.(logistics.network.all(), machineUI?.isOpen || logisticsUI?.isOpen || constructionUI?.isOpen || inventoryUI?.isOpen ? 1 : createdGame.clock.alpha);
+      engine.syncConveyors?.(logistics.network.all(), machineUI?.isOpen || logisticsUI?.isOpen || constructionUI?.isOpen || inventoryUI?.isOpen ? 1 : createdGame.clock.alpha, groundItems.all());
       engine.setMachineStates?.(machines.all().map((machine) => ({ id: machine.id, state: machine.state })));
       engine.setBuildingPreview?.(construction.selected, preview ?? undefined);
       constructionStatus.hidden = !construction.active;
       if (construction.active) constructionStatus.textContent = preview
-        ? `${preview.reason === 'valid' ? 'Valid placement' : `Cannot place: ${preview.reason}`} · R rotate · C place again · Esc cancel${preview.connection ? ` · ${preview.connection} port` : ''}${construction.selected?.startsWith('conveyor-') ? ' · cyan input → yellow output · R sets initial direction' : ''}${preview.snappedToConveyor ? ' · aligned to neighbour' : ''}${preview.conveyorPreviewChanges?.length ? ' · green preview shows belt after C' : ''}`
+        ? `${preview.reason === 'valid' ? 'Valid placement' : `Cannot place: ${preview.reason}`} · R rotate · C place again · Esc cancel${preview.connection ? ` · ${preview.connection} port` : ''}${construction.selected?.startsWith('conveyor-') ? ' · direction follows view; yellow = output · R rotates' : ''}${preview.snappedToConveyor ? ' · aligned to neighbour' : ''}${preview.conveyorPreviewChanges?.length ? ' · green preview shows belt after C' : ''}`
         : `Aim at ground within ${config.construction.reach} m · R rotate · Esc cancel`;
       const target = inventoryUI?.isOpen || constructionUI?.isOpen || machineUI?.isOpen || logisticsUI?.isOpen || construction.active ? null : interaction.target;
       engine.setHighlight?.(target?.id ?? null);

@@ -4,7 +4,7 @@
 **Version:** 0.3.0
 **Current Phase:** Phase 5 — Conveyor foundation (in progress)
 **Phase Status:** 🟡 In progress — headless WebGL path verified; user acceptance pending
-**Next Recommended Task:** Verify the new turn preview and live material path in a real browser with the player; complete Phase 5 acceptance.
+**Next Recommended Task:** Validate the one-cell conveyor and dropped items in a real browser with the player; complete Phase 5 acceptance.
 **Last Updated:** 2026-11-11
 
 ---
@@ -56,6 +56,34 @@
   usability; phase 5 is not accepted and phase 6 is not started.
 
 ---
+
+## Phase 5 — one-cell directional conveyors (implementation; acceptance pending)
+
+- The user reports automatic turns still fail and requested one-cell tiles,
+  oriented by view, transferring into the tile ahead irrespective of its direction.
+  This deliberately supersedes the two-cell automatic menu behavior below. R adds
+  a manual quarter turn; the green preview and yellow marker show the tile's
+  selected output direction. Existing legacy models are retained internally.
+- The application transfers to adjacent one-cell belts, including side input,
+  opposite directions, fan-in and cycles; multiple inputs are arbitrated. A Miner
+  connects to one adjacent lane at its output; terminals accept the two lanes at
+  their input. Full receivers block; open ends drop items into the world where E
+  can collect them, without deleting them when the inventory is full.
+- `npm run verify` passes: 577 tests in 54 files, typecheck, build and server
+  verification. Automated tests cover occupied placement, cycles, opposite directions,
+  generated-world Miner, terminal backpressure and Three.js bounds. Ramps are
+  checked in all four directions, both elevations and all destination headings,
+  including continuous item positions and Miner-to-terminal delivery. Browser/WebGL and player acceptance are
+  **not yet verified**. Phase 5 remains open and Phase 6 has not started.
+- Adjacent cells now plan ascending decks and descending entry ramps inside their
+  footprints. Side and opposite entries follow the entry segment at belt speed;
+  placement previews show affected neighbours. Adjacent support heights and deck
+  rise are limited to one grid cell, otherwise placement is refused. Existing items
+  are safely projected or the topology change is rejected if unsafe.
+- Limitations: ground items are session-only, unstacked and unbounded in number.
+  Old two-cell belts do not connect to one-cell belts; only the new belt is in the
+  construction menu. Player collision still uses the building's box, not the
+  exact ramp surface. Real browser play and slope behavior need validation.
 
 ## Phase 5 — turn preview follow-up (in progress)
 

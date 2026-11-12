@@ -26,7 +26,7 @@ it('offers all Phase 5 entries with exact costs and rejects unaffordable selecti
   document.body.innerHTML = '<section hidden><button data-construction-close>Close</button><div data-construction-list></div></section>';
   const root = document.querySelector('section')!, inventory = new Inventory(createDefaultItemRegistry(), 4), select = vi.fn();
   const ui = new ConstructionUI(root, createDefaultBuildingRegistry(inventory.registry), inventory, select, vi.fn()); ui.open();
-  const ids = ['conveyor-auto', 'receiving-terminal'];
+  const ids = ['conveyor-cell', 'receiving-terminal'];
   for (const id of ids) {
     const entry = root.querySelector<HTMLButtonElement>(`[data-building="${id}"]`)!;
     expect(entry).not.toBeNull(); expect(entry.disabled).toBe(true);

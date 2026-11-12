@@ -33,7 +33,7 @@ export class ConstructionUI {
   private render(): void {
     this.list.replaceChildren();
     for (const definition of this.registry.all()) {
-      if (['conveyor-straight', 'conveyor-curve', 'conveyor-incline'].includes(definition.id)) continue;
+      if (['conveyor-auto', 'conveyor-straight', 'conveyor-curve', 'conveyor-incline'].includes(definition.id)) continue;
       const button = this.root.ownerDocument.createElement('button');
       button.type = 'button'; button.dataset.building = definition.id; button.className = 'construction__entry';
       const affordable = definition.cost.every((cost) => this.inventory.hasItem(cost.itemId, cost.quantity));
