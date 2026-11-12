@@ -9,6 +9,16 @@
 
 ---
 
+## Phase 5 — latest iteration (user validation pending)
+
+- Directional cells display curved guides and open incoming side rails for turns;
+  terminals accept inward-facing cells on all four marked sides, at matching
+  height, and retain their one-stack backpressure. Legacy belts keep their port.
+- E targets individual moving belt items instead of opening conveyor inspection;
+  failed pickup keeps the item. More seeded starter trees and stones are placed
+  with the same exclusion rules. Real-browser visual and player acceptance remain
+  outstanding; Phase 6 has not begun.
+
 ## Voxel transition — terrain integration (in progress)
 
 - The user chose indestructible voxel terrain and voxel-style resources and

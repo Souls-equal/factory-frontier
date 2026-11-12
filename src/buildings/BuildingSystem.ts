@@ -128,7 +128,9 @@ export class BuildingSystem {
       if (typeId === 'conveyor-cell') {
         const candidate = { id: '__preview__', typeId, transform };
         const source = this.all().find((b) => b.typeId === 'miner-mk1' && cellTouchesMachine(candidate, b, this.cellSize, 'source', true));
-        if (source) anchored = source.transform.y;
+        const sink = this.all().find((b) => b.typeId === 'receiving-terminal' && cellTouchesMachine(candidate, b, this.cellSize, 'receiver', true));
+        if (source && sink && Math.abs(source.transform.y - sink.transform.y) > 1e-7) anchored = 'conflict';
+        else if (source || sink) anchored = (source ?? sink)!.transform.y;
       } else if (typeId === 'conveyor-auto') {
         const source = this.all().find((b) => {
           if (b.typeId !== 'miner-mk1') return false;
@@ -207,6 +209,7 @@ export class BuildingSystem {
     if ((typeId === 'miner-mk1' || typeId === 'receiving-terminal') && connection === 'disconnected') {
       const port = machinePort(proposed, this.cellSize, typeId === 'miner-mk1' ? 'source' : 'receiver');
       if (planned.some((b) => {
+        if (b.typeId === 'conveyor-cell') return cellTouchesMachine(b, proposed, this.cellSize, typeId === 'miner-mk1' ? 'source' : 'receiver');
         if (b.typeId !== 'conveyor-auto') return false;
         const path = pathForBuilding(b, this.cellSize)!;
         return typeId === 'miner-mk1' ? matchesPort(port, path.point(0), path.direction('input')) :

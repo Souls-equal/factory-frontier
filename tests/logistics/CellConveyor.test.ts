@@ -25,7 +25,7 @@ function setup() {
   const place = (type: string, x: number, z: number, r = 0) => {
     const result = buildings.place(type, x, z, r, player); expect(result.reason).toBe('valid'); return result.building!;
   };
-  return { buildings, machines, logistics, ground, place };
+  return { buildings, machines, logistics, ground, place, items };
 }
 
 describe('one-cell conveyor routing', () => {
@@ -157,4 +157,55 @@ it('preserves moving items when a perpendicular neighbour is built after product
     expect(source.getItemCount('iron-ore') + logistics.network.all().reduce((n, s) => n + s.items.length, 0) + ground.all().length).toBe(5);
   }
   expect(ground.all()).toHaveLength(5);
+});
+
+it.each([0, 1, 2, 3].flatMap((side) => [0, 1, 2, 3].flatMap((orientation) => [-.5, .5].flatMap((lane) => [true, false].map((terminalFirst) => [side, orientation, lane, terminalFirst] as const)))))
+('terminal accepts from side %i with terminal rotation %i lane %s first %s', async (side, orientation, lane, terminalFirst) => {
+  const { InventorySource } = await import('../../src/logistics/Ports');
+  const { place, logistics, items, ground } = setup();
+  const dirs = [{ x: 0, z: -1 }, { x: -1, z: 0 }, { x: 0, z: 1 }, { x: 1, z: 0 }], d = dirs[side]!;
+  const bx = -1.5 * d.x + lane * d.z, bz = -1.5 * d.z - lane * d.x;
+  let terminal, belt;
+  if (terminalFirst) { terminal = place('receiving-terminal', 0, 0, orientation); belt = place('conveyor-cell', bx, bz, side); }
+  else { belt = place('conveyor-cell', bx, bz, side); terminal = place('receiving-terminal', 0, 0, orientation); }
+  logistics.sync(); const segment = logistics.network.get(belt.id)!;
+  expect(segment.receiver?.id).toBe(terminal.id);
+  const source = new Inventory(items, 1); source.addItem('iron-ore', 1);
+  logistics.network.attachCellSource(belt.id, new InventorySource('test-source', { position: segment.path.point(0), direction: segment.path.direction('input') }, source, 'iron-ore'), 0);
+  for (let i = 0; i < 50; i++) logistics.fixedUpdate(50);
+  expect(logistics.terminal(terminal.id)!.getItemCount('iron-ore')).toBe(1);
+  expect(ground.all()).toHaveLength(0);
+});
+
+it('picks up the authoritative moving item once, and keeps it if inventory is full', () => {
+  const { place, machines, logistics, items } = setup();
+  const miner = place('miner-mk1', 0, 0), a = place('conveyor-cell', .5, -1.5, 0), b = place('conveyor-cell', .5, -2.5, 3);
+  logistics.sync(); machines.get(miner.id)!.output.addItem('iron-ore', 1);
+  for (let i = 0; i < 30 && !logistics.network.get(b.id)!.items.length; i++) logistics.fixedUpdate(50);
+  const item = logistics.network.get(b.id)!.items[0]!;
+  expect(item).toBeDefined();
+  const before = logistics.network.findItem(item.id)!.position;
+  logistics.fixedUpdate(50); expect(logistics.network.findItem(item.id)!.position).not.toEqual(before);
+  const inventory = new Inventory(items, 1); inventory.addItem('stone', 100);
+  expect(logistics.network.pickup(item.id, inventory)).toBe(false);
+  expect(logistics.network.findItem(item.id)).toBeDefined();
+  inventory.removeItem('stone', 100);
+  expect(logistics.network.pickup(item.id, inventory)).toBe(true);
+  expect(inventory.getItemCount('iron-ore')).toBe(1);
+  expect(logistics.network.findItem(item.id)).toBeUndefined();
+  expect(logistics.network.pickup(item.id, inventory)).toBe(false);
+  expect(logistics.network.get(a.id)!.items).toHaveLength(0);
+});
+
+it.each([1, 3])('shows a turn guide and opens the incoming rail for rotation %i', async (rotation) => {
+  const { BuildingView } = await import('../../src/engine/BuildingView');
+  const { place, buildings } = setup();
+  const a = place('conveyor-cell', .5, .5, 0), b = place('conveyor-cell', .5, -.5, rotation);
+  const view = new BuildingView(buildings.registry, 1); view.sync(buildings.all());
+  const tile = view.group.getObjectByName(b.id)!;
+  let guides = 0, rails = 0;
+  tile.traverse((o) => { if (o.name === 'conveyor-turn-guide') guides++; if (o.name === 'conveyor-rail') rails++; });
+  expect(guides).toBe(10); expect(rails).toBe(1);
+  const straight = view.group.getObjectByName(a.id)!;
+  expect(straight.getObjectByName('conveyor-turn-guide')).toBeUndefined(); view.dispose();
 });

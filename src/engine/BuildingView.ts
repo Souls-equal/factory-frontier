@@ -142,7 +142,7 @@ export class BuildingView {
         size: (typeId === 'conveyor-cell' ? 1 : 2) * this.cellSize, ...(typeId === 'conveyor-cell' ? { rise: cell?.rise ?? 0 } : auto ? { rise: auto.rise } : shape === 'incline' ? { rise: this.cellSize } : {}) });
       const count = shape.startsWith('curve-') ? 16 : 1;
       const geometry = new BoxGeometry(.8 * this.cellSize, .12, typeId === 'conveyor-cell' ? this.cellSize : path.length / count + .004);
-      const belt = new MeshStandardMaterial({ color: 0x377c82, roughness: .8, transparent: preview, opacity: preview ? .55 : 1, depthWrite: !preview });
+      const belt = new MeshStandardMaterial({ color: typeId === 'conveyor-cell' && cell?.entries.some((entry) => Math.abs(entry.x) > 1e-8) ? 0x276a75 : 0x377c82, roughness: .8, transparent: preview, opacity: preview ? .55 : 1, depthWrite: !preview });
       const railGeometry = new BoxGeometry(.09 * this.cellSize, .17, typeId === 'conveyor-cell' ? this.cellSize : path.length / count + .004);
       if (typeId === 'conveyor-cell' && cell?.rise) {
         for (const g of [geometry, railGeometry]) {
@@ -160,6 +160,7 @@ export class BuildingView {
         piece.quaternion.setFromUnitVectors(new Vector3(0, 0, 1), typeId === 'conveyor-cell' ? new Vector3(0, 0, -1) : tangent); piece.name = 'conveyor-surface'; piece.castShadow = !preview; piece.receiveShadow = !preview; mesh.add(piece);
         const side = new Vector3(tangent.z, 0, -tangent.x).normalize();
         for (const sign of [-1, 1]) {
+          if (typeId === 'conveyor-cell' && cell?.entries.some((entry) => entry.x * -sign > 1e-8)) continue;
           const rail = new Mesh(railGeometry, rails);
           rail.position.copy(midpoint).addScaledVector(side, sign * .45 * this.cellSize); rail.position.y += .05;
           rail.quaternion.copy(piece.quaternion); rail.name = 'conveyor-rail'; rail.castShadow = !preview; mesh.add(rail);
@@ -179,6 +180,23 @@ export class BuildingView {
         ramp.position.set(entry.x / 2, (startY + endY) / 2 - def.height / 2, entry.z / 2);
         ramp.quaternion.setFromUnitVectors(new Vector3(0, 0, 1), new Vector3(-entry.x / horizontal, 0, -entry.z / horizontal));
         ramp.name = 'conveyor-entry-ramp'; mesh.add(ramp);
+      }
+      // Curved guide strips explicitly show every lateral route into the output.
+      // Their elevation follows the same entry interpolation as transported items.
+      if (typeId === 'conveyor-cell' && cell) for (const entry of cell.entries.filter((e) => Math.abs(e.x) > 1e-8)) {
+        const guideMaterial = new MeshStandardMaterial({ color: 0xf5d056, roughness: .7, transparent: preview, opacity: preview ? .65 : 1, depthWrite: !preview });
+        const guide = (t: number): Vector3 => {
+          const height = t <= .5 ? entry.startHeight * (1 - 2 * t) + cell.rise * t : cell.rise * (.5 + .8 * (t - .5));
+          return new Vector3(entry.x * .85 * (1 - t) ** 2, BELT_HEIGHT + height + .09 - def.height / 2,
+            entry.z * (1 - t) ** 2 - .4 * this.cellSize * t ** 2);
+        };
+        for (let i = 0; i < 10; i++) {
+          const a = guide(i / 10), b = guide((i + 1) / 10), delta = b.clone().sub(a);
+          const stripe = new Mesh(new BoxGeometry(.045 * this.cellSize, .02, delta.length() + .004), guideMaterial);
+          stripe.position.copy(a).add(b).multiplyScalar(.5);
+          stripe.quaternion.setFromUnitVectors(new Vector3(0, 0, 1), delta.normalize());
+          stripe.name = 'conveyor-turn-guide'; mesh.add(stripe);
+        }
       }
       // Short bright transverse treads follow the same centreline on turns and ramps.
       const treadGeometry = new BoxGeometry(.52 * this.cellSize, .025, .08 * this.cellSize);
@@ -221,6 +239,14 @@ export class BuildingView {
       const port = new Mesh(new BoxGeometry(.45 * this.cellSize, .3, .12),
         new MeshStandardMaterial({ color: 0x59dce1, transparent: preview, opacity: preview ? .65 : 1, depthWrite: !preview }));
       port.position.set(0, BELT_HEIGHT - def.height / 2, this.cellSize); port.name = 'terminal-input-port'; mesh.add(port);
+      for (let side = 0; side < 4; side++) {
+        const edge = new Mesh(new BoxGeometry(1.6 * this.cellSize, .12, .06 * this.cellSize),
+          new MeshStandardMaterial({ color: 0x59dce1, transparent: preview, opacity: preview ? .65 : 1, depthWrite: !preview }));
+        edge.rotation.y = side * Math.PI / 2;
+        edge.position.set(Math.sin(side * Math.PI / 2) * this.cellSize * .97, BELT_HEIGHT - def.height / 2 + .16,
+          Math.cos(side * Math.PI / 2) * this.cellSize * .97);
+        edge.name = 'terminal-input-edge'; mesh.add(edge);
+      }
       const panel = new Mesh(new BoxGeometry(1.25 * this.cellSize, .46, .08 * this.cellSize),
         new MeshStandardMaterial({ color: 0x354a53, transparent: preview, opacity: preview ? .55 : 1, depthWrite: !preview }));
       panel.position.set(0, .23 - def.height / 2, -this.cellSize); panel.name = 'terminal-panel'; mesh.add(panel);

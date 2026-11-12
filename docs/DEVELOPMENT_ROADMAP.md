@@ -435,3 +435,9 @@ heading are implemented, with ground drops and pickup. Automated coverage includ
 turns, fan-in, cycles, Miner, terminal and backpressure. Complete real-browser and
 player acceptance, including ramp presentation and terrain. Do not advance
 to Phase 6 without Phase 5 acceptance and explicit authorization.
+
+### Phase 5 — player feedback iteration
+
+Turn skins, four-sided cell terminal intake, E pickup of moving belt items, and
+additional starter resources are implemented for testing. Phase 5 remains in
+progress until the player validates the scenarios; do not start Phase 6.

@@ -26,6 +26,11 @@ const STARTERS: readonly { kind: GatherableKind; x: number; z: number }[] = [
   { kind: 'stone', x: 3, z: 7 }, { kind: 'stone', x: 6, z: 7 },
   { kind: 'stone', x: 11, z: 1 }, { kind: 'tree', x: 10, z: 3 },
   { kind: 'tree', x: 9, z: -5 }, { kind: 'tree', x: 12, z: 7 },
+  { kind: 'tree', x: 14, z: -4 }, { kind: 'tree', x: 15, z: 3 },
+  { kind: 'tree', x: 8, z: 10 }, { kind: 'tree', x: 4, z: 11 },
+  { kind: 'stone', x: 12, z: -7 }, { kind: 'stone', x: 14, z: 6 },
+  { kind: 'stone', x: 11, z: 10 }, { kind: 'stone', x: 6, z: -8 },
+  { kind: 'stone', x: 16, z: 0 }, { kind: 'stone', x: 2, z: 10 },
 ];
 
 /** Seeded bounded layout; rejects collisions and never changes the terrain. */

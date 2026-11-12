@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { World } from '../../src/world/World';
 import type { GroundItem } from '../../src/logistics/GroundItems';
-import type { ConveyorSegment } from '../../src/logistics/ConveyorNetwork';
+import { transportPosition, type ConveyorSegment } from '../../src/logistics/ConveyorNetwork';
 import type { InventoryReceiver } from '../../src/logistics/Ports';
 import type { CameraView } from '../../src/engine/types';
 import { createGameConfig } from '../../src/core/Configuration';
@@ -56,40 +56,40 @@ it('real bootstrap registers and runs the building-backed miner-to-receiver path
   expect(world.buildings.demolish(terminal.building!.id)).toBe('output not empty');
 });
 
-it('targets and inspects a real belt and pauses gameplay through bootstrap modal wiring (mock renderer)', async () => {
+it('picks up moving belt items with E without opening a conveyor panel (mock renderer)', async () => {
   vi.spyOn(console, 'info').mockImplementation(() => undefined);
   await import('../../src/main'); await vi.waitFor(() => expect(state.init).toBe(1)); frame();
   const world = state.world!, deposit = world.deposits.find((entry) => entry.itemId === 'iron-ore')!;
   const far = { x: 80, z: 80, radius: .4 };
   const miner = world.buildings.place('miner-mk1', deposit.x, deposit.z, 0, far);
-  const belt = world.buildings.place('conveyor-straight', miner.transform.x, miner.transform.z - 2, 0, far);
-  const terminal = world.buildings.place('receiving-terminal', miner.transform.x, miner.transform.z - 4, 0, far);
-  expect([miner.reason, belt.reason, terminal.reason]).toEqual(['valid', 'valid', 'valid']);
+  const first = world.buildings.place('conveyor-cell', miner.transform.x + .5, miner.transform.z - 1.5, 0, far);
+  const second = world.buildings.place('conveyor-cell', first.transform.x, first.transform.z - 1, 0, far);
+  const belt = world.buildings.place('conveyor-cell', second.transform.x, second.transform.z - 1, 0, far);
+  expect([miner.reason, first.reason, second.reason, belt.reason]).toEqual(['valid', 'valid', 'valid', 'valid']);
   const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!, sensitivity = createGameConfig().controls.lookSensitivity;
   const turn = (dx: number, dy: number) => {
     canvas.dispatchEvent(new MouseEvent('mousedown', { button: 0, clientX: 5000, clientY: 5000 }));
     window.dispatchEvent(new MouseEvent('mousemove', { clientX: 5000 + dx, clientY: 5000 + dy })); frame();
     window.dispatchEvent(new MouseEvent('mouseup'));
   };
-  const key = (code: string) => window.dispatchEvent(new KeyboardEvent('keydown', { code, cancelable: true }));
   const initial = state.view!.position, target = belt.transform;
   const yaw = Math.atan2(-(target.x - initial.x), -(target.z - initial.z)); turn(-yaw / sensitivity, 0);
-  key('KeyW');
-  for (let i = 0; i < 70; i++) { frame(); const p = state.view!.position; if (Math.hypot(p.x - target.x, p.z - target.z) < 3.1) break; }
-  window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyW' })); for (let i = 0; i < 6; i++) frame();
-  const pos = state.view!.position, distance = Math.hypot(pos.x - target.x, pos.z - target.z);
-  const pitch = Math.atan2(target.y + .6 - pos.y, distance); turn(0, -pitch / sensitivity);
-  for (let i = 0; i < 200; i++) frame();
-  key('KeyE'); frame(); const panel = document.querySelector<HTMLElement>('[data-ui="logistics"]')!;
-  expect(panel.hidden).toBe(false); expect(panel.textContent).toContain('Conveyor: straight');
-  expect(panel.textContent).toContain(`Input: ${miner.building!.id}`); expect(panel.textContent).toContain(`Output: ${terminal.building!.id}`);
-  const snapshot = () => ({ items: state.segments[0]!.items.map(({ id, distance }) => ({ id, distance })),
-    received: (state.segments[0]!.receiver as InventoryReceiver).inventory.snapshot(), position: { ...state.view!.position }, buildings: world.buildings.all().length });
-  const before = snapshot(); key('KeyW'); key('KeyC'); key('KeyF'); key('KeyQ');
-  for (let i = 0; i < 100; i++) frame(); expect(snapshot()).toEqual(before);
-  expect(document.querySelector<HTMLElement>('[data-ui="construction"]')!.hidden).toBe(true);
-  key('Escape'); expect(panel.hidden).toBe(true); for (let i = 0; i < 100; i++) frame();
-  expect(snapshot().received).not.toEqual(before.received);
+  window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW' }));
+  for (let i = 0; i < 100; i++) { frame(); const p = state.view!.position; if (Math.hypot(p.x - target.x, p.z - target.z) < 2.5) break; }
+  window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyW' }));
+  let picked = false;
+  for (let i = 0; i < 300 && !picked; i++) {
+    frame(); const segment = state.segments.find((s) => s.id === belt.building!.id), item = segment?.items[0]; if (!item) continue;
+    const p = transportPosition(item, segment.path), view = state.view!.position;
+    const aimYaw = Math.atan2(-(p.x - view.x), -(p.z - view.z));
+    const pitch = Math.atan2(p.y + .22 - view.y, Math.hypot(p.x - view.x, p.z - view.z));
+    turn(-(aimYaw - state.view!.yaw) / sensitivity, -(pitch - state.view!.pitch) / sensitivity);
+    window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyE', cancelable: true })); frame();
+    window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyE' }));
+    picked = document.querySelector('[data-ui="interaction-feedback"]')!.textContent === 'Item picked up.';
+  }
+  expect(picked).toBe(true);
+  expect(document.querySelector<HTMLElement>('[data-ui="logistics"]')!.hidden).toBe(true);
 });
 
 it('real bootstrap starts a Miner-to-belt line before a terminal exists (mock renderer)', async () => {

@@ -273,7 +273,7 @@ async function boot(): Promise<void> {
   const logisticsInteractions = new Map<string, () => void>();
   const syncLogistics = (): void => {
     logistics.sync();
-    const active = new Set(buildings.all().filter((building) => buildings.registry.get(building.typeId).placement === 'logistics').map((building) => building.id));
+    const active = new Set(buildings.all().filter((building) => buildings.registry.get(building.typeId).placement === 'logistics' && building.typeId === 'receiving-terminal').map((building) => building.id));
     for (const [id, unregister] of logisticsInteractions) if (!active.has(id)) { unregister(); logisticsInteractions.delete(id); }
     for (const id of active) {
       if (logisticsInteractions.has(id)) continue;
@@ -281,6 +281,23 @@ async function boot(): Promise<void> {
       logisticsInteractions.set(id, interaction.register(new LogisticsInteractable(building, buildingRegistry.get(building.typeId).name, config.interaction.range, (selected) => {
         pendingConstruction = null; player.stopHorizontalMotion(); createdInput.suspendForModal(); logisticsUI?.open(selected);
       })));
+    }
+  };
+
+  const beltItemInteractions = new Map<string, () => void>();
+  const syncBeltItems = (): void => {
+    const items = logistics.network.all().flatMap((segment) => segment.items);
+    const active = new Set(items.map((item) => item.id));
+    for (const [id, unregister] of beltItemInteractions) if (!active.has(id)) { unregister(); beltItemInteractions.delete(id); }
+    for (const item of items) {
+      if (beltItemInteractions.has(item.id)) continue;
+      const id = item.id, initial = logistics.network.findItem(id)!.position;
+      beltItemInteractions.set(id, interaction.register({
+        get descriptor() { const p = logistics.network.findItem(id)?.position ?? initial; return { id, displayName: registry.get(item.itemId).name,
+          hint: 'Pick up', position: { x: p.x, y: p.y + .22, z: p.z }, targetRadius: .3, range: config.interaction.range }; },
+        isAvailable: () => !!logistics.network.findItem(id),
+        interact: () => logistics.network.pickup(id, inventory) ? { ok: true, message: 'Item picked up.' } : { ok: false, message: 'Inventory full.' },
+      }));
     }
   };
 
@@ -313,7 +330,7 @@ async function boot(): Promise<void> {
           interactionPrompt.showFeedback(result === 'removed' ? 'Building demolished; materials refunded.' : `Cannot demolish: ${result}.`);
         }
       }
-      syncMachines(); syncLogistics(); syncGroundItems();
+      syncMachines(); syncLogistics(); syncBeltItems(); syncGroundItems();
       const interactPressed = createdInput.consumeInteract();
       if (interactPressed && action === null && !construction.active && !constructionUI?.isOpen && !inventoryUI?.isOpen && !machineUI?.isOpen && !logisticsUI?.isOpen) {
         interaction.requestInteraction();
