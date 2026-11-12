@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — voxel inventory artwork
+
+- Restyle the player and terminal inventories with six-column, dark blue square
+  slots inspired by the reference; preserve real capacities and existing actions.
+- Add local isometric voxel SVG icons for iron ore, copper ore, limestone, coal,
+  stone and wood, with readable quantities, accessible labels and text fallback
+  for custom items.
+
 ## Unreleased — dropped-item recovery and terminal inventory
 
 - Directional conveyor cells collect covered drops at their centre with spacing

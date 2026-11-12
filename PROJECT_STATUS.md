@@ -9,6 +9,15 @@
 
 ---
 
+## Phase 5 — inventory visual refresh (user validation pending)
+
+- Player and terminal inventories use the same dark six-column square slots and
+  six local voxel material icons. Counts and accessible names remain available;
+  custom items without artwork retain a text fallback. Capacity and interactions
+  are unchanged. Chromium headless screenshots checked the populated standalone
+  inventory and a simulated terminal at desktop and mobile widths; this is not a
+  substitute for a complete in-game play session or user visual acceptance.
+
 ## Phase 5 — dropped items and two-panel terminal (user validation pending)
 
 - A terminal collects covered dropped items until full; directional cells admit

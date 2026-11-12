@@ -453,41 +453,44 @@ body {
 .inventory__header h2 { margin: 6px 0; font-size: 27px; }
 .inventory__eyebrow { color: var(--ff-accent); font: 10px var(--ff-mono); letter-spacing: .2em; }
 .inventory__intro, .inventory__detail, .inventory__footer { color: var(--ff-muted); font-size: 12px; line-height: 1.5; }
-.inventory__grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+/* The same six-column square-slot system is shared by every inventory. */
+.inventory__grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 3px; align-content: start; }
 .inventory button { color: var(--ff-text); background: #132832; border: 1px solid #5ad6e84a;
   border-radius: 7px; padding: 10px; cursor: pointer; }
-.inventory button:hover, .inventory button:focus-visible, .inventory__slot.is-selected { border-color: var(--ff-accent); background: #214550; }
+.inventory button:hover, .inventory button:focus-visible { border-color: var(--ff-accent); background: #214550; }
 .inventory button:disabled { opacity: .4; cursor: default; }
+.inventory__panel.inventory-panel { width: min(510px, 100%); background: #0b1a2a; border-color: #233f56; padding: 22px; }
+.inventory .inventory__slot { position: relative; display: grid; place-items: center; min-width: 0; min-height: 0;
+  aspect-ratio: 1; padding: 4px; border-radius: 9px; border: 1px solid #395d7b; background: #192f43; }
+.inventory .inventory__slot:hover, .inventory .inventory__slot:focus-visible, .inventory .inventory__slot.is-selected {
+  border-color: #8fc5dc; background: #24445a; outline-offset: 2px;
+}
 .inventory__slot[draggable="true"] { cursor: grab; }
 .inventory__slot.is-dragging { opacity: .45; cursor: grabbing; }
-.inventory__slot { min-height: 58px; text-align: left; overflow-wrap: anywhere; font: 11px var(--ff-mono); }
-@media (max-width: 650px) { .inventory__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.inventory__slot-icon { display: block; width: 78%; height: 78%; object-fit: contain; pointer-events: none; image-rendering: pixelated; }
+.inventory__slot-fallback { font: bold 16px var(--ff-mono); color: #bed8e4; }
+.inventory__slot-count { position: absolute; right: 5px; bottom: 3px; font: 700 12px var(--ff-mono);
+  color: #fff; text-shadow: 1px 1px 2px #05101b, -1px -1px 2px #05101b; pointer-events: none; }
+.inventory__slot-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+@media (max-width: 430px) { .inventory { padding: 10px; } .inventory__panel.inventory-panel { padding: 14px; } }
 
 .construction__list { display: grid; gap: .65rem; }
 .construction__entry { display: grid; gap: .35rem; text-align: left; padding: 1rem; color: #d7eef0; background: #152933; border: 1px solid #57818b; border-radius: .3rem; cursor: pointer; }
 .construction__entry:disabled { opacity: .55; cursor: not-allowed; }
 .construction-status { position: absolute; bottom: 5rem; left: 50%; transform: translateX(-50%); padding: .6rem .9rem; color: #e7f5f5; background: rgba(6,20,28,.88); border: 1px solid #5a8790; border-radius: .3rem; pointer-events: none; }
 
-/* A paired storage view: compact voxel-like slots, inspired by the inventory grid. */
-.inventory__panel.terminal { width: min(1060px, 100%); padding: 25px; background: #071521; border-color: #38657f; }
-.terminal__header { margin-bottom: 20px; }
-.terminal__layout { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: stretch; }
-.terminal__pane { min-width: 0; padding: 20px; border: 1px solid #294b61; border-radius: 10px; background: #0c1d2b; }
+/* Two separate, dark storage panels echo the reference without fake slots. */
+.inventory__panel.terminal { width: min(1060px, 100%); padding: 20px; background: #091827; border-color: #233f56; }
+.terminal__header { margin-bottom: 18px; }
+.terminal__layout { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: start; }
+.terminal__pane { min-width: 0; padding: 15px; border: 1px solid #20394e; border-radius: 10px; background: #0c1c2c; }
 .terminal__pane-heading { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
 .terminal__pane-heading h3 { margin: 4px 0 0; color: #e3f4fb; font-size: 18px; }
 .terminal__eyebrow { color: #74a8bf; font: 10px var(--ff-mono); letter-spacing: .14em; }
 .terminal__badge { color: #80d5de; border: 1px solid #376c7a; background: #173642; border-radius: 4px; padding: 4px 7px; font: 9px var(--ff-mono); letter-spacing: .1em; }
-.terminal__grid { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; align-content: start; }
-.inventory .terminal__grid .inventory__slot { position: relative; aspect-ratio: 1; min-height: 0; padding: 3px; font-size: 0; background: #152b3e; border: 1px solid #385e7a; border-radius: 8px; }
-.inventory .terminal__grid .inventory__slot:hover, .inventory .terminal__grid .inventory__slot:focus-visible, .inventory .terminal__grid .inventory__slot.is-selected { background: #21465a; border-color: #82e5e8; outline-offset: 2px; }
-.terminal__grid .inventory__slot[data-item]::before { content: attr(data-icon); display: grid; place-items: center; width: 66%; height: 66%; margin: auto; clip-path: polygon(50% 0, 94% 23%, 94% 75%, 50% 100%, 6% 75%, 6% 23%); background: linear-gradient(150deg, #ead1ab 0 29%, #ad7f63 30% 62%, #795449 63%); color: #1b2930; font: bold clamp(9px, 1.4vw, 14px) var(--ff-mono); text-shadow: 0 1px #fff6; }
-.terminal__grid .inventory__slot[data-item="wood"]::before { background: linear-gradient(150deg, #d8b17b 0 29%, #9d6a3b 30% 62%, #6d4428 63%); }
-.terminal__grid .inventory__slot[data-item="stone"]::before, .terminal__grid .inventory__slot[data-item="limestone"]::before { background: linear-gradient(150deg, #dae4e0 0 29%, #a9b5b6 30% 62%, #718389 63%); }
-.terminal__grid .inventory__slot[data-item="copper-ore"]::before { background: linear-gradient(150deg, #ffc18e 0 29%, #d9844e 30% 62%, #9b5037 63%); }
-.terminal__grid .inventory__slot[data-item="coal"]::before { background: linear-gradient(150deg, #7c8990 0 29%, #43515a 30% 62%, #29343e 63%); color: #edf5f2; }
-.terminal__grid .inventory__slot[data-item]::after { content: attr(data-quantity); position: absolute; right: 4px; bottom: 3px; font: 700 11px var(--ff-mono); color: #fff; text-shadow: 0 1px 3px #001; }
 .terminal__detail { min-height: 2.7em; }
 .terminal__actions { display: flex; }
 .inventory .terminal__retrieve { flex: 1; display: flex; justify-content: space-between; font-weight: 700; background: #1a5963; border-color: #58b8c2; }
 .terminal__notice { color: #91ddd6; font-size: 12px; min-height: 1.3em; }
-@media (max-width: 700px) { .terminal__layout { grid-template-columns: 1fr; } .terminal__pane { padding: 15px; } }
+@media (max-width: 700px) { .terminal__layout { grid-template-columns: 1fr; gap: 14px; } .terminal__pane { padding: 12px; } }

@@ -38,7 +38,7 @@ it('inspects real segment state and retrieves only what fits from a terminal', (
   expect(playerInventory.getItemCount('iron-ore')).toBe(100);
   expect(root.querySelector('[data-logistics-player-grid]')!.textContent).toContain('Iron Ore ×100');
   playerInventory.removeItem('iron-ore', 100); ui.update();
-  expect(root.querySelector('[data-logistics-player-grid]')!.textContent).toContain('Empty');
+  expect(root.querySelector('[data-logistics-player-grid] [data-slot]')!.getAttribute('aria-label')).toBe('Empty slot 1');
   expect(root.querySelector('[data-logistics-player-capacity]')!.textContent).toContain('0 / 1');
   root.querySelector<HTMLButtonElement>('[data-logistics-close]')!.click(); expect(close).toHaveBeenCalledOnce();
   ui.closePanel(); expect(ui.isOpen).toBe(false); ui.dispose();
@@ -74,14 +74,14 @@ it('renders all configurable terminal slots, updates and preserves partial trans
   const player = new Inventory(items, 1); player.addItem('iron-ore', 97);
   const ui = new LogisticsUI(root, logistics, player, vi.fn()); ui.open(terminal.id);
   const slots = () => [...root.querySelectorAll<HTMLButtonElement>('[data-logistics-grid] [data-slot]')];
-  expect(slots()).toHaveLength(3); expect(slots().map((s) => s.textContent)).toEqual(['Fe · Iron Ore ×100', 'Fe · Iron Ore ×5', 'C · Coal ×2']);
+  expect(slots()).toHaveLength(3); expect(slots().map((s) => s.getAttribute('aria-label'))).toEqual(['Iron Ore, 100 of 100', 'Iron Ore, 5 of 100', 'Coal, 2 of 100']);
   expect(slots()[2]!.getAttribute('aria-label')).toBe('Coal, 2 of 100'); slots()[2]!.click();
   expect(root.textContent).toContain('Carbon-rich fuel');
   const first = slots()[0]; ui.update(); expect(slots()[0]).toBe(first); // no rebuilding every frame
   root.querySelector<HTMLButtonElement>('[data-logistics-retrieve]')!.click();
   expect(player.getItemCount('iron-ore')).toBe(100); expect(receiver.getItemCount('iron-ore')).toBe(102);
   expect(receiver.getItemCount('coal')).toBe(2); expect(root.textContent).toContain('Transferred 3; 104 remain.');
-  receiver.removeItem('coal', 2); ui.update(); expect(slots()[2]!.textContent).toBe('Empty');
+  receiver.removeItem('coal', 2); ui.update(); expect(slots()[2]!.getAttribute('aria-label')).toBe('Empty slot 3');
   expect(root.querySelector('[data-logistics-slot-detail]')!.textContent).not.toContain('Carbon-rich');
   ui.closePanel(); ui.open(terminal.id); expect(slots()).toHaveLength(3); ui.dispose();
 });

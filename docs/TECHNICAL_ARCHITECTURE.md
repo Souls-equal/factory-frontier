@@ -1183,3 +1183,12 @@ the player's inventory, each rebuilt on revision changes. Selection is inspectio
 only; the existing Retrieve contents action is the only terminal-to-player
 transfer and respects capacity. The layout is responsive, with simple colored
 voxel icons and accessible item labels. It does not offer drag-and-drop transfer.
+
+### Shared inventory artwork
+
+`ItemIcons` maps the six built-in item IDs to local voxel SVG assets, independently
+from simulation data. `InventorySlot` renders those images for both inventories,
+with a registry-provided text fallback for other IDs, an accessible button name
+and a separate visible quantity. Empty slots have accessible names but no visible
+placeholder. The CSS grid displays the actual snapshot only; it does not create
+additional storage or modify slot selection, dragging or terminal transfer.
