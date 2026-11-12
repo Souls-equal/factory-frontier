@@ -1064,3 +1064,22 @@ The user-requested single auto-adapting conveyor has not yet been implemented.
 Changing occupied paths needs explicit conservation and spacing validation,
 including under topology rebuild, branching ambiguity, both turn directions and
 elevation changes. The current separate shapes remain available in the interim.
+
+### Automatic conveyor topology (Phase 5 follow-up)
+
+`AutoConveyor` resolves contiguous automatic tiles and Miner/terminal ports into
+a linear, acyclic graph. A source determines flow, or a receiver if no source is
+present; otherwise an end tile's initial rotation provides a starting direction.
+Straight paths, left/right quarter turns, and rising or falling transitions share
+`ConveyorPath` for preview, rendering, port matching and simulation. Adjacent
+support height differences are limited to one cell; branching, loops, incompatible connected
+heights and mixing legacy conveyor tiles with automatic neighbours are rejected.
+Legacy types remain registered for compatibility, but are hidden from the menu.
+
+Building placement and demolition resolve and validate the complete proposed
+layout before payment/refund. The logistics topology guard refuses to reshape
+an occupied segment and checks spacing at proposed joins; straight extensions
+can connect occupied segments when spacing permits. Empty reshapes preserve the
+segment's throughput clocks. A blocked occupied end may need to be drained via a
+straight extension and receiver before it can become a turn. The game has not
+yet been physically verified by the user after this change.

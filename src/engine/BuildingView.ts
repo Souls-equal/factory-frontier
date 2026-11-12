@@ -1,4 +1,5 @@
 import { BoxGeometry, Group, Mesh, MeshStandardMaterial, Vector3 } from 'three';
+import type { AutoConveyorShape } from '../logistics/AutoConveyor';
 import type { MachineState } from '../machines/Miner';
 import { ConveyorPath } from '../logistics/ConveyorPath';
 import { CONVEYOR_SHAPES, BELT_HEIGHT } from '../logistics/ConveyorDefinitions';
@@ -12,22 +13,27 @@ export class BuildingView {
   private readonly meshes = new Map<string, Mesh<BoxGeometry, MeshStandardMaterial>>();
   private preview: Mesh<BoxGeometry, MeshStandardMaterial> | null = null;
   private previewType: string | null = null;
+  private readonly shapes = new Map<string, string>();
+  private previewShape = '';
   constructor(private readonly registry: BuildingRegistry, private readonly cellSize: number) {}
 
   sync(buildings: readonly BuildingInstance[]): void {
     const present = new Set(buildings.map((building) => building.id));
     for (const [id, mesh] of this.meshes) {
-      if (!present.has(id)) { this.release(mesh); this.meshes.delete(id); }
+      if (!present.has(id)) { this.release(mesh); this.meshes.delete(id); this.shapes.delete(id); }
     }
     for (const building of buildings) {
       let mesh = this.meshes.get(building.id);
+      const shapeKey = JSON.stringify(building.autoConveyor ?? null);
+      if (mesh && this.shapes.get(building.id) !== shapeKey) { this.release(mesh); this.meshes.delete(building.id); mesh = undefined; }
       if (!mesh) {
-        mesh = this.createMesh(building.typeId, false);
+        mesh = this.createMesh(building.typeId, false, building.autoConveyor);
+        this.shapes.set(building.id, shapeKey);
         mesh.name = building.id; this.meshes.set(building.id, mesh); this.group.add(mesh);
       }
       const definition = this.registry.get(building.typeId);
       mesh.position.set(building.transform.x, building.transform.y + definition.height / 2, building.transform.z);
-      mesh.rotation.y = building.transform.rotation * Math.PI / 2;
+      mesh.rotation.y = (building.autoConveyor?.rotation ?? building.transform.rotation) * Math.PI / 2;
     }
   }
   setMachineStates(states: readonly { readonly id: string; readonly state: MachineState }[]): void {
@@ -54,14 +60,15 @@ export class BuildingView {
       if (this.preview) this.release(this.preview);
       this.preview = null; this.previewType = null; return;
     }
-    if (this.previewType !== typeId) {
+    const shapeKey = JSON.stringify(placement.autoConveyor ?? null);
+    if (this.previewType !== typeId || this.previewShape !== shapeKey) {
       if (this.preview) this.release(this.preview);
-      this.preview = this.createMesh(typeId, true); this.preview.name = 'building-preview';
-      this.previewType = typeId; this.group.add(this.preview);
+      this.preview = this.createMesh(typeId, true, placement.autoConveyor); this.preview.name = 'building-preview';
+      this.previewType = typeId; this.previewShape = shapeKey; this.group.add(this.preview);
     }
     const mesh = this.preview!; const definition = this.registry.get(typeId);
     mesh.position.set(placement.transform.x, placement.transform.y + definition.height / 2, placement.transform.z);
-    mesh.rotation.y = placement.transform.rotation * Math.PI / 2;
+    mesh.rotation.y = (placement.autoConveyor?.rotation ?? placement.transform.rotation) * Math.PI / 2;
     const color = placement.reason === 'valid' ? 0x55e8b2 : 0xff5363;
     mesh.material.color.setHex(color);
     for (const child of mesh.children) if (child instanceof Mesh && child.material instanceof MeshStandardMaterial) child.material.color.setHex(color);
@@ -72,7 +79,7 @@ export class BuildingView {
     if (this.preview) this.release(this.preview);
     this.preview = null; this.previewType = null; this.group.clear();
   }
-  private createMesh(typeId: string, preview: boolean): Mesh<BoxGeometry, MeshStandardMaterial> {
+  private createMesh(typeId: string, preview: boolean, auto?: AutoConveyorShape): Mesh<BoxGeometry, MeshStandardMaterial> {
     const def = this.registry.get(typeId);
     const geometry = new BoxGeometry(def.widthCells * this.cellSize, def.height, def.depthCells * this.cellSize);
     const material = new MeshStandardMaterial({ color: def.color, transparent: preview, opacity: preview ? 0.5 : 1,
@@ -93,12 +100,12 @@ export class BuildingView {
       part(new BoxGeometry(.25, .25, .12), 0x59656c, .48 * scale, 1.4, -.65 * scale, 'machine-indicator');
       part(new BoxGeometry(.45 * scale, .3, .16), 0xf5d056, 0, .5, -scale, 'machine-output-port');
     }
-    const shape = CONVEYOR_SHAPES[typeId];
+    const shape = typeId === 'conveyor-auto' ? (auto?.shape ?? 'straight') : CONVEYOR_SHAPES[typeId];
     if (shape) {
       material.transparent = true; material.opacity = 0; material.depthWrite = false; mesh.castShadow = false;
-      const path = new ConveyorPath({ shape, x: 0, y: BELT_HEIGHT, z: 0, rotation: 0,
-        size: 2 * this.cellSize, ...(shape === 'incline' ? { rise: this.cellSize } : {}) });
-      const count = shape === 'curve-right' ? 16 : 1;
+      const path = new ConveyorPath({ shape, x: 0, y: BELT_HEIGHT + (auto?.offset ?? 0), z: 0, rotation: 0,
+        size: 2 * this.cellSize, ...(auto ? { rise: auto.rise } : shape === 'incline' ? { rise: this.cellSize } : {}) });
+      const count = shape.startsWith('curve-') ? 16 : 1;
       const geometry = new BoxGeometry(.8 * this.cellSize, .12, path.length / count + .004);
       const belt = new MeshStandardMaterial({ color: 0x425961, roughness: .85, transparent: preview, opacity: preview ? .55 : 1, depthWrite: !preview });
       for (let i = 0; i < count; i++) {

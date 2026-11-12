@@ -68,11 +68,14 @@
   retain their items. Ports still require exact position, height and direction;
   this addresses the demonstrated case, not necessarily every reported layout.
   Typecheck, test, build and verify passed; 452 tests in 50 files.
-- The requested single self-adapting conveyor is **not implemented** yet: straight,
-  right-curve and incline remain separate menu choices. It needs a consistent
-  topology/preview algorithm, both turn directions and heights, and a safe policy
-  for changing paths that already hold items. Do not silently discard or overlap
-  items, bypass placement validation, or implement splitters/mergers (Phase 7).
+- The construction menu now offers one automatic conveyor: neighbouring tiles
+  resolve into straight, left/right turns and rising or falling paths, with shared
+  preview/render/simulation geometry. Lines remain linear and acyclic; branching,
+  loops, unsupported height changes and mixed legacy/automatic neighbours are
+  rejected. A path with items cannot be reshaped; joining occupied paths also
+  checks spacing. Legacy definitions remain available internally. Physical user
+  validation of the new behaviour is pending. `npm run verify` passes with 466
+  tests across 51 files, plus build and server checks.
 - This version has not been checked in real WebGL or physically by the user;
   use the revised manual checklist. Phase 5 remains in progress.
 
@@ -82,7 +85,7 @@
   This branch integrates it into construction, the game loop, machine inventory,
   rendering and interaction. Phase 4 was accepted by the user for proceeding
   with its browser verification still pending.
-- The construction menu exposes straight, right curve, incline and a minimal
+- The construction menu exposes one automatic conveyor and a minimal
   receiving terminal (each 4 stone and 2 wood). R rotates, C places repeatedly
   for all buildings, Escape exits before interaction/demolition; invalid, disconnected and connected preview feedback
   shares the authoritative placement validator. Ports are directional and
@@ -93,8 +96,8 @@
 - A foundation may support a whole logistics footprint; removing a loaded
   foundation is refused. Otherwise placement follows terrain slope/variation
   limits, permits at most 0.12 m terrain penetration, and allows a connected
-  elevated end up to 2 m above terrain for inclines. This bounded temporary
-  support policy enables incline-to-terminal construction without a lift system.
+  elevated connected legacy end up to 2 m above terrain. Automatic tiles follow
+  adjacent supports with at most one cell of height difference; no lift system exists.
 - Stable building IDs link a real Miner output inventory, belt segments and a
   one-slot, configurable, inspectable terminal. Partial player retrieval conserves
   remainders; occupied belts, non-empty miner/terminal inventories and refunds

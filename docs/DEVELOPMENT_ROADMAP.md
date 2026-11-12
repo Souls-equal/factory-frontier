@@ -166,9 +166,10 @@ Chunks, persistence and terrain editing are not included in the current step.
 
 The user reports disconnected belts and requests a single self-adapting
 conveyor. A source-connected open line now runs and queues at its open end;
-other possible user layouts still need real-browser verification. A unified
-conveyor with automatic straight/turn/incline routing remains pending; retain
-linear, acyclic topology and item conservation rather than advancing Phase 7.
+other possible user layouts still need real-browser verification. The construction menu now provides a single automatic conveyor with straight,
+left/right and ascending/descending routing; topology stays linear and acyclic.
+Automated coverage is present; browser and user acceptance remain pending.
+Branches and mergers remain Phase 7 scope.
 
 Status: integration implemented and automated checks pass (410 tests / 46 files after the usability follow-up),
 and a real headless Chromium WebGL path/blockage run passed. The user reported

@@ -59,43 +59,28 @@ No save system exists: a reload resets all construction and inventory.
    and C to place. Expect one Miner and a deduction of 10 stone and 10 wood, with no iron required.
    Escape exits placement; press E while targeting it: expect its deposit purity,
    output and running state.
-4. Q → Conveyor: Straight. Each logistics building costs 4 stone and 2 wood.
-   Starting at the Miner's **yellow output**, aim at the adjacent 2 m footprint
-   ahead of it. Default orientation flows from rear to front. Preview should say
-   connected and valid; C places. All building types stay selected for repeat
-   placement; Escape cancels (also before interacting or demolishing). A cyan
-   marker is the input and yellow is the output on the placed model. Expect the belt cyan input to meet the Miner yellow output.
-   Before adding a terminal, close placement mode and wait: the Miner should feed
-   items onto the connected belt; they should stop at the open end and inspection
-   should report BLOCKED with an open-end explanation, not DISCONNECTED. Confirm
-   items do not disappear or overlap. Add a correctly aligned belt or terminal;
-   expect them to resume. A belt with no source should say DISCONNECTED.
-5. Escape to exit repeat-placement, then Q → Conveyor: Right Curve. Place it immediately after the straight belt in
-   the same orientation; expect its cyan inlet to meet the straight yellow outlet
-   and its yellow outlet to turn right relative to travel. Escape, then Q → Conveyor: Incline;
-   rotate with R until its cyan inlet meets the curve outlet, then C. Its outlet
-   should be one metre higher. Escape, then Q → Receiving Terminal; rotate until its cyan inlet
-   meets the incline yellow outlet and place. Expect each preview to report a
-   connected port and the terminal to stand at the incline's output height.
-   Press Escape to exit placement before inspecting it.
-   Default zero-rotation Miner/straight/curve with three R presses for the incline
-   and terminal is a geometry-tested arrangement on the starting deposit. If
-   terrain, obstacles, aim or collision prevent this in practice, record the failure.
-6. Try a reversed adjacent belt and an overlapping footprint. Expect an explanatory
-   invalid preview and no inventory deduction after C. Test an isolated belt:
-   its preview reports disconnected; after placement and Escape, E inspection
-   reports DISCONNECTED. Test a
-   belt on a foundation and F on the supporting foundation: expect refusal until
-   the belt is removed. Rotation, grid snapping, repeat placement, cancellation,
-   and placement on terrain should all match the preview. Repeat placement with
-   a foundation, Miner, each belt shape and terminal; confirm each successful
-   placement deducts its cost, invalid or unaffordable attempts do not, and
-   Escape clears the preview before E/F interactions.
+4. Q → Conveyor. Each logistics building costs 4 stone and 2 wood.
+   Place the first tile at the Miner's **yellow output**. Its cyan input should
+   meet the output regardless of the selected initial rotation. C places repeatedly;
+   Escape cancels placement. An isolated tile uses R for its initial direction.
+   Before adding a terminal, wait for items: they should queue at the open end,
+   which should report BLOCKED, not DISCONNECTED. An unsourced line is DISCONNECTED.
+5. Place more Conveyor tiles in a line and then to either side: the preceding tile
+   should automatically become a right or left turn, with matching coloured ports.
+   Test all rotations and build some sections before attaching a Miner. Try rising
+   and falling terrain or foundations: the preview, surface and moving items must
+   agree. Place a Receiving Terminal facing the last output and observe transport.
+   A shape change on a tile carrying items is refused as `conveyor occupied`: first
+   drain the line using a straight extension and receiver, then retry. Adding a
+   straight extension should not discard items. Record any mismatch.
+6. Try a branch, cycle, overlap or excessive height difference. Expect an invalid
+   preview and no payment. Try an isolated tile, a foundation-supported tile and
+   demolishing its support, as well as repeated placement and cancellation.
 
 ## Run, inspect and recover
 
 7. Leave menus closed and watch the full chain. Expect individual ore items to
-   move from the Miner, through the straight, right curve and incline, into the
+   move from the Miner, through straight tiles, turns and any slopes, into the
    terminal, without visible jumps, overlap or disappearing mid-route. E on a
    belt should show its shape, state, direction, input/output IDs, item count and
    maximum throughput. E on the terminal should show iron and its slot capacity.
@@ -129,5 +114,4 @@ Record each result and any console errors/screenshots. Report separately whether
 pointer lock, every shape/rotation, blockage/recovery, partial retrieval and the
 complete chain passed. Do not infer acceptance from these instructions alone.
 
-The requested single self-adapting conveyor is not yet implemented; separate
-straight, right-curve and incline choices above are still required.
+The single self-adapting conveyor requires physical validation; use the scenarios above.

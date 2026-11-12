@@ -45,6 +45,12 @@ export class ConveyorNetwork implements SimulationSystem {
       source: null, receiver: null, state: 'DISCONNECTED', nextInputMs: 0, nextOutputMs: 0 };
     this.segments.set(id, segment); this.refreshStates(); return segment;
   }
+  /** Change geometry only when empty; retain the segment's throughput clocks. */
+  reshape(id: string, path: ConveyorPath): boolean {
+    const segment = this.require(id);
+    if (segment.items.length || segment.settings.spacing > path.length) return false;
+    segment.path = path; return true;
+  }
   private require(id: string): InternalSegment { const s = this.segments.get(id); if (!s) throw new RangeError(`Unknown conveyor: ${id}`); return s; }
   connect(fromId: string, toId: string): boolean {
     const from = this.require(fromId), to = this.require(toId);

@@ -63,6 +63,7 @@ export function createDefaultBuildingRegistry(items: ItemRegistry): BuildingRegi
     widthCells: 2, depthCells: 2, height: 2.4, maxSlope: 0.58, maxGroundVariation: 0.8,
     color: 0xb58b42, placement: 'deposit' });
   for (const [id, name, description, height] of [
+    ['conveyor-auto', 'Conveyor', 'Automatically connects and turns toward adjacent conveyors.', .55],
     ['conveyor-straight', 'Conveyor: Straight', 'Straight belt; arrow points in item direction.', .55],
     ['conveyor-curve', 'Conveyor: Right Curve', 'Quarter-turn belt; input at rear, output at right.', .55],
     ['conveyor-incline', 'Conveyor: Incline', 'Ascending belt; output is one metre above input.', 1.55],

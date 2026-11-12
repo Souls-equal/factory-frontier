@@ -81,7 +81,7 @@ describe('construction bootstrap wiring', () => {
     vi.spyOn(console, 'info').mockImplementation(() => undefined);
     await import('../../src/main'); await vi.waitFor(() => expect(state.init).toBe(1)); frame(16);
     key('KeyQ'); const menu = document.querySelector<HTMLElement>('[data-ui="construction"]')!;
-    const entry = menu.querySelector<HTMLButtonElement>('[data-building="conveyor-straight"]')!;
+    const entry = menu.querySelector<HTMLButtonElement>('[data-building="conveyor-auto"]')!;
     expect(entry.disabled).toBe(false); expect(entry.textContent).toContain('Logistics'); entry.click();
     const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
     canvas.dispatchEvent(new MouseEvent('mousedown', { button: 0, clientX: 500, clientY: 500 }));
@@ -91,7 +91,7 @@ describe('construction bootstrap wiring', () => {
     const expected = state.preview!.transform;
     key('KeyC'); frame(166);
     expect(state.buildings).toHaveLength(1); expect(state.buildings[0]!.transform).toEqual(expected);
-    expect(state.selected).toBe('conveyor-straight'); expect(state.preview?.reason).toBe('occupied space');
+    expect(state.selected).toBe('conveyor-auto'); expect(state.preview?.reason).toBe('occupied space');
     key('KeyC'); frame(216); expect(state.buildings).toHaveLength(1);
     key('Escape'); frame(266); key('KeyF'); frame(316); expect(state.buildings).toHaveLength(0);
     key('KeyQ'); expect(menu.textContent).toContain('Stone: 20 / 4');

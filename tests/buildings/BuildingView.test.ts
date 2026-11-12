@@ -110,3 +110,25 @@ it('reflects every machine and conveyor state without changing geometry or place
   expect(view.group.getObjectByName('b')!.rotation.y).toBeCloseTo(Math.PI / 2);
   view.dispose();
 });
+
+it('renders and previews the resolved automatic geometry, including reshapes and sloped turns', async () => {
+  const { Vector3 } = await import('three');
+  const { pathForBuilding } = await import('../../src/logistics/ConveyorDefinitions');
+  const registry = createDefaultBuildingRegistry(createDefaultItemRegistry()), view = new BuildingView(registry, 1);
+  const transform = { ...snapFootprint(registry.get('conveyor-auto'), 0, 0, 0, 1), y: 2 };
+  const autoConveyor = { shape: 'curve-left' as const, rotation: 1, rise: -1, offset: 1 };
+  const belt = { id: 'auto', typeId: 'conveyor-auto', transform, autoConveyor };
+  view.sync([belt]); view.setPreview('conveyor-auto', { reason: 'valid', transform, autoConveyor });
+  view.group.updateMatrixWorld(true);
+  const expected = pathForBuilding(belt, 1)!;
+  for (const root of ['auto', 'building-preview']) for (const [name, distance] of [['conveyor-input', 0], ['conveyor-output', expected.length]] as const) {
+    const marker = view.group.getObjectByName(root)!.getObjectByName(name)!;
+    const actual = new Vector3(); marker.getWorldPosition(actual);
+    const position = expected.point(distance);
+    expect(actual.x).toBeCloseTo(position.x); expect(actual.z).toBeCloseTo(position.z);
+    expect(actual.y).toBeCloseTo(position.y + .1);
+  }
+  const previous = view.group.getObjectByName('auto')!;
+  view.sync([{ ...belt, autoConveyor: { shape: 'straight', rotation: 0, rise: 0, offset: 0 } }]);
+  expect(view.group.getObjectByName('auto')).not.toBe(previous); view.dispose();
+});
