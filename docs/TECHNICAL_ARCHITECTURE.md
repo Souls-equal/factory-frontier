@@ -992,15 +992,23 @@ authoritative validator and atomic payment. Escape cancels the mode and pending
 placement, allowing normal interaction and demolition. The renderer selects
 `PCFShadowMap` directly, matching Three.js's former deprecated-mode fallback.
 
-## Voxel transition — isolated data foundation
+## Voxel transition — terrain integration
 
 `VoxelTerrain` is a renderer-independent, immutable finite column model. Each
 column samples a supplied deterministic surface at its centre, rounds to a block
 level, and represents solids from a fixed bottom up to the exclusive top. It
 exports occupancy and bounded exposed-face buffers, without internal faces; it
 has no caves, editing, chunks or bottom mesh. Surface generation rejects meshes
-over 500,000 faces before allocation. This data model is not used by `World`,
-`PlayerController`, construction or `EnvironmentView`: the active game remains
-the documented heightfield. Replacing it requires robust horizontal swept wall
-collision, vertical support/jumping, terrain-aware building validation and new
-resource interactions, not merely substituting a visual mesh.
+over 500,000 faces before allocation. `World` now samples the prior seeded
+heightfield into this model, normally at 1 m per block; if a large or complex
+world exceeds the mesh budget, resolution is reduced until it fits. This may make
+blocks larger than a jump. The renderer consumes the same data. `VoxelCollision`
+composes conservative expanded-column swept wall collision with natural and
+building collisions. `groundBelow` tests the player's circular footprint against
+column tops and finds support below their prior feet height, so landing near a
+ledge does not teleport the player through a wall. The default fixed-step jump
+speed is 8.4 m/s. Voxel building support takes exact column extrema over the
+footprint, and generated deposits are filtered against Miner support. The old
+heightfield remains the procedural source, not the rendered/physical surface.
+The initial resource loop and block-style machine/resource models are not yet
+implemented; browser and physical acceptance remain pending.

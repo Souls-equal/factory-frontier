@@ -85,7 +85,7 @@ export interface PlayerControllerOptions {
 
 const DEFAULT_PLAYER_PHYSICS: PlayerConfig = Object.freeze({
   gravity: 24,
-  jumpSpeed: 7.2,
+  jumpSpeed: 8.4,
   radius: 0.4,
   height: 1.8,
   maxWalkableSlope: 0.73,
@@ -340,8 +340,10 @@ export class PlayerController {
     this.z = resolved.z;
 
     // --- vertical integration ------------------------------------------------
+    const previousFeetY = this.y;
     this.y += this.velocityY * dt;
-    const ground = this.terrain.heightAt(this.x, this.z);
+    const ground = this.terrain.groundBelow?.(this.x, this.z, previousFeetY, this.physics.radius)
+      ?? this.terrain.heightAt(this.x, this.z);
 
     if (this.y < ground) {
       // Never leave the collision surface.

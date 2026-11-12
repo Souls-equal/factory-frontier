@@ -32,6 +32,18 @@ No save system exists: a reload resets all construction and inventory.
    retrieval test below, gather at least 115 iron and 50 stone before building,
    and merge the remaining iron into one stack after paying for the Miner.
 
+## Voxel terrain checks (integration pending physical acceptance)
+
+- On the default world, travel beyond the starting clearing to a one-block ledge.
+  Walk into its vertical face: expect to stop without passing through or rising.
+  Jump while moving towards it: expect to land on top, then walk down without
+  falling through the ground. Repeat along an edge, at corners and near a rock.
+- Place a foundation on a flat top; attempt to place one across a height change.
+  The latter should be rejected without charging resources. Check deposits and
+  the factory chain below still work. Record any visual/collision mismatch.
+- Terrain cannot be broken. The new tree/branch/loose-stone bootstrap and voxel
+  machine models are not implemented yet; the previous resource loop is interim.
+
 ## Construct and connect
 
 3. Q → Miner Mk.1. Aim at the iron deposit from nearby ground; the preview must

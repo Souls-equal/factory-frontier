@@ -21,6 +21,17 @@ export class BuildingTerrain implements TerrainQuery {
     return top;
   }
   heightAt(x: number, z: number): number { return Math.max(this.terrain.heightAt(x, z), this.topAt(x, z)); }
+  groundBelow(x: number, z: number, feetY: number, radius: number): number {
+    let top = this.terrain.groundBelow?.(x, z, feetY, radius) ?? this.terrain.heightAt(x, z);
+    for (const building of this.buildings.all()) {
+      const f = building.transform.footprint;
+      const dx = x - Math.max(f.minX, Math.min(f.maxX, x));
+      const dz = z - Math.max(f.minZ, Math.min(f.maxZ, z));
+      const height = building.transform.y + this.buildings.registry.get(building.typeId).height;
+      if (dx * dx + dz * dz <= radius * radius + 1e-10 && height <= feetY + 1e-7) top = Math.max(top, height);
+    }
+    return top;
+  }
   normalAt(x: number, z: number): TerrainNormal {
     return this.topAt(x, z) > this.terrain.heightAt(x, z) ? { x: 0, y: 1, z: 0 } : this.terrain.normalAt(x, z);
   }

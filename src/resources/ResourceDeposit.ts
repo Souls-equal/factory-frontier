@@ -24,7 +24,8 @@ export const RESOURCE_TYPES = ['iron-ore', 'copper-ore', 'limestone', 'coal', 's
 
 /** Seeded clusters near the clearing and in distinct exploration directions. */
 export function generateDeposits(terrain: TerrainQuery, obstacles: readonly ObstacleDefinition[],
-  seed: number, spawn: { x: number; z: number }, settings: ResourceConfig, playAreaRadius: number): readonly ResourceDeposit[] {
+  seed: number, spawn: { x: number; z: number }, settings: ResourceConfig, playAreaRadius: number,
+  suitable: (x: number, z: number) => boolean = () => true): readonly ResourceDeposit[] {
   const random = createRandom(seed ^ 0x48b32f17);
   const deposits: ResourceDeposit[] = [];
   const radius = 0.8;
@@ -40,7 +41,7 @@ export function generateDeposits(terrain: TerrainQuery, obstacles: readonly Obst
         const jitter = type === 0 && index === 0 ? 1 : 5 + Math.floor(attempt / 20) * 2;
         const x = centreX + random.range(-jitter, jitter);
         const z = centreZ + random.range(-jitter, jitter);
-        if (!terrain.contains(x, z) || Math.hypot(x, z) > reachableRadius) continue;
+        if (!terrain.contains(x, z) || Math.hypot(x, z) > reachableRadius || !suitable(x, z)) continue;
         if (Math.hypot(x - spawn.x, z - spawn.z) < 4 + radius || terrain.slopeAt(x, z) > 0.58) continue;
         if (obstacles.some((o) => Math.hypot(x - o.x, z - o.z) < radius + o.radius + 1.3)) continue;
         if (deposits.some((d) => Math.hypot(x - d.x, z - d.z) < radius + d.radius + 1.5)) continue;

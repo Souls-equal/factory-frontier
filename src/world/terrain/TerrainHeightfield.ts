@@ -62,6 +62,8 @@ export interface TerrainQuery {
   readonly resolution: number;
   readonly cellSize: number;
   heightAt(x: number, z: number): number;
+  /** Optional footprint-aware support below the current feet (for stepped terrain). */
+  groundBelow?(x: number, z: number, feetY: number, radius: number): number;
   normalAt(x: number, z: number): TerrainNormal;
   /** Slope angle in radians (0 = flat). */
   slopeAt(x: number, z: number): number;

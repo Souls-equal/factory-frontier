@@ -65,7 +65,7 @@ export const DEFAULT_PLAYER_CONFIG = Object.freeze({
   /** Downward acceleration in metres per second squared. */
   gravity: 24,
   /** Initial upward speed of a jump in metres per second. */
-  jumpSpeed: 7.2,
+  jumpSpeed: 8.4,
   /** Horizontal collision radius of the player capsule, in metres. */
   radius: 0.4,
   /** Total player height in metres (eye height is configured separately). */

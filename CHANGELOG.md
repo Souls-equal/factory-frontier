@@ -7,7 +7,20 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
-### In progress — voxel transition foundation (not connected to gameplay)
+### In progress — voxel terrain integration
+
+- Replaced the playable smooth surface with seeded, indestructible column
+  voxels, exposed-face rendering, swept wall collision and footprint-aware
+  landing. Default jumps can reach one-metre blocks in fixed-step tests.
+- Building support uses all intersected columns; generated deposits are checked
+  for Miner support. Large, complex worlds may use larger blocks to stay within
+  the mesh budget. Actual browser rendering and usability remain unverified.
+- Tree/branch/stone collection, the first Miner cost change and voxel-style
+  machine/resource models remain unimplemented. The old gathering loop remains
+  temporarily available. Phase 5 acceptance remains pending.
+- Typecheck, tests, build and verify pass: 433 tests in 49 files.
+
+### Earlier — voxel transition foundation (initially isolated)
 
 - Added a read-only, finite column voxel data model with deterministic sampling,
   occupancy queries and exposed-face buffers; added unit tests for coordinates,

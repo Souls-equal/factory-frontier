@@ -1,7 +1,9 @@
+import type { TerrainQuery, TerrainBounds } from './TerrainHeightfield';
+
 /**
  * Immutable, finite column voxel terrain. Levels denote the exclusive top of a
  * solid column; there are no caves, overhangs or terrain edits. This module is
- * deliberately Three-free, and is not yet connected to the playable world.
+ * deliberately Three-free.
  */
 export interface VoxelTerrainOptions {
   readonly originX: number;
@@ -22,7 +24,11 @@ export interface VoxelSurfaceData {
   readonly faceCount: number;
 }
 
-export class VoxelTerrain {
+export class VoxelTerrain implements TerrainQuery {
+  readonly bounds: TerrainBounds;
+  readonly size: number;
+  readonly resolution: number;
+  readonly cellSize: number;
   readonly originX: number;
   readonly originZ: number;
   readonly columnsX: number;
@@ -43,6 +49,9 @@ export class VoxelTerrain {
     this.originX = originX; this.originZ = originZ;
     this.columnsX = columnsX; this.columnsZ = columnsZ;
     this.blockSize = blockSize; this.bottomLevel = bottomLevel;
+    this.size = columnsX * blockSize; this.resolution = columnsX; this.cellSize = blockSize;
+    this.bounds = Object.freeze({ minX: originX, maxX: originX + columnsX * blockSize,
+      minZ: originZ, maxZ: originZ + columnsZ * blockSize });
     this.levels = new Int32Array(columnsX * columnsZ);
     for (let z = 0; z < columnsZ; z++) for (let x = 0; x < columnsX; x++) {
       const height = sampleHeight(originX + (x + .5) * blockSize, originZ + (z + .5) * blockSize);
@@ -75,9 +84,49 @@ export class VoxelTerrain {
     return this.topLevel(cx, cz) === null ? null : { x: cx, z: cz };
   }
 
-  /** Visible top and side quads only. No bottom is rendered in this finite prototype. */
-  getSurfaceData(): VoxelSurfaceData {
-    // Count first: reject pathological checkerboards before allocating huge arrays.
+  contains(x: number, z: number): boolean {
+    return Number.isFinite(x) && Number.isFinite(z) && x >= this.bounds.minX && x <= this.bounds.maxX &&
+      z >= this.bounds.minZ && z <= this.bounds.maxZ;
+  }
+  clampXZ(x: number, z: number): { x: number; z: number } {
+    if (!Number.isFinite(x) || !Number.isFinite(z)) throw new RangeError('Terrain coordinates must be finite.');
+    return { x: Math.max(this.bounds.minX, Math.min(this.bounds.maxX, x)),
+      z: Math.max(this.bounds.minZ, Math.min(this.bounds.maxZ, z)) };
+  }
+  heightAt(x: number, z: number): number {
+    const p = this.clampXZ(x, z);
+    const cx = Math.min(this.columnsX - 1, Math.floor((p.x - this.originX) / this.blockSize));
+    const cz = Math.min(this.columnsZ - 1, Math.floor((p.z - this.originZ) / this.blockSize));
+    return this.topLevel(cx, cz)! * this.blockSize;
+  }
+  normalAt(_x: number, _z: number): { x: number; y: number; z: number } { return { x: 0, y: 1, z: 0 }; }
+  slopeAt(_x: number, _z: number): number { return 0; }
+  get maxHeight(): number { let max = -Infinity; for (const level of this.levels) max = Math.max(max, level); return max * this.blockSize; }
+
+  /** Highest column top below the feet that intersects the horizontal player circle. */
+  groundBelow(x: number, z: number, feetY: number, radius: number): number {
+    const size = this.blockSize;
+    const minX = Math.max(0, Math.floor((x - radius - this.originX) / size));
+    const maxX = Math.min(this.columnsX - 1, Math.floor((x + radius - this.originX) / size));
+    const minZ = Math.max(0, Math.floor((z - radius - this.originZ) / size));
+    const maxZ = Math.min(this.columnsZ - 1, Math.floor((z + radius - this.originZ) / size));
+    let ground = -Infinity;
+    for (let cz = minZ; cz <= maxZ; cz++) for (let cx = minX; cx <= maxX; cx++) {
+      const x0 = this.originX + cx * size, z0 = this.originZ + cz * size;
+      const dx = x - Math.max(x0, Math.min(x0 + size, x));
+      const dz = z - Math.max(z0, Math.min(z0 + size, z));
+      const top = this.topLevel(cx, cz)! * size;
+      if (dx * dx + dz * dz <= radius * radius + 1e-10 && top <= feetY + 1e-7) ground = Math.max(ground, top);
+    }
+    return ground;
+  }
+  getRenderData() {
+    const data = this.getSurfaceData();
+    return { ...data, vertexCount: data.faceCount * 4, triangleCount: data.faceCount * 2 };
+  }
+
+  /** Count exposed top and side faces without allocating mesh buffers. */
+  getSurfaceFaceCount(): number {
     let totalFaces = this.columnsX * this.columnsZ;
     for (let z = 0; z < this.columnsZ; z++) for (let x = 0; x < this.columnsX; x++) {
       const top = this.topLevel(x, z)!;
@@ -85,6 +134,12 @@ export class VoxelTerrain {
         totalFaces += Math.max(0, top - (this.topLevel(x + dx, z + dz) ?? this.bottomLevel));
       }
     }
+    return totalFaces;
+  }
+
+  /** Visible top and side quads only. No bottom is rendered in this finite prototype. */
+  getSurfaceData(): VoxelSurfaceData {
+    const totalFaces = this.getSurfaceFaceCount();
     if (totalFaces > 500_000) throw new RangeError('Voxel surface exceeds the finite prototype mesh limit.');
     const positions = new Float32Array(totalFaces * 12), normals = new Float32Array(totalFaces * 12);
     const indices = new Uint32Array(totalFaces * 6);

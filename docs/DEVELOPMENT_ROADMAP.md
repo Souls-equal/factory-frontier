@@ -152,9 +152,10 @@ Do not silently declare earlier phases accepted or remove the Phase 5 criteria.
 Proceed in independently verified steps: (1) immutable voxel data and exposed
 faces, (2) actual world integration with swept block-side collisions, jumping,
 landing and safe construction support, (3) the initial resource loop and visuals,
-(4) full regression plus real-browser and user acceptance. The first step exists
-only as an isolated prototype; the playable world has not switched. Chunks,
-persistence and terrain editing are not included in the current step.
+(4) full regression plus real-browser and user acceptance. The transition
+now includes integrated terrain, wall collisions and placement checks; browser
+acceptance remains pending. The resource-loop and styling step remains open.
+Chunks, persistence and terrain editing are not included in the current step.
 
 ## PHASE 5 — Conveyor foundation
 
