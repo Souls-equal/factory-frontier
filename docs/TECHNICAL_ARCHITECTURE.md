@@ -1192,3 +1192,16 @@ with a registry-provided text fallback for other IDs, an accessible button name
 and a separate visible quantity. Empty slots have accessible names but no visible
 placeholder. The CSS grid displays the actual snapshot only; it does not create
 additional storage or modify slot selection, dragging or terminal transfer.
+
+### Textured natural environment
+
+The presentation layer creates deterministic, locally generated pixel textures
+with Three.js `DataTexture`; it needs neither DOM canvas nor external requests.
+A single atlas supplies terrain top grass, upper grassy walls and deeper dirt.
+The terrain UVs are assigned per exposed quad from the owning voxel column; the
+positions, normals, index buffer and collision data remain authoritative.
+Decorative rocks share three faceted, instanced meshes with stone textures.
+Starter resources use shared bark, foliage and stone textures and grouped parts;
+visibility, targeting, collision and collection continue to use gatherable state.
+Generated textures are explicitly disposed with the view. Decorative rock
+colliders remain approximate cylinders, not precise faceted meshes.

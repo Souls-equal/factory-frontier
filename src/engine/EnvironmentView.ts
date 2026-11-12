@@ -15,12 +15,15 @@ import {
   TorusGeometry,
   type BufferGeometry as BufferGeometryType,
   type Material,
+  type Texture,
 } from 'three';
 
 import type { World } from '../world/World';
 import type { ResourceDeposit } from '../resources/ResourceDeposit';
 import type { GatherableField } from '../resources/Gatherables';
 import type { InteractableDefinition } from '../world/World';
+import { createNaturalTexture, terrainTileUv } from './NaturalTextures';
+import { createNaturalBlockGeometry, createRockGeometry } from './NaturalModels';
 
 /**
  * Renderer for the Phase 1 environment.
@@ -31,7 +34,7 @@ import type { InteractableDefinition } from '../world/World';
  * physics collides with.
  *
  * Performance notes:
- * - one merged terrain mesh with vertex colours (no textures, one draw call),
+ * - one merged terrain mesh with a pixel texture atlas and vertex tint,
  * - boulders and formations share three instanced meshes,
  * - geometries and materials are created once and disposed together,
  * - the only per-frame work is toggling a highlight ring.
@@ -41,11 +44,6 @@ const SKY_RADIUS = 480;
 
 /** Sunlit, colourful frontier palette for the voxel landscape. */
 const PALETTE = Object.freeze({
-  lowland: new Color(0x669b5d),
-  land: new Color(0x75ac6b),
-  highland: new Color(0x96b77c),
-  rock: new Color(0x9aa99b),
-  ridge: new Color(0xc0c9a8),
   skyZenith: new Color(0x68b9e6),
   skyHorizon: new Color(0xb8e0e8),
   skyWarm: new Color(0xffe8b8),
@@ -63,6 +61,7 @@ export class EnvironmentView {
   private readonly highlightBindings = new Map<string, HighlightBinding>();
   private readonly geometries: BufferGeometryType[] = [];
   private readonly materials: Material[] = [];
+  private readonly textures: Texture[] = [];
   private highlightedId: string | null = null;
   private readonly gatherables: GatherableField;
   private readonly gatherableModels = new Map<string, Group>();
@@ -123,6 +122,8 @@ export class EnvironmentView {
     for (const material of this.materials) {
       material.dispose();
     }
+    for (const texture of this.textures) texture.dispose();
+    this.textures.length = 0;
     this.geometries.length = 0;
     this.materials.length = 0;
     this.highlightBindings.clear();
@@ -181,12 +182,26 @@ export class EnvironmentView {
     geometry.setIndex(new BufferAttribute(data.indices, 1));
 
     const colors = new Float32Array(data.vertexCount * 3);
-    this.writeTerrainColors(data.positions, data.normals, world.terrain.maxHeight, colors);
+    const uv = new Float32Array(data.vertexCount * 2);
+    for (let face = 0; face < data.faceCount; face++) {
+      const p = face * 12, nx = data.normals[p]!, ny = data.normals[p + 1]!, nz = data.normals[p + 2]!;
+      // Sample just inside the owning column; only its uppermost wall has a grass fringe.
+      const x = (data.positions[p]! + data.positions[p + 6]!) / 2 - nx * world.terrain.blockSize * .01;
+      const z = (data.positions[p + 2]! + data.positions[p + 8]!) / 2 - nz * world.terrain.blockSize * .01;
+      const topY = Math.max(data.positions[p + 1]!, data.positions[p + 4]!);
+      const tile = ny === 1 ? 0 : Math.abs(topY - world.terrain.heightAt(x, z)) < world.terrain.blockSize * .001 ? 1 : 2;
+      const [u0, v0, u1, v1] = terrainTileUv(tile);
+      uv.set([u0, v0, u0, v1, u1, v1, u1, v0], face * 8);
+      const shade = .91 + .09 * ((face * 2654435761) % 1000) / 1000;
+      for (let vertex = 0; vertex < 4; vertex++) colors.set([shade, shade, shade], p + vertex * 3);
+    }
     geometry.setAttribute('color', new BufferAttribute(colors, 3));
+    geometry.setAttribute('uv', new BufferAttribute(uv, 2));
     geometry.computeBoundingSphere();
 
     const material = new MeshStandardMaterial({
       vertexColors: true,
+      map: this.naturalTexture(['grass', 'grass-side', 'dirt']),
       roughness: 0.96,
       metalness: 0.04,
     });
@@ -200,36 +215,6 @@ export class EnvironmentView {
     return terrain;
   }
 
-  /** Height/slope driven vertex colours: grass flats, rock on steep faces. */
-  private writeTerrainColors(
-    positions: Float32Array,
-    normals: Float32Array,
-    maxHeight: number,
-    target: Float32Array,
-  ): void {
-    const color = new Color();
-    const heightRange = Math.max(maxHeight, 1);
-
-    for (let vertex = 0; vertex < positions.length / 3; vertex += 1) {
-      const height = positions[vertex * 3 + 1] ?? 0;
-      const normalY = normals[vertex * 3 + 1] ?? 1;
-
-      const heightT = clamp01(height / heightRange);
-      const steepness = clamp01((1 - normalY) / 0.3);
-
-      color.copy(PALETTE.lowland).lerp(PALETTE.land, clamp01(heightT * 3));
-      color.lerp(PALETTE.highland, clamp01((heightT - 0.25) * 1.6));
-      color.lerp(PALETTE.ridge, clamp01((heightT - 0.6) * 2.2));
-      color.lerp(PALETTE.rock, steepness * 0.85);
-
-      // One tint per quad keeps block faces flat rather than interpolating noise.
-      const variation = 0.92 + 0.16 * ((Math.floor(vertex / 4) * 2654435761) % 1000) / 1000;
-      target[vertex * 3] = color.r * variation;
-      target[vertex * 3 + 1] = color.g * variation;
-      target[vertex * 3 + 2] = color.b * variation;
-    }
-  }
-
   private createRocks(world: World): Group {
     const rocks = new Group();
     rocks.name = 'environment:rocks';
@@ -240,9 +225,9 @@ export class EnvironmentView {
     }
 
     const variants: BufferGeometryType[] = [
-      new BoxGeometry(1.3, 1, 1.1),
-      new BoxGeometry(1.1, 1, 1.3),
-      new BoxGeometry(1.2, 1, 1.2),
+      createRockGeometry(0),
+      createRockGeometry(1),
+      createRockGeometry(2),
     ];
     for (const geometry of variants) {
       this.registerGeometry(geometry);
@@ -256,6 +241,7 @@ export class EnvironmentView {
     const dummy = new Object3D();
     const tint = new Color();
 
+    const rockTexture = this.naturalTexture(['stone']);
     variants.forEach((geometry, variantIndex) => {
       const indices = buckets[variantIndex];
       if (indices === undefined || indices.length === 0) {
@@ -263,7 +249,8 @@ export class EnvironmentView {
       }
 
       const material = new MeshStandardMaterial({
-        color: 0x98a8a0,
+        color: 0xffffff,
+        map: rockTexture,
         roughness: 0.92,
         metalness: 0.08,
         flatShading: true,
@@ -280,13 +267,12 @@ export class EnvironmentView {
         if (obstacle === undefined) {
           return;
         }
-        const isFormation = obstacle.kind === 'formation';
         const width = obstacle.radius;
         const height = obstacle.height;
 
-        dummy.position.set(obstacle.x, obstacle.y + height * (isFormation ? 0.31 : 0.275), obstacle.z);
+        dummy.position.set(obstacle.x, obstacle.y, obstacle.z);
         dummy.rotation.set(0, obstacle.yaw, 0);
-        dummy.scale.set(width, height * (isFormation ? 0.62 : 0.55), width);
+        dummy.scale.set(width, height, width);
         dummy.updateMatrix();
         mesh.setMatrixAt(instance, dummy.matrix);
 
@@ -392,26 +378,52 @@ export class EnvironmentView {
 
   private createGatherables(world: World): Group {
     const group = new Group(); group.name = 'environment:gatherables';
-    const trunk = new BoxGeometry(.55, 2, .55), leaves = new BoxGeometry(1.55, 1.5, 1.55);
-    const branch = new BoxGeometry(.75, .12, .18), stone = new BoxGeometry(.5, .35, .42);
-    const ring = new TorusGeometry(.55, .035, 6, 24);
-    for (const geometry of [trunk, leaves, branch, stone, ring]) this.registerGeometry(geometry);
-    const bark = new MeshStandardMaterial({ color: 0x79502f, roughness: 1 });
-    const foliage = new MeshStandardMaterial({ color: 0x68aa56, roughness: 1 });
-    const rock = new MeshStandardMaterial({ color: 0xb4b6a7, roughness: 1 });
+    const treeBark = createNaturalBlockGeometry([
+      { position: [0, 1.18, 0], scale: [.48, 2.36, .48] },
+      { position: [0, .12, 0], scale: [.68, .24, .68] },
+      { position: [-.34, 2.02, 0], scale: [.64, .23, .24], yaw: -.2 },
+      { position: [.30, 2.18, .12], scale: [.60, .22, .24], yaw: .35 },
+    ]);
+    const leaves = createNaturalBlockGeometry([
+      { position: [0, 2.47, 0], scale: [1.38, .88, 1.30] },
+      { position: [-.50, 2.38, -.05], scale: [.55, .68, .83] },
+      { position: [.03, 2.40, .53], scale: [.82, .64, .48] },
+    ]);
+    const leavesLight = createNaturalBlockGeometry([
+      { position: [.48, 2.53, .08], scale: [.52, .72, .78] },
+      { position: [-.10, 3.02, -.04], scale: [.94, .34, .90] },
+    ]);
+    const branch = createNaturalBlockGeometry([
+      { position: [0, .09, 0], scale: [.72, .16, .17], yaw: .15 },
+      { position: [.08, .11, .12], scale: [.36, .11, .12], yaw: -.72 },
+    ]);
+    const stone = createRockGeometry(1), ring = new TorusGeometry(.55, .035, 6, 24);
+    for (const geometry of [treeBark, leaves, leavesLight, branch, stone, ring]) this.registerGeometry(geometry);
+    const bark = new MeshStandardMaterial({ map: this.naturalTexture(['bark']), roughness: 1 });
+    const foliage = new MeshStandardMaterial({ map: this.naturalTexture(['leaves']), roughness: 1 });
+    const foliageLight = new MeshStandardMaterial({ color: 0xd6ecc6, map: foliage.map, roughness: 1 });
+    const rock = new MeshStandardMaterial({ map: this.naturalTexture(['stone']), roughness: 1 });
     const highlight = new MeshBasicMaterial({ color: 0x8ff3ff });
-    for (const material of [bark, foliage, rock, highlight]) this.registerMaterial(material);
-    for (const d of world.gatherables.definitions) {
+    for (const material of [bark, foliage, foliageLight, rock, highlight]) this.registerMaterial(material);
+
+    const part = (model: Group, name: string, geometry: BufferGeometryType, material: MeshStandardMaterial): Mesh => {
+      const mesh = new Mesh(geometry, material); mesh.name = `${model.name}:${name}`;
+      mesh.castShadow = true; mesh.receiveShadow = true; model.add(mesh); return mesh;
+    };
+    for (const [index, d] of world.gatherables.definitions.entries()) {
       const model = new Group(); model.name = `environment:gatherable:${d.id}`;
       model.position.set(d.x, d.y, d.z);
+      // Rotation varies by stable definition order, not random state or simulation.
+      model.rotation.y = (index * 2.3999632297) % (Math.PI * 2);
       if (d.kind === 'tree') {
-        const body = new Mesh(trunk, bark); body.position.y = 1; body.castShadow = true;
-        const crown = new Mesh(leaves, foliage); crown.position.y = 2.5; crown.castShadow = true;
-        model.add(body, crown);
+        part(model, 'trunk', treeBark, bark);
+        part(model, 'crown', leaves, foliage);
+        part(model, 'crown-light', leavesLight, foliageLight);
+      } else if (d.kind === 'branch') {
+        part(model, 'branch', branch, bark);
       } else {
-        const body = new Mesh(d.kind === 'branch' ? branch : stone, d.kind === 'branch' ? bark : rock);
-        body.position.y = d.kind === 'branch' ? .08 : .18; body.rotation.y = d.kind === 'branch' ? .6 : .2;
-        body.castShadow = true; body.receiveShadow = true; model.add(body);
+        const body = part(model, 'stone', stone, rock);
+        body.scale.set(.37, .33, .37);
       }
       const halo = new Mesh(ring, highlight); halo.name = `${model.name}:highlight-ring`;
       halo.rotation.x = Math.PI / 2; halo.position.y = d.kind === 'tree' ? 3.35 : .42;
@@ -493,6 +505,12 @@ export class EnvironmentView {
     return prop;
   }
 
+  private naturalTexture(patterns: Parameters<typeof createNaturalTexture>[0]): Texture {
+    const texture = createNaturalTexture(patterns);
+    this.textures.push(texture);
+    return texture;
+  }
+
   private registerGeometry(geometry: BufferGeometryType): void {
     this.geometries.push(geometry);
   }
@@ -500,8 +518,4 @@ export class EnvironmentView {
   private registerMaterial(material: Material): void {
     this.materials.push(material);
   }
-}
-
-function clamp01(value: number): number {
-  return value < 0 ? 0 : value > 1 ? 1 : value;
 }
