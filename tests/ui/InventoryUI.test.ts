@@ -32,7 +32,7 @@ describe('inventory presentation', () => {
     inv.addItem('iron-ore', 25); ui.open();
     expect(ui.isOpen).toBe(true);
     expect(slot(0).textContent).toContain('Iron Ore ×25');
-    expect(slot(1).textContent).toBe('Empty');
+    expect(slot(1).getAttribute('aria-label')).toBe('Empty slot 2');
     expect(root.querySelector('[data-inventory-capacity]')?.textContent).toContain('1 / 3');
     slot(0).click(); expect(root.querySelector('[data-inventory-detail]')?.textContent).toContain('25 / 100');
     inv.addItem('iron-ore', 3); ui.update();
