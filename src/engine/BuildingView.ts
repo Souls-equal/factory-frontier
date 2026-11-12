@@ -7,6 +7,7 @@ import { CONVEYOR_SHAPES, BELT_HEIGHT } from '../logistics/ConveyorDefinitions';
 import type { ConveyorState } from '../logistics/ConveyorNetwork';
 import type { BuildingRegistry } from '../buildings/BuildingRegistry';
 import type { BuildingInstance, PlacementResult } from '../buildings/BuildingSystem';
+import { addConveyorDetails, addFoundationDetails, addMinerDetails, addTerminalDetails } from './BuildingDetails';
 
 /** Rendering-only consumer of logical building state, with a separate preview. */
 export class BuildingView {
@@ -116,7 +117,10 @@ export class BuildingView {
   }
   private createMesh(typeId: string, preview: boolean, auto?: AutoConveyorShape, cell?: CellConveyorShape): Mesh<BoxGeometry, MeshStandardMaterial> {
     const def = this.registry.get(typeId);
-    const geometry = new BoxGeometry(def.widthCells * this.cellSize, def.height, def.depthCells * this.cellSize);
+    // The terminal's inset shell leaves its protective corner frame visible;
+    // authoritative footprint and port positions remain unchanged.
+    const shellInset = typeId === 'receiving-terminal' ? .88 : 1;
+    const geometry = new BoxGeometry(def.widthCells * this.cellSize * shellInset, def.height, def.depthCells * this.cellSize * shellInset);
     const material = new MeshStandardMaterial({ color: def.color, transparent: preview, opacity: preview ? 0.5 : 1,
       depthWrite: !preview, roughness: 0.8 });
     const mesh = new Mesh(geometry, material); mesh.castShadow = !preview; mesh.receiveShadow = !preview;
@@ -134,6 +138,7 @@ export class BuildingView {
       part(new BoxGeometry(.55 * scale, .22, .55 * scale), 0xd1ae64, 0, 2.19, 0, 'miner-head-cap');
       part(new BoxGeometry(.25, .25, .12), 0x59656c, .48 * scale, 1.4, -.65 * scale, 'machine-indicator');
       part(new BoxGeometry(.45 * scale, .3, .16), 0xf5d056, 0, .5, -scale, 'machine-output-port');
+      addMinerDetails(mesh, scale, def.height, preview);
     }
     const shape = typeId === 'conveyor-auto' ? (auto?.shape ?? 'straight') : typeId === 'conveyor-cell' && cell?.rise ? 'incline' : CONVEYOR_SHAPES[typeId];
     if (shape) {
@@ -218,11 +223,16 @@ export class BuildingView {
       const lamp = new Mesh(new BoxGeometry(.18 * (typeId === 'conveyor-cell' ? this.cellSize : 1), .15, .18 * (typeId === 'conveyor-cell' ? this.cellSize : 1)), new MeshStandardMaterial({ color: 0xdd6954, transparent: preview, opacity: preview ? .55 : 1, depthWrite: !preview }));
       lamp.position.set((typeId === 'conveyor-cell' ? -.38 : -.43) * this.cellSize, path.point(path.length * .2).y - def.height / 2 + .12, (typeId === 'conveyor-cell' ? .3 : .6) * this.cellSize);
       lamp.name = 'conveyor-indicator'; mesh.add(lamp);
+      // Keep the centre-entry ramps unobstructed when belts join from the side.
+      if (typeId === 'conveyor-cell' && !cell?.entries.length) addConveyorDetails(mesh, this.cellSize, def.height, preview);
       for (const fraction of [.2, .8]) {
         const p = path.point(path.length * fraction), height = Math.max(.12, p.y - .1);
-        const support = new Mesh(new BoxGeometry(.65 * this.cellSize, height, .18 * this.cellSize),
-          new MeshStandardMaterial({ color: 0xd4d5b8, transparent: preview, opacity: preview ? .55 : 1, depthWrite: !preview }));
-        support.position.set(p.x, height / 2 - def.height / 2, p.z); support.name = 'conveyor-support'; mesh.add(support);
+        const supportGeometry = new BoxGeometry((typeId === 'conveyor-cell' ? .14 : .65) * this.cellSize, height, .18 * this.cellSize);
+        const supportMaterial = new MeshStandardMaterial({ color: typeId === 'conveyor-cell' ? 0x657b7b : 0xd4d5b8, transparent: preview, opacity: preview ? .55 : 1, depthWrite: !preview });
+        for (const side of typeId === 'conveyor-cell' ? [-.25, .25] : [0]) {
+          const support = new Mesh(supportGeometry, supportMaterial);
+          support.position.set(p.x + side * this.cellSize, height / 2 - def.height / 2, p.z); support.name = 'conveyor-support'; mesh.add(support);
+        }
       }
     }
     if (typeId === 'foundation') {
@@ -234,6 +244,7 @@ export class BuildingView {
         const tile = new Mesh(tileGeometry, tileMaterial); tile.name = 'foundation-tile';
         tile.position.set(x, def.height / 2 + .013, z); tile.receiveShadow = !preview; mesh.add(tile);
       }
+      addFoundationDetails(mesh, this.cellSize, def.height, preview);
     }
     if (typeId === 'receiving-terminal') {
       const port = new Mesh(new BoxGeometry(.45 * this.cellSize, .3, .12),
@@ -253,12 +264,15 @@ export class BuildingView {
       const lid = new Mesh(new BoxGeometry(1.72 * this.cellSize, .12, 1.72 * this.cellSize),
         new MeshStandardMaterial({ color: 0x93a4a1, transparent: preview, opacity: preview ? .55 : 1, depthWrite: !preview }));
       lid.position.set(0, def.height / 2 - .06, 0); lid.name = 'terminal-lid'; mesh.add(lid);
+      addTerminalDetails(mesh, this.cellSize, def.height, preview);
     }
-    // A contrasting north-edge stripe makes quarter-turns visible even for a square footprint.
-    const stripe = new Mesh(new BoxGeometry(def.widthCells * this.cellSize * 0.55, 0.02, 0.08),
-      new MeshStandardMaterial({ color: 0xf1d66d, transparent: preview, opacity: preview ? 0.8 : 1, depthWrite: !preview }));
-    stripe.position.set(0, def.height / 2 + 0.015, -def.depthCells * this.cellSize * 0.35);
-    stripe.name = 'orientation-marker'; mesh.add(stripe);
+    // Mark slab and legacy orientation; the refreshed machine and one-cell belt show their ports.
+    if (!['miner-mk1', 'conveyor-cell', 'receiving-terminal'].includes(typeId)) {
+      const stripe = new Mesh(new BoxGeometry(def.widthCells * this.cellSize * 0.55, 0.02, 0.08),
+        new MeshStandardMaterial({ color: 0xf1d66d, transparent: preview, opacity: preview ? 0.8 : 1, depthWrite: !preview }));
+      stripe.position.set(0, def.height / 2 + (typeId === 'foundation' ? .03 : .015), -def.depthCells * this.cellSize * 0.35);
+      stripe.name = 'orientation-marker'; mesh.add(stripe);
+    }
     return mesh;
   }
   private release(mesh: Mesh<BoxGeometry, MeshStandardMaterial>): void {

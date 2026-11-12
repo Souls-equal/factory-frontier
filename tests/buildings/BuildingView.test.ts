@@ -48,7 +48,7 @@ it.each(['foundation', 'miner-mk1', 'conveyor-straight', 'conveyor-curve', 'conv
     view.sync([{ id: 'placed', typeId, transform }]);
     const actual = view.group.getObjectByName('placed') as Mesh;
     actual.traverse((object) => {
-      if (object instanceof Mesh) expect(object.geometry.type, object.name).toBe('BoxGeometry');
+      if (object instanceof Mesh) expect(object.geometry.isBufferGeometry, object.name).toBe(true);
     });
     view.setPreview(typeId, { reason: 'valid', transform });
     const preview = view.group.getObjectByName('building-preview') as Mesh;
@@ -199,4 +199,41 @@ it('updates and removes hypothetical neighbouring belt shapes as aim or world ch
   expect(dispose).toHaveBeenCalledOnce(); expect(view.group.getObjectByName('building-change-preview:a')).not.toBe(ghost);
   view.sync([]); view.setPreview('conveyor-auto', { reason: 'valid', transform, conveyorPreviewChanges: [left] });
   expect(view.group.getObjectByName('building-change-preview:a')).toBeUndefined(); view.dispose();
+});
+
+describe('refined construction details', () => {
+  it.each([
+    ['foundation', ['foundation-corner-plates', 'foundation-bolts', 'foundation-side-banding']],
+    ['miner-mk1', ['miner-gantry', 'miner-access-panels', 'miner-vents', 'miner-drill-collar']],
+    ['conveyor-cell', ['conveyor-feet', 'conveyor-chassis']],
+    ['receiving-terminal', ['terminal-frame', 'terminal-controls', 'terminal-screen', 'terminal-latches']],
+  ])('shows and disposes batched %s details in placed and invalid/valid previews', (typeId, details) => {
+    const registry = createDefaultBuildingRegistry(createDefaultItemRegistry()), view = new BuildingView(registry, 1);
+    const transform = snapFootprint(registry.get(typeId), 0, 0, 0, 1);
+    view.sync([{ id: 'placed', typeId, transform }]);
+    view.setPreview(typeId, { reason: 'valid', transform });
+    const actual = view.group.getObjectByName('placed')!, ghost = view.group.getObjectByName('building-preview')!;
+    const disposals: ReturnType<typeof vi.spyOn>[] = [];
+    for (const name of details) {
+      const part = actual.getObjectByName(name) as Mesh, preview = ghost.getObjectByName(name) as Mesh;
+      expect(part).toBeDefined(); expect(preview).toBeDefined();
+      expect((preview.material as MeshStandardMaterial).color.getHex()).toBe(0x55e8b2);
+      expect((preview.material as MeshStandardMaterial).depthWrite).toBe(false);
+      disposals.push(vi.spyOn(part.geometry, 'dispose'), vi.spyOn(part.material as MeshStandardMaterial, 'dispose'));
+    }
+    view.setPreview(typeId, { reason: 'occupied space', transform });
+    for (const name of details) expect(((ghost.getObjectByName(name) as Mesh).material as MeshStandardMaterial).color.getHex()).toBe(0xff5363);
+    view.sync([]);
+    for (const dispose of disposals) expect(dispose).toHaveBeenCalledOnce();
+    view.dispose();
+  });
+  it('keeps extra conveyor chassis off junctions with entry ramps', () => {
+    const registry = createDefaultBuildingRegistry(createDefaultItemRegistry()), view = new BuildingView(registry, 1);
+    const transform = snapFootprint(registry.get('conveyor-cell'), 0, 0, 0, 1);
+    const cellConveyor = { rise: 0, entries: [{ x: .5, z: 0, startHeight: -.4 }] };
+    view.sync([{ id: 'junction', typeId: 'conveyor-cell', transform, cellConveyor }]);
+    expect(view.group.getObjectByName('conveyor-entry-ramp')).toBeDefined();
+    expect(view.group.getObjectByName('conveyor-chassis')).toBeUndefined();
+    view.dispose();
+  });
 });
