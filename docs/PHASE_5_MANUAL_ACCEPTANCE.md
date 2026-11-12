@@ -36,6 +36,8 @@ No save system exists: a reload resets all construction and inventory.
 
 ## Voxel terrain checks (integration pending physical acceptance)
 
+- Check the brighter sky, terrain and conveyor rails/treads for legibility in a
+  real WebGL browser; record glare, excessive saturation or unreadable markers.
 - On the default world, travel beyond the starting clearing to a one-block ledge.
   Walk into its vertical face: expect to stop without passing through or rising.
   Jump while moving towards it: expect to land on top, then walk down without
@@ -70,9 +72,12 @@ No save system exists: a reload resets all construction and inventory.
    Test all rotations and build some sections before attaching a Miner. Try rising
    and falling terrain or foundations: the preview, surface and moving items must
    agree. Place a Receiving Terminal facing the last output and observe transport.
-   A shape change on a tile carrying items is refused as `conveyor occupied`: first
-   drain the line using a straight extension and receiver, then retry. Adding a
-   straight extension should not discard items. Record any mismatch.
+   Test a single isolated tile with an adjacent tile to the left and to the right;
+   the first tile should turn without having to connect a Miner first. Repeat with
+   a running Miner and a belt blocked full at its open end: adding a side tile
+   should immediately turn it, retain all items and resume transport. Items may
+   snap to the new path at construction. If a more complex arrangement cannot
+   preserve spacing, expect `conveyor occupied` and no payment. Record mismatches.
 6. Try a branch, cycle, overlap or excessive height difference. Expect an invalid
    preview and no payment. Try an isolated tile, a foundation-supported tile and
    demolishing its support, as well as repeated placement and cancellation.

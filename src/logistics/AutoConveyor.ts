@@ -47,11 +47,16 @@ export function resolveAutoConveyors(buildings: readonly BuildingInstance[], cel
     const sink = component.find((n) => n.typeId === 'receiving-terminal');
     let start = source ?? (sink ? ends.find((n) => n !== sink) : undefined);
     if (!start && component.length > 1) {
-      // Without endpoints, prefer the end whose selected heading points into the line.
+      // Prefer an already resolved end whose outlet enters the line. This keeps
+      // the direction stable while extending a source-less route at either end.
       start = ends.find((n) => {
-        const next = neighbors.get(n.id)![0], d = directions[n.transform.rotation % 4]!;
+        if (!n.autoConveyor) return false;
+        const next = neighbors.get(n.id)![0];
+        const { rotation, shape } = n.autoConveyor;
+        const out = shape === 'curve-right' ? (rotation + 3) % 4 : shape === 'curve-left' ? (rotation + 1) % 4 : rotation;
+        const d = directions[out]!;
         return next && (next.transform.x - n.transform.x) * d.x + (next.transform.z - n.transform.z) * d.z > epsilon;
-      }) ?? ends[0];
+      }) ?? ends.find((n) => n.autoConveyor) ?? ends[0];
     }
     start ??= first;
     const ordered: BuildingInstance[] = []; let prev: BuildingInstance | undefined, current: BuildingInstance | undefined = start;
@@ -67,8 +72,12 @@ export function resolveAutoConveyors(buildings: readonly BuildingInstance[], cel
       const directionIndex = (from: BuildingInstance, to: BuildingInstance): number =>
         directions.findIndex((d) => Math.abs(to.transform.x - from.transform.x - d.x * 2 * cellSize) < epsilon &&
           Math.abs(to.transform.z - from.transform.z - d.z * 2 * cellSize) < epsilon);
-      const incoming = before ? directionIndex(before, belt) : after ? directionIndex(belt, after) : belt.transform.rotation;
-      const outgoing = after ? directionIndex(belt, after) : incoming;
+      const outgoingNeighbor = after ? directionIndex(belt, after) : undefined;
+      // A free inlet keeps the originally selected heading. A neighbour placed
+      // to the side therefore bends this tile instead of rotating the whole line.
+      let incoming = before ? directionIndex(before, belt) : (belt.autoConveyor?.rotation ?? belt.transform.rotation);
+      if (!before && outgoingNeighbor !== undefined && (incoming + 2) % 4 === outgoingNeighbor) incoming = outgoingNeighbor;
+      const outgoing = outgoingNeighbor ?? incoming;
       if (incoming < 0 || outgoing < 0 || (incoming + 2) % 4 === outgoing) return null;
       // The shared edge is at the higher of the two supports, keeping a ramp
       // above ground for both ascending and descending transitions.

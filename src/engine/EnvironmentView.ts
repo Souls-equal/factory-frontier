@@ -39,16 +39,16 @@ import type { InteractableDefinition } from '../world/World';
 
 const SKY_RADIUS = 480;
 
-/** Palette shared with the UI: cool industrial twilight. */
+/** Sunlit, colourful frontier palette for the voxel landscape. */
 const PALETTE = Object.freeze({
-  lowland: new Color(0x24322c),
-  land: new Color(0x2f4238),
-  highland: new Color(0x475459),
-  rock: new Color(0x4c585d),
-  ridge: new Color(0x5c6a6f),
-  skyZenith: new Color(0x060d16),
-  skyHorizon: new Color(0x1d3a44),
-  skyWarm: new Color(0x4a4a3c),
+  lowland: new Color(0x669b5d),
+  land: new Color(0x75ac6b),
+  highland: new Color(0x96b77c),
+  rock: new Color(0x9aa99b),
+  ridge: new Color(0xc0c9a8),
+  skyZenith: new Color(0x68b9e6),
+  skyHorizon: new Color(0xb8e0e8),
+  skyWarm: new Color(0xffe8b8),
   sun: new Color(0xffe4b5),
 });
 
@@ -263,7 +263,7 @@ export class EnvironmentView {
       }
 
       const material = new MeshStandardMaterial({
-        color: 0x59646a,
+        color: 0x98a8a0,
         roughness: 0.92,
         metalness: 0.08,
         flatShading: true,
@@ -397,7 +397,7 @@ export class EnvironmentView {
     const ring = new TorusGeometry(.55, .035, 6, 24);
     for (const geometry of [trunk, leaves, branch, stone, ring]) this.registerGeometry(geometry);
     const bark = new MeshStandardMaterial({ color: 0x79502f, roughness: 1 });
-    const foliage = new MeshStandardMaterial({ color: 0x4b8a4f, roughness: 1 });
+    const foliage = new MeshStandardMaterial({ color: 0x68aa56, roughness: 1 });
     const rock = new MeshStandardMaterial({ color: 0xb4b6a7, roughness: 1 });
     const highlight = new MeshBasicMaterial({ color: 0x8ff3ff });
     for (const material of [bark, foliage, rock, highlight]) this.registerMaterial(material);

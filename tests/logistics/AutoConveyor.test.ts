@@ -60,3 +60,24 @@ it('resolves a line to its source and sink regardless of placement order', () =>
   for (const belt of [a, b, c]) expect(two.get(belt.id)).toEqual(one.get(belt.id));
   expect(one.get('b')?.shape).toBe('curve-left');
 });
+
+it.each([0, 1, 2, 3])('turns the first isolated tile when a neighbour is placed sideways at rotation %s', (rotation) => {
+  const d = [{ x: 0, z: -1 }, { x: -1, z: 0 }, { x: 0, z: 1 }, { x: 1, z: 0 }][rotation]!;
+  for (const side of [-1, 1]) {
+    const right = { x: -d.z * side, z: d.x * side };
+    const a = make('a', 'conveyor-auto', 0, 0, rotation);
+    const initial = resolveAutoConveyors([a], 1)!.get('a')!;
+    const existing = { ...a, autoConveyor: initial };
+    const b = make('b', 'conveyor-auto', right.x * 2, right.z * 2, (rotation + 2) % 4);
+    const plan = resolveAutoConveyors([existing, b], 1)!;
+    expect(plan.get('a')?.shape).toBe(side === 1 ? 'curve-right' : 'curve-left');
+    expect(pathForBuilding({ ...a, autoConveyor: plan.get('a') }, 1)!.compatible(pathForBuilding({ ...b, autoConveyor: plan.get('b') }, 1)!)).toBe(true);
+  }
+});
+
+it('keeps a resolved inlet direction after its source is removed', () => {
+  const miner = make('m', 'miner-mk1', 0, 0, 3), belt = make('b', 'conveyor-auto', 2, 0, 0);
+  const auto = resolveAutoConveyors([miner, belt], 1)!.get('b')!;
+  expect(auto.rotation).toBe(3);
+  expect(resolveAutoConveyors([{ ...belt, autoConveyor: auto }], 1)!.get('b')!.rotation).toBe(3);
+});

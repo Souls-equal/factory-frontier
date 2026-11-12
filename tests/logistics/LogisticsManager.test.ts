@@ -380,18 +380,37 @@ it('runs an automatic conveyor chain through a turn and keeps items on a straigh
   expect(logistics.terminal(terminal.id)!.getItemCount('iron-ore')).toBe(10);
 });
 
-it('refuses to reshape an occupied automatic belt without changing stock or costs', () => {
-  const { buildings, machines, logistics, playerInventory } = setup();
-  const miner = place(buildings, 'miner-mk1', 0, 0), belt = place(buildings, 'conveyor-auto', 0, -2);
-  logistics.sync(); machines.get(miner.id)!.output.addItem('iron-ore', 3); logistics.fixedUpdate(50);
-  const before = playerInventory.snapshot(), item = logistics.network.get(belt.id)!.items[0]!;
-  expect(buildings.place('conveyor-auto', 2, -2, 0, player).reason).toBe('conveyor occupied');
-  expect(playerInventory.snapshot()).toEqual(before); expect(logistics.network.get(belt.id)!.items[0]).toEqual(item);
-  expect(buildings.get(belt.id)!.autoConveyor?.shape).toBe('straight');
-  // A straight extension does not reshape the occupied segment.
-  const next = place(buildings, 'conveyor-auto', 0, -4); logistics.sync();
-  expect(logistics.network.get(belt.id)!.items[0]).toEqual(item);
-  expect(logistics.network.get(belt.id)!.output).toBe(next.id);
+it.each([0, 1, 2, 3])('turns an occupied, blocked automatic belt to either side at rotation %s', (rotation) => {
+  const d = [{ x: 0, z: -1 }, { x: -1, z: 0 }, { x: 0, z: 1 }, { x: 1, z: 0 }][rotation]!;
+  for (const side of [-1, 1]) {
+    const { buildings, machines, logistics } = setup();
+    const miner = place(buildings, 'miner-mk1', 0, 0, rotation), belt = place(buildings, 'conveyor-auto', d.x * 2, d.z * 2);
+    logistics.sync(); const stock = machines.get(miner.id)!.output; stock.addItem('iron-ore', 12);
+    for (let i = 0; i < 350; i++) logistics.fixedUpdate(50);
+    const segment = logistics.network.get(belt.id)!;
+    expect(segment.state).toBe('BLOCKED'); expect(segment.items.length).toBeGreaterThan(1);
+    const ids = segment.items.map((item) => item.id).sort(), inputClock = segment.nextInputMs, outputClock = segment.nextOutputMs;
+    const sideX = -d.z * side, sideZ = d.x * side;
+    const x = d.x * 2 + sideX * 2, z = d.z * 2 + sideZ * 2;
+    expect(buildings.validate('conveyor-auto', x, z, 0, player).reason).toBe('valid');
+    const next = place(buildings, 'conveyor-auto', x, z); logistics.sync();
+    const a = logistics.network.get(belt.id)!, b = logistics.network.get(next.id)!;
+    expect(a.path.spec.shape).toBe(side === 1 ? 'curve-right' : 'curve-left');
+    expect(a.output).toBe(b.id);
+    expect([...a.items, ...b.items].map((item) => item.id).sort()).toEqual(ids);
+    for (const s of [a, b]) for (const item of s.items) expect(item.previousPosition).toEqual(s.path.point(item.distance));
+    expect(a.nextInputMs).toBe(inputClock); expect(a.nextOutputMs).toBe(outputClock);
+    for (const s of [a, b]) for (let j = 1; j < s.items.length; j++) expect(s.items[j - 1]!.distance - s.items[j]!.distance).toBeGreaterThanOrEqual(.5 - 1e-8);
+    if (a.items[0] && b.items.at(-1)) expect(a.path.length - a.items[0].distance + b.items.at(-1)!.distance).toBeGreaterThanOrEqual(.5 - 1e-8);
+    expect(b.items.length).toBeGreaterThan(0);
+    const terminal = place(buildings, 'receiving-terminal', x + sideX * 2, z + sideZ * 2, side === 1 ? (rotation + 3) % 4 : (rotation + 1) % 4);
+    logistics.sync();
+    for (let i = 0; i < 500; i++) {
+      logistics.fixedUpdate(50);
+      expect(stock.getItemCount('iron-ore') + logistics.terminal(terminal.id)!.getItemCount('iron-ore') + logistics.network.all().reduce((n, s) => n + s.items.length, 0)).toBe(12);
+    }
+    expect(logistics.terminal(terminal.id)!.getItemCount('iron-ore')).toBe(12);
+  }
 });
 
 it('attaches an automatic conveyor at a generated starting iron deposit', async () => {
@@ -433,4 +452,38 @@ it('anchors and previews a terminal at an elevated automatic conveyor outlet', (
   expect(preview.transform.y).toBeCloseTo(.4);
   const terminal = place(buildings, 'receiving-terminal', 4, -2);
   logistics.sync(); expect(logistics.network.get(belt.id)!.receiver?.id).toBe(terminal.id);
+});
+
+it.each([0, 1, 2, 3])('preview and placement turn an isolated conveyor sideways in rotation %s', (rotation) => {
+  const d = [{ x: 0, z: -1 }, { x: -1, z: 0 }, { x: 0, z: 1 }, { x: 1, z: 0 }][rotation]!;
+  for (const side of [-1, 1]) {
+    const { buildings, logistics } = setup();
+    const first = place(buildings, 'conveyor-auto', 0, 6, rotation);
+    const x = -d.z * side * 2, z = 6 + d.x * side * 2;
+    const preview = buildings.validate('conveyor-auto', x, z, (rotation + 2) % 4, player);
+    expect(preview.reason).toBe('valid'); expect(preview.connection).toBe('connected');
+    const next = place(buildings, 'conveyor-auto', x, z, (rotation + 2) % 4); logistics.sync();
+    expect(buildings.get(first.id)!.autoConveyor!.shape).toBe(side === 1 ? 'curve-right' : 'curve-left');
+    expect(logistics.network.get(first.id)!.output).toBe(next.id);
+    expect(logistics.network.get(next.id)!.path.spec.rotation).toBe(preview.autoConveyor!.rotation);
+  }
+});
+
+it('reroutes occupied items through a turn that also climbs onto a foundation', () => {
+  const { buildings, machines, logistics, playerInventory } = setup();
+  playerInventory.addItem('wood', 10);
+  const miner = place(buildings, 'miner-mk1', 0, 0);
+  const a = place(buildings, 'conveyor-auto', 0, -2);
+  place(buildings, 'foundation', 2, -2);
+  logistics.sync(); const stock = machines.get(miner.id)!.output; stock.addItem('iron-ore', 8);
+  for (let i = 0; i < 300; i++) logistics.fixedUpdate(50);
+  const ids = logistics.network.get(a.id)!.items.map((x) => x.id).sort();
+  const b = place(buildings, 'conveyor-auto', 2, -2); logistics.sync();
+  const first = logistics.network.get(a.id)!, second = logistics.network.get(b.id)!;
+  expect(first.path.spec.shape).toBe('curve-right'); expect(first.path.rise).toBeCloseTo(.4);
+  expect(first.path.compatible(second.path)).toBe(true);
+  expect([...first.items, ...second.items].map((x) => x.id).sort()).toEqual(ids);
+  const terminal = place(buildings, 'receiving-terminal', 4, -2, 3); logistics.sync();
+  for (let i = 0; i < 400; i++) logistics.fixedUpdate(50);
+  expect(logistics.terminal(terminal.id)!.getItemCount('iron-ore')).toBe(8);
 });

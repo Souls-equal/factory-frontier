@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — side turns and brighter presentation
+
+- A sideways neighbour now turns an isolated conveyor and can reshape an occupied
+  end immediately when items can be safely projected onto the resulting route.
+  IDs, ordering, spacing and throughput clocks are preserved; unsafe joins are
+  rejected without payment. Visual item positions can snap during a reshape.
+- Brighter daytime sky, fog, terrain and fill lighting; conveyor models add
+  coloured path-following rails, treads and supports. Real-player and WebGL
+  acceptance remain pending.
+
 ## Unreleased — automatic conveyor
 
 - One construction choice resolves straight, left/right turns and height changes
@@ -23,8 +33,8 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 - Logistics inspection explains the missing output, and tests cover four
   rotations, backpressure, reconnection and the bootstrap with a mocked renderer.
   Typecheck, test, build and verify passed: 452 tests in 50 files.
-- The requested single, neighbour-adapting conveyor remains unimplemented; the
-  three explicit variants are still available. Physical/WebGL validation remains
+- At that earlier revision, the requested single, neighbour-adapting conveyor
+  was not implemented and three explicit variants were still available. Physical/WebGL validation remains
   pending, including any other cause behind the reported disconnected layout.
 
 ### Changed — block-style current world objects

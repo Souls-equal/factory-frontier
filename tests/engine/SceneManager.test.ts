@@ -215,3 +215,13 @@ it('renders block-shaped deposits, natural rocks and props without changing logi
   expect(JSON.stringify({ deposits: world.deposits, obstacles: world.obstacleDefinitions, interactables: world.interactables })).toBe(snapshot);
   manager.dispose(); expect(dispose).toHaveBeenCalledOnce();
 });
+
+it('uses a light daytime sky, fog and colourful terrain by default', () => {
+  const { manager, config } = createHarness();
+  const sky = findObject<Mesh>(manager, 'environment:sky').geometry.getAttribute('color');
+  const terrain = findObject<Mesh>(manager, 'environment:terrain').geometry.getAttribute('color');
+  expect(config.render.backgroundColor).toBe(0xb8e0e8); expect(config.render.fogColor).toBe(0xb8e0e8);
+  expect(sky.getZ(0)).toBeGreaterThan(.5);
+  expect(terrain.getY(0)).toBeGreaterThan(.2);
+  manager.dispose();
+});

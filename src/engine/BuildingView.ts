@@ -107,12 +107,32 @@ export class BuildingView {
         size: 2 * this.cellSize, ...(auto ? { rise: auto.rise } : shape === 'incline' ? { rise: this.cellSize } : {}) });
       const count = shape.startsWith('curve-') ? 16 : 1;
       const geometry = new BoxGeometry(.8 * this.cellSize, .12, path.length / count + .004);
-      const belt = new MeshStandardMaterial({ color: 0x425961, roughness: .85, transparent: preview, opacity: preview ? .55 : 1, depthWrite: !preview });
+      const belt = new MeshStandardMaterial({ color: 0x377c82, roughness: .8, transparent: preview, opacity: preview ? .55 : 1, depthWrite: !preview });
+      const railGeometry = new BoxGeometry(.09 * this.cellSize, .17, path.length / count + .004);
+      const rails = new MeshStandardMaterial({ color: 0xf3b75d, roughness: .7, transparent: preview, opacity: preview ? .55 : 1, depthWrite: !preview });
       for (let i = 0; i < count; i++) {
         const a = path.point(i * path.length / count), b = path.point((i + 1) * path.length / count);
         const piece = new Mesh(geometry, belt); const tangent = new Vector3(b.x - a.x, b.y - a.y, b.z - a.z).normalize();
-        piece.position.set((a.x + b.x) / 2, (a.y + b.y) / 2 - def.height / 2, (a.z + b.z) / 2);
-        piece.quaternion.setFromUnitVectors(new Vector3(0, 0, 1), tangent); piece.name = 'conveyor-surface'; mesh.add(piece);
+        const midpoint = new Vector3((a.x + b.x) / 2, (a.y + b.y) / 2 - def.height / 2, (a.z + b.z) / 2);
+        piece.position.copy(midpoint);
+        piece.quaternion.setFromUnitVectors(new Vector3(0, 0, 1), tangent); piece.name = 'conveyor-surface'; piece.castShadow = !preview; piece.receiveShadow = !preview; mesh.add(piece);
+        const side = new Vector3(tangent.z, 0, -tangent.x).normalize();
+        for (const sign of [-1, 1]) {
+          const rail = new Mesh(railGeometry, rails);
+          rail.position.copy(midpoint).addScaledVector(side, sign * .45 * this.cellSize); rail.position.y += .05;
+          rail.quaternion.copy(piece.quaternion); rail.name = 'conveyor-rail'; rail.castShadow = !preview; mesh.add(rail);
+        }
+      }
+      // Short bright transverse treads follow the same centreline on turns and ramps.
+      const treadGeometry = new BoxGeometry(.52 * this.cellSize, .025, .08 * this.cellSize);
+      const treadMaterial = new MeshStandardMaterial({ color: 0x9bd8c5, roughness: .75, transparent: preview, opacity: preview ? .55 : 1, depthWrite: !preview });
+      for (let i = 0; i < 5; i++) {
+        const distance = path.length * (i + .5) / 5, p = path.point(distance);
+        const a = path.point(Math.max(0, distance - .01)), b = path.point(Math.min(path.length, distance + .01));
+        const tangent = new Vector3(b.x - a.x, b.y - a.y, b.z - a.z).normalize();
+        const tread = new Mesh(treadGeometry, treadMaterial); tread.name = 'conveyor-tread';
+        tread.position.set(p.x, p.y - def.height / 2 + .075, p.z);
+        tread.quaternion.setFromUnitVectors(new Vector3(0, 0, 1), tangent); mesh.add(tread);
       }
       // Coloured end markers show flow: cyan = inlet, yellow = outlet.
       for (const [distance, color, name] of [[0, 0x59dce1, 'conveyor-input'], [path.length, 0xf5d056, 'conveyor-output']] as const) {
@@ -123,10 +143,11 @@ export class BuildingView {
       const lamp = new Mesh(new BoxGeometry(.18, .15, .18), new MeshStandardMaterial({ color: 0xdd6954, transparent: preview, opacity: preview ? .55 : 1, depthWrite: !preview }));
       lamp.position.set(-.43 * this.cellSize, BELT_HEIGHT - def.height / 2 + .12, .6 * this.cellSize);
       lamp.name = 'conveyor-indicator'; mesh.add(lamp);
-      for (const z of [-.6 * this.cellSize, .6 * this.cellSize]) {
-        const support = new Mesh(new BoxGeometry(.9 * this.cellSize, .35, .16),
-          new MeshStandardMaterial({ color: 0x7e8b8a, transparent: preview, opacity: preview ? .55 : 1, depthWrite: !preview }));
-        support.position.set(0, .175 - def.height / 2, z); support.name = 'conveyor-support'; mesh.add(support);
+      for (const fraction of [.2, .8]) {
+        const p = path.point(path.length * fraction), height = Math.max(.12, p.y - .1);
+        const support = new Mesh(new BoxGeometry(.65 * this.cellSize, height, .18 * this.cellSize),
+          new MeshStandardMaterial({ color: 0xd4d5b8, transparent: preview, opacity: preview ? .55 : 1, depthWrite: !preview }));
+        support.position.set(p.x, height / 2 - def.height / 2, p.z); support.name = 'conveyor-support'; mesh.add(support);
       }
     }
     if (typeId === 'foundation') {
