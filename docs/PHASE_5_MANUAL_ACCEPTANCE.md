@@ -74,16 +74,17 @@ No save system exists: a reload resets all construction and inventory.
 6. Leave an output with nothing in front: ore should fall, remain visible on the
    ground and be collectable with E. With a full inventory it must remain. Try
    several inputs joining a belt and check resource conservation. Test foundation
-   support, blocked output, repeated placement, overlap and cancellation. Height
-   differences currently cause discontinuous transfer rather than a ramp; record
-   the result rather than treating it as a passed ramp criterion.
+   support, blocked output, repeated placement, overlap and cancellation. Build
+   ascending and descending one-cell steps in all four directions, with straight,
+   side and opposite-facing destinations; the green neighbour preview must show
+   the proposed ramps. Watch items follow the ramp without a height jump; terrain
+   steps over one grid cell or unsafe reconfigurations must be refused.
 
 ## Run, inspect and recover
 
 7. Leave menus closed and watch the full chain. Expect individual ore items to
-   move from the Miner through directional tiles and turns into the terminal;
-   record any visible jumps, overlap or disappearing items. Height changes are
-   not yet rendered as ramps. E on a
+   move from the Miner through directional tiles, turns and ramps into the terminal;
+   record any visible jumps, overlap or disappearing items. E on a
    belt should show its shape, state, direction, input/output IDs, item count and
    maximum throughput. E on the terminal should show iron and its slot capacity.
 8. With a gameplay panel open, wait and try WASD, Q, C and F. Expect player

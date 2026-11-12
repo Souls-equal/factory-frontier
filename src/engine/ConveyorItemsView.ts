@@ -1,6 +1,6 @@
 import { BoxGeometry, Color, InstancedMesh, Matrix4, MeshStandardMaterial, Object3D } from 'three';
 import type { GroundItem } from '../logistics/GroundItems';
-import type { ConveyorSegment } from '../logistics/ConveyorNetwork';
+import { transportPosition, type ConveyorSegment } from '../logistics/ConveyorNetwork';
 
 /** One shared instanced mesh; instance transforms are derived solely from simulation. */
 export class ConveyorItemsView {
@@ -22,7 +22,7 @@ export class ConveyorItemsView {
     }
     const t = Math.max(0, Math.min(1, alpha)); let index = 0;
     for (const segment of segments) for (const item of segment.items) {
-      const p = segment.path.point(item.distance), previous = item.previousPosition;
+      const p = transportPosition(item, segment.path), previous = item.previousPosition;
       this.object.position.set(previous.x + (p.x - previous.x) * t, previous.y + (p.y - previous.y) * t + .22,
         previous.z + (p.z - previous.z) * t);
       this.object.rotation.set(0, 0, 0); this.object.updateMatrix(); this.mesh.setMatrixAt(index, this.object.matrix);

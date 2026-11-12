@@ -69,17 +69,21 @@
   connects to one adjacent lane at its output; terminals accept the two lanes at
   their input. Full receivers block; open ends drop items into the world where E
   can collect them, without deleting them when the inventory is full.
-- `npm run verify` passed: 527 tests in 53 files, typecheck, production build,
-  build/preview and dev-server verification. Items and simulation are tested
-  independently of rendering, including occupied
-  placement, cycles, opposite directions, generated-world Miner, terminal
-  backpressure and Three.js bounds. Browser/WebGL and player acceptance are
+- `npm run verify` passes: 577 tests in 54 files, typecheck, build and server
+  verification. Automated tests cover occupied placement, cycles, opposite directions,
+  generated-world Miner, terminal backpressure and Three.js bounds. Ramps are
+  checked in all four directions, both elevations and all destination headings,
+  including continuous item positions and Miner-to-terminal delivery. Browser/WebGL and player acceptance are
   **not yet verified**. Phase 5 remains open and Phase 6 has not started.
+- Adjacent cells now plan ascending decks and descending entry ramps inside their
+  footprints. Side and opposite entries follow the entry segment at belt speed;
+  placement previews show affected neighbours. Adjacent support heights and deck
+  rise are limited to one grid cell, otherwise placement is refused. Existing items
+  are safely projected or the topology change is rejected if unsafe.
 - Limitations: ground items are session-only, unstacked and unbounded in number.
-  Different-height neighbours transfer without a ramp model: the item crosses a
-  height discontinuity, so this is not a replacement for the old automatic ramp.
   Old two-cell belts do not connect to one-cell belts; only the new belt is in the
-  construction menu. Real browser play and slope behavior need further validation.
+  construction menu. Player collision still uses the building's box, not the
+  exact ramp surface. Real browser play and slope behavior need validation.
 
 ## Phase 5 — turn preview follow-up (in progress)
 

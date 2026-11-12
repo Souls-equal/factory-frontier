@@ -1123,6 +1123,16 @@ simulation. A drop callback sends open-end resources into `GroundItems`, which
 owns item IDs, position and gravity separately from Three.js. Dropped items use the
 shared instanced mesh and interaction pickup; full inventory preserves the item.
 
-Ground items are session-only, unstacked and unbounded. Adjacent cells at different
-heights currently transfer with a height discontinuity, not a generated ramp;
-physical browser validation and user acceptance remain outstanding.
+The cell planner calculates an ascending surface on the lower upstream tile and,
+where needed, an entry ramp within the downstream footprint. Aligned level/uphill
+cells join at the downstream inlet; other entries traverse from the shared edge to
+the destination centre, at belt speed along the rendered entry surface. Terrain
+heights and planned deck rise are limited to one cell; unsafe placements are
+rejected. Neighbour changes appear in the preview. Changes to an occupied deck
+project items by their fractional path distance only if spacing remains safe; an
+entry cannot be removed while an item is crossing it. Renderer and simulation use
+the same plan and item transition positions. Cell collision for the player remains
+box-based rather than a precise ramp collider.
+
+Ground items are session-only, unstacked and unbounded. Physical browser
+validation and user acceptance remain outstanding.

@@ -5,7 +5,15 @@ import { ConveyorPath, type Point3 } from './ConveyorPath';
 export interface ConveyorSettings { readonly speed: number; readonly throughputPerMinute: number; readonly spacing: number }
 export const DEFAULT_CONVEYOR_SETTINGS: ConveyorSettings = Object.freeze({ speed: 1, throughputPerMinute: 60, spacing: .5 });
 export type ConveyorState = 'DISCONNECTED' | 'IDLE' | 'RUNNING' | 'BLOCKED' | 'INVALID' | 'ERROR';
-export interface TransportItem { readonly id: string; readonly itemId: string; readonly distance: number; readonly previousPosition: Point3; }
+export interface CellTransition { readonly from: Point3; readonly to: Point3; readonly distance: number; readonly length: number }
+export interface TransportItem { readonly id: string; readonly itemId: string; readonly distance: number; readonly previousPosition: Point3; readonly transition?: CellTransition }
+/** The physical position can be on an entry ramp inside the receiving tile. */
+export function transportPosition(item: TransportItem, path: ConveyorPath): Point3 {
+  const t = item.transition;
+  if (!t) return path.point(item.distance);
+  const f = Math.min(1, t.distance / t.length);
+  return { x: t.from.x + (t.to.x - t.from.x) * f, y: t.from.y + (t.to.y - t.from.y) * f, z: t.from.z + (t.to.z - t.from.z) * f };
+}
 export interface ConveyorSegment {
   readonly id: string;
   readonly path: ConveyorPath;
@@ -33,6 +41,7 @@ export class ConveyorNetwork implements SimulationSystem {
   private readonly cells = new Set<string>();
   private readonly cellInputDistance = new Map<string, number>();
   private readonly cellObstacle = new Set<string>();
+  private readonly cellSourceStart = new Map<string, Point3>();
   private cellOrder = 0;
   private timeMs = 0;
   private readonly active = new Set<string>();
@@ -60,10 +69,10 @@ export class ConveyorNetwork implements SimulationSystem {
     if (!this.cells.has(fromId) || !this.cells.has(toId) || fromId === toId || from.output || from.receiver || !Number.isFinite(inputDistance) || inputDistance < 0 || inputDistance > to.path.length) return false;
     from.output = toId; to.input ??= fromId; this.cellInputDistance.set(fromId, inputDistance); this.refreshStates(); return true;
   }
-  attachCellSource(id: string, source: ItemSource, distance: number): boolean {
+  attachCellSource(id: string, source: ItemSource, distance: number, start?: Point3): boolean {
     const s = this.require(id);
     if (!this.cells.has(id) || s.source || !Number.isFinite(distance) || distance < 0 || distance > s.path.length || this.all().some((entry) => entry.source?.id === source.id)) return false;
-    s.source = source; this.cellInputDistance.set(`source:${id}`, distance); this.refreshStates(); return true;
+    s.source = source; this.cellInputDistance.set(`source:${id}`, distance); if (start) this.cellSourceStart.set(id, start); this.refreshStates(); return true;
   }
   attachCellReceiver(id: string, receiver: ItemReceiver): boolean {
     const s = this.require(id);
@@ -94,8 +103,13 @@ export class ConveyorNetwork implements SimulationSystem {
     for (const segment of this.segments.values()) {
       if (!paths.has(segment.id)) { if (segment.items.length) return null; continue; }
       if (this.cells.has(segment.id)) {
-        if (JSON.stringify(paths.get(segment.id)!.spec) !== JSON.stringify(segment.path.spec) && segment.items.length) return null;
-        projected.set(segment.id, segment.items.map((item) => ({ ...item })));
+        const path = paths.get(segment.id)!;
+        const changed = JSON.stringify(path.spec) !== JSON.stringify(segment.path.spec);
+        if (changed && segment.items.some((item) => item.transition)) return null;
+        projected.set(segment.id, segment.items.map((item) => {
+          const distance = changed ? item.distance / segment.path.length * path.length : item.distance;
+          return { ...item, distance, previousPosition: changed ? path.point(distance) : item.previousPosition };
+        }));
         continue;
       }
       for (const item of segment.items) {
@@ -160,7 +174,7 @@ export class ConveyorNetwork implements SimulationSystem {
   }
   /** Clear only links, preserving segment ownership, items and cooldowns. */
   resetConnections(): void {
-    this.cellInputDistance.clear(); this.cellObstacle.clear();
+    this.cellInputDistance.clear(); this.cellObstacle.clear(); this.cellSourceStart.clear();
     for (const segment of this.segments.values()) {
       segment.input = null; segment.output = null; segment.source = null; segment.receiver = null;
     }
@@ -199,7 +213,7 @@ export class ConveyorNetwork implements SimulationSystem {
     if (!Number.isFinite(deltaMs) || deltaMs < 0) throw new RangeError('Invalid conveyor tick.');
     if (deltaMs === 0 || this.paused()) return;
     this.timeMs += deltaMs;
-    for (const segment of this.segments.values()) for (const item of segment.items) item.previousPosition = segment.path.point(item.distance);
+    for (const segment of this.segments.values()) for (const item of segment.items) item.previousPosition = transportPosition(item, segment.path);
     this.advanceCells(deltaMs);
     // Walk each path downstream-to-upstream. Newly transferred items do not move twice.
     for (const route of this.routes) for (const segment of route) this.advance(segment, deltaMs);
@@ -232,7 +246,12 @@ export class ConveyorNetwork implements SimulationSystem {
     for (const s of cells) {
       let ahead = Infinity;
       for (const item of s.items) {
-        item.distance = Math.min(s.path.length, item.distance + s.settings.speed * deltaMs / 1000, ahead - s.settings.spacing);
+        if (item.transition) {
+          const distance = Math.min(item.transition.length, item.transition.distance + s.settings.speed * deltaMs / 1000);
+          item.transition = distance >= item.transition.length - 1e-9 ? undefined : { ...item.transition, distance };
+        } else {
+          item.distance = Math.max(item.distance, Math.min(s.path.length, item.distance + s.settings.speed * deltaMs / 1000, ahead - s.settings.spacing));
+        }
         ahead = item.distance;
       }
     }
@@ -240,13 +259,17 @@ export class ConveyorNetwork implements SimulationSystem {
     const ordered = [...cells.slice(this.cellOrder), ...cells.slice(0, this.cellOrder)];
     for (const s of ordered) {
       const item = s.items[0];
-      if (!item || item.distance < s.path.length - 1e-9 || this.timeMs < s.nextOutputMs) continue;
+      if (!item || item.transition || item.distance < s.path.length - 1e-9 || this.timeMs < s.nextOutputMs) continue;
       let transferred = false;
       if (s.output) {
         const next = this.require(s.output), distance = this.cellInputDistance.get(s.id)!;
         const gap = Math.max(s.settings.spacing, next.settings.spacing);
         if (next.items.every((other) => Math.abs(other.distance - distance) >= gap - 1e-8)) {
-          item.distance = distance; next.items.push(item); next.items.sort((a, b) => b.distance - a.distance);
+          const from = s.path.point(s.path.length), to = next.path.point(distance);
+          const length = Math.hypot(to.x - from.x, to.y - from.y, to.z - from.z);
+          item.distance = distance;
+          item.transition = length > 1e-9 ? { from, to, distance: 0, length } : undefined;
+          next.items.push(item); next.items.sort((a, b) => b.distance - a.distance);
           transferred = true;
         }
       } else if (s.receiver) {
@@ -263,7 +286,10 @@ export class ConveyorNetwork implements SimulationSystem {
         if (s.items.every((other) => Math.abs(other.distance - distance) >= s.settings.spacing - 1e-8)) {
           const itemId = s.source.peek();
           if (itemId && s.source.take(itemId)) {
-            s.items.push({ id: `transport-${this.nextItem++}`, itemId, distance, previousPosition: s.path.point(distance) });
+            const to = s.path.point(distance), from = this.cellSourceStart.get(s.id) ?? to;
+            const length = Math.hypot(to.x - from.x, to.y - from.y, to.z - from.z);
+            s.items.push({ id: `transport-${this.nextItem++}`, itemId, distance, previousPosition: from,
+              ...(length > 1e-9 ? { transition: { from, to, distance: 0, length } } : {}) });
             s.items.sort((a, b) => b.distance - a.distance); s.nextInputMs = this.timeMs + 60000 / s.settings.throughputPerMinute;
           }
         }

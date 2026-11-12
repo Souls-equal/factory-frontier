@@ -1,4 +1,4 @@
-import { cellAhead, cellTouchesMachine } from './CellConveyor';
+import { cellAhead, cellEntryFraction, cellTouchesMachine } from './CellConveyor';
 import type { BuildingSystem } from '../buildings/BuildingSystem';
 import type { SimulationSystem } from '../core/Game';
 import { Inventory, type QuantityResult } from '../items/Inventory';
@@ -24,9 +24,16 @@ export class LogisticsManager implements SimulationSystem {
     this.network = new ConveyorNetwork(() => false, groundItems ? (item, position) => groundItems.drop(item.id, item.itemId, position) : undefined);
     buildings.addTopologyGuard((before, after) => {
       const relevant = (entries: typeof before) => entries.filter((b) => b.typeId.startsWith('conveyor-') || b.typeId === 'miner-mk1' || b.typeId === RECEIVER_TYPE)
-        .map((b) => [b.id, b.typeId, b.transform.x, b.transform.y, b.transform.z, b.transform.rotation, b.autoConveyor]);
+        .map((b) => [b.id, b.typeId, b.transform.x, b.transform.y, b.transform.z, b.transform.rotation, b.autoConveyor, b.cellConveyor]);
       if (JSON.stringify(relevant(before)) === JSON.stringify(relevant(after))) return true;
       this.sync();
+      // An entry ramp must not disappear under an item already travelling on it.
+      for (const old of before) {
+        if (old.typeId !== 'conveyor-cell') continue;
+        const next = after.find((b) => b.id === old.id);
+        if (next && JSON.stringify(old.cellConveyor?.entries) !== JSON.stringify(next.cellConveyor?.entries) &&
+            this.network.get(old.id)?.items.some((item) => item.transition)) return false;
+      }
       const paths = new Map(after.map((b) => [b.id, pathForBuilding(b, buildings.cellSize)] as const)
         .filter((entry): entry is readonly [string, NonNullable<typeof entry[1]>] => !!entry[1]));
       return this.network.canReconfigure(paths, this.settings, new Set(after.filter((b) => b.typeId === 'conveyor-cell').map((b) => b.id)));
@@ -80,9 +87,8 @@ export class LogisticsManager implements SimulationSystem {
     for (const from of cells) {
       const next = cells.find((to) => cellAhead(from, to, this.buildings.cellSize));
       if (next) {
-        const a = pathForBuilding(from, this.buildings.cellSize)!, b = pathForBuilding(next, this.buildings.cellSize)!;
-        const da = a.direction('output'), db = b.direction('input');
-        this.network.connectCell(from.id, next.id, da.x === db.x && da.z === db.z ? 0 : b.length / 2);
+        const b = pathForBuilding(next, this.buildings.cellSize)!;
+        this.network.connectCell(from.id, next.id, b.length * cellEntryFraction(from, next, this.buildings.cellSize));
       }
     }
     for (const building of buildings) {
@@ -95,7 +101,10 @@ export class LogisticsManager implements SimulationSystem {
         if (cell) {
           const path = pathForBuilding(cell, this.buildings.cellSize)!, d = path.direction('input');
           const port = conditional.pose.direction;
-          this.network.attachCellSource(cell.id, conditional, d.x === port.x && d.z === port.z ? 0 : path.length / 2);
+          const distance = d.x === port.x && d.z === port.z ? 0 : path.length / 2;
+          const start = { x: cell.transform.x - port.x * this.buildings.cellSize / 2, y: conditional.pose.position.y,
+            z: cell.transform.z - port.z * this.buildings.cellSize / 2 };
+          this.network.attachCellSource(cell.id, conditional, distance, start);
         } else for (const segment of legacy) if (this.network.attachSource(segment.id, conditional)) break;
       }
       const terminal = this.terminals.get(building.id);

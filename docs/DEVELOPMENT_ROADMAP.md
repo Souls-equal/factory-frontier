@@ -433,5 +433,5 @@ The final result must be a coherent, playable, persistent, and scalable 3D facto
 One-cell, look-oriented tiles and transfer into the belt ahead irrespective of its
 heading are implemented, with ground drops and pickup. Automated coverage includes
 turns, fan-in, cycles, Miner, terminal and backpressure. Complete real-browser and
-player acceptance; address height transitions/ramp presentation. Do not advance
+player acceptance, including ramp presentation and terrain. Do not advance
 to Phase 6 without Phase 5 acceptance and explicit authorization.

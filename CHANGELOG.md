@@ -6,8 +6,10 @@
   view. Its output passes resources to the next belt independent of its heading,
   including fan-in and cycles, or to a compatible machine.
 - Open ends drop recoverable items; full machines block instead. Legacy two-cell
-  paths remain internal but do not connect to the new tiles. Height transitions
-  are discontinuous and real-browser and player verification remain pending.
+  paths remain internal but do not connect to the new tiles.
+- Add one-cell ascent and descent ramps, with continuous item transitions and
+  previews of affected neighbours. Excessive height changes are rejected;
+  real-browser and player verification remain pending.
 
 ## Unreleased — conveyor turn preview
 

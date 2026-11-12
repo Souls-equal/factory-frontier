@@ -1,3 +1,4 @@
+import type { CellConveyorShape } from '../logistics/CellConveyor';
 import { BoxGeometry, Group, Mesh, MeshStandardMaterial, Vector3 } from 'three';
 import type { AutoConveyorShape } from '../logistics/AutoConveyor';
 import type { MachineState } from '../machines/Miner';
@@ -25,10 +26,10 @@ export class BuildingView {
     }
     for (const building of buildings) {
       let mesh = this.meshes.get(building.id);
-      const shapeKey = JSON.stringify(building.autoConveyor ?? null);
+      const shapeKey = JSON.stringify([building.autoConveyor ?? null, building.cellConveyor ?? null]);
       if (mesh && this.shapes.get(building.id) !== shapeKey) { this.release(mesh); this.meshes.delete(building.id); mesh = undefined; }
       if (!mesh) {
-        mesh = this.createMesh(building.typeId, false, building.autoConveyor);
+        mesh = this.createMesh(building.typeId, false, building.autoConveyor, building.cellConveyor);
         this.shapes.set(building.id, shapeKey);
         mesh.name = building.id; this.meshes.set(building.id, mesh); this.group.add(mesh);
       }
@@ -69,11 +70,11 @@ export class BuildingView {
       const original = this.meshes.get(building.id);
       if (!original) continue;
       original.visible = false;
-      const key = JSON.stringify([building.typeId, building.autoConveyor, building.transform]);
+      const key = JSON.stringify([building.typeId, building.autoConveyor, building.cellConveyor, building.transform]);
       let entry = this.changedPreviews.get(building.id);
       if (entry && entry.key !== key) { this.release(entry.mesh); this.changedPreviews.delete(building.id); entry = undefined; }
       if (!entry) {
-        const mesh = this.createMesh(building.typeId, true, building.autoConveyor);
+        const mesh = this.createMesh(building.typeId, true, building.autoConveyor, building.cellConveyor);
         mesh.name = `building-change-preview:${building.id}`;
         entry = { mesh, key }; this.changedPreviews.set(building.id, entry); this.group.add(mesh);
       }
@@ -86,10 +87,10 @@ export class BuildingView {
       if (this.preview) this.release(this.preview);
       this.preview = null; this.previewType = null; return;
     }
-    const shapeKey = JSON.stringify(placement.autoConveyor ?? null);
+    const shapeKey = JSON.stringify([placement.autoConveyor ?? null, placement.cellConveyor ?? null]);
     if (this.previewType !== typeId || this.previewShape !== shapeKey) {
       if (this.preview) this.release(this.preview);
-      this.preview = this.createMesh(typeId, true, placement.autoConveyor); this.preview.name = 'building-preview';
+      this.preview = this.createMesh(typeId, true, placement.autoConveyor, placement.cellConveyor); this.preview.name = 'building-preview';
       this.previewType = typeId; this.previewShape = shapeKey; this.group.add(this.preview);
     }
     const mesh = this.preview!; const definition = this.registry.get(typeId);
@@ -113,7 +114,7 @@ export class BuildingView {
     if (this.preview) this.release(this.preview);
     this.preview = null; this.previewType = null; this.group.clear();
   }
-  private createMesh(typeId: string, preview: boolean, auto?: AutoConveyorShape): Mesh<BoxGeometry, MeshStandardMaterial> {
+  private createMesh(typeId: string, preview: boolean, auto?: AutoConveyorShape, cell?: CellConveyorShape): Mesh<BoxGeometry, MeshStandardMaterial> {
     const def = this.registry.get(typeId);
     const geometry = new BoxGeometry(def.widthCells * this.cellSize, def.height, def.depthCells * this.cellSize);
     const material = new MeshStandardMaterial({ color: def.color, transparent: preview, opacity: preview ? 0.5 : 1,
@@ -134,28 +135,50 @@ export class BuildingView {
       part(new BoxGeometry(.25, .25, .12), 0x59656c, .48 * scale, 1.4, -.65 * scale, 'machine-indicator');
       part(new BoxGeometry(.45 * scale, .3, .16), 0xf5d056, 0, .5, -scale, 'machine-output-port');
     }
-    const shape = typeId === 'conveyor-auto' ? (auto?.shape ?? 'straight') : CONVEYOR_SHAPES[typeId];
+    const shape = typeId === 'conveyor-auto' ? (auto?.shape ?? 'straight') : typeId === 'conveyor-cell' && cell?.rise ? 'incline' : CONVEYOR_SHAPES[typeId];
     if (shape) {
       material.transparent = true; material.opacity = 0; material.depthWrite = false; mesh.castShadow = false;
       const path = new ConveyorPath({ shape, x: 0, y: BELT_HEIGHT + (auto?.offset ?? 0), z: 0, rotation: 0,
-        size: (typeId === 'conveyor-cell' ? 1 : 2) * this.cellSize, ...(auto ? { rise: auto.rise } : shape === 'incline' ? { rise: this.cellSize } : {}) });
+        size: (typeId === 'conveyor-cell' ? 1 : 2) * this.cellSize, ...(typeId === 'conveyor-cell' ? { rise: cell?.rise ?? 0 } : auto ? { rise: auto.rise } : shape === 'incline' ? { rise: this.cellSize } : {}) });
       const count = shape.startsWith('curve-') ? 16 : 1;
-      const geometry = new BoxGeometry(.8 * this.cellSize, .12, path.length / count + (typeId === 'conveyor-cell' ? 0 : .004));
+      const geometry = new BoxGeometry(.8 * this.cellSize, .12, typeId === 'conveyor-cell' ? this.cellSize : path.length / count + .004);
       const belt = new MeshStandardMaterial({ color: 0x377c82, roughness: .8, transparent: preview, opacity: preview ? .55 : 1, depthWrite: !preview });
-      const railGeometry = new BoxGeometry(.09 * this.cellSize, .17, path.length / count + (typeId === 'conveyor-cell' ? 0 : .004));
+      const railGeometry = new BoxGeometry(.09 * this.cellSize, .17, typeId === 'conveyor-cell' ? this.cellSize : path.length / count + .004);
+      if (typeId === 'conveyor-cell' && cell?.rise) {
+        for (const g of [geometry, railGeometry]) {
+          const vertices = g.attributes.position!;
+          for (let n = 0; n < vertices.count; n++) vertices.setY(n, vertices.getY(n) + vertices.getZ(n) * cell.rise / this.cellSize);
+          g.computeVertexNormals();
+        }
+      }
       const rails = new MeshStandardMaterial({ color: 0xf3b75d, roughness: .7, transparent: preview, opacity: preview ? .55 : 1, depthWrite: !preview });
       for (let i = 0; i < count; i++) {
         const a = path.point(i * path.length / count), b = path.point((i + 1) * path.length / count);
         const piece = new Mesh(geometry, belt); const tangent = new Vector3(b.x - a.x, b.y - a.y, b.z - a.z).normalize();
         const midpoint = new Vector3((a.x + b.x) / 2, (a.y + b.y) / 2 - def.height / 2, (a.z + b.z) / 2);
         piece.position.copy(midpoint);
-        piece.quaternion.setFromUnitVectors(new Vector3(0, 0, 1), tangent); piece.name = 'conveyor-surface'; piece.castShadow = !preview; piece.receiveShadow = !preview; mesh.add(piece);
+        piece.quaternion.setFromUnitVectors(new Vector3(0, 0, 1), typeId === 'conveyor-cell' ? new Vector3(0, 0, -1) : tangent); piece.name = 'conveyor-surface'; piece.castShadow = !preview; piece.receiveShadow = !preview; mesh.add(piece);
         const side = new Vector3(tangent.z, 0, -tangent.x).normalize();
         for (const sign of [-1, 1]) {
           const rail = new Mesh(railGeometry, rails);
           rail.position.copy(midpoint).addScaledVector(side, sign * .45 * this.cellSize); rail.position.y += .05;
           rail.quaternion.copy(piece.quaternion); rail.name = 'conveyor-rail'; rail.castShadow = !preview; mesh.add(rail);
         }
+      }
+      // Entry ramps are confined to the receiving tile; downward transfers
+      // use them rather than embedding a descending belt inside solid ground.
+      if (typeId === 'conveyor-cell' && cell) for (const entry of cell.entries) {
+        const horizontal = Math.hypot(entry.x, entry.z), startY = BELT_HEIGHT + entry.startHeight, endY = BELT_HEIGHT + cell.rise / 2;
+        const deckAtEntry = BELT_HEIGHT + cell.rise * (.5 - entry.z / this.cellSize);
+        if (horizontal < 1e-9 || Math.abs(startY - deckAtEntry) < 1e-8) continue;
+        const rampGeometry = new BoxGeometry(.48 * this.cellSize, .06, horizontal);
+        const vertices = rampGeometry.attributes.position!;
+        for (let n = 0; n < vertices.count; n++) vertices.setY(n, vertices.getY(n) + vertices.getZ(n) * (endY - startY) / horizontal);
+        rampGeometry.computeVertexNormals();
+        const ramp = new Mesh(rampGeometry, new MeshStandardMaterial({ color: 0x377c82, roughness: .8, transparent: preview, opacity: preview ? .55 : 1, depthWrite: !preview }));
+        ramp.position.set(entry.x / 2, (startY + endY) / 2 - def.height / 2, entry.z / 2);
+        ramp.quaternion.setFromUnitVectors(new Vector3(0, 0, 1), new Vector3(-entry.x / horizontal, 0, -entry.z / horizontal));
+        ramp.name = 'conveyor-entry-ramp'; mesh.add(ramp);
       }
       // Short bright transverse treads follow the same centreline on turns and ramps.
       const treadGeometry = new BoxGeometry(.52 * this.cellSize, .025, .08 * this.cellSize);
@@ -170,9 +193,9 @@ export class BuildingView {
       }
       // Coloured end markers show flow: cyan = inlet, yellow = outlet.
       for (const [distance, color, name] of [[0, 0x59dce1, 'conveyor-input'], [path.length, 0xf5d056, 'conveyor-output']] as const) {
-        const p = path.point(distance);
+        const p = typeId === 'conveyor-cell' ? path.point(distance === 0 ? path.length * .12 : path.length * .88) : path.point(distance);
         const marker = new Mesh(new BoxGeometry(.22 * (typeId === 'conveyor-cell' ? this.cellSize : 1), .12, .22 * (typeId === 'conveyor-cell' ? this.cellSize : 1)), new MeshStandardMaterial({ color, transparent: preview, opacity: preview ? .65 : 1, depthWrite: !preview }));
-        marker.position.set(typeId === 'conveyor-cell' ? p.x * .76 : p.x, p.y - def.height / 2 + .1, typeId === 'conveyor-cell' ? p.z * .76 : p.z); marker.name = name; mesh.add(marker);
+        marker.position.set(p.x, p.y - def.height / 2 + .1, p.z); marker.name = name; mesh.add(marker);
       }
       const lamp = new Mesh(new BoxGeometry(.18 * (typeId === 'conveyor-cell' ? this.cellSize : 1), .15, .18 * (typeId === 'conveyor-cell' ? this.cellSize : 1)), new MeshStandardMaterial({ color: 0xdd6954, transparent: preview, opacity: preview ? .55 : 1, depthWrite: !preview }));
       lamp.position.set((typeId === 'conveyor-cell' ? -.38 : -.43) * this.cellSize, BELT_HEIGHT - def.height / 2 + .12, (typeId === 'conveyor-cell' ? .3 : .6) * this.cellSize);
