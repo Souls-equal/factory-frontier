@@ -5,6 +5,7 @@ import { createDefaultBuildingRegistry } from '../buildings/BuildingRegistry';
 import { Inventory } from '../items/Inventory';
 import { createDefaultItemRegistry } from '../items/ItemRegistry';
 import type { GameConfig } from '../core/Configuration';
+import { GatherableField, generateGatherables } from '../resources/Gatherables';
 import { generateDeposits, type ResourceDeposit } from '../resources/ResourceDeposit';
 import { ObstacleField, type ObstacleDefinition } from './ObstacleField';
 import { createRandom } from './rng';
@@ -55,6 +56,7 @@ export interface World {
   readonly obstacleDefinitions: readonly ObstacleDefinition[];
   readonly interactables: readonly InteractableDefinition[];
   readonly deposits: readonly ResourceDeposit[];
+  readonly gatherables: GatherableField;
   readonly spawn: WorldSpawn;
 }
 
@@ -113,10 +115,13 @@ export function createWorld(config: GameConfig, inventory = new Inventory(create
     z: deposit.z, radius: deposit.radius, height: 1.5, yaw: 0, variant: 0,
   }))]);
 
+  const gatherables = new GatherableField(generateGatherables(terrain, obstacles.definitions, deposits,
+    worldConfig.seed, { x: SPAWN_X, z: SPAWN_Z }, config.controls.playAreaRadius));
   return {
     terrain,
+    gatherables,
     buildings: new BuildingSystem(buildingRegistry, inventory, terrain,
-      obstacles.definitions, config.construction.gridSize, config.controls.playAreaRadius, deposits),
+      obstacles.definitions, config.construction.gridSize, config.controls.playAreaRadius, deposits, () => gatherables.placementObstacles()),
     obstacles,
     obstacleDefinitions: obstacles.definitions,
     interactables,

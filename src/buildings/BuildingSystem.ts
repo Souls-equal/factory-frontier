@@ -41,7 +41,8 @@ export class BuildingSystem {
   constructor(readonly registry: BuildingRegistry, private readonly inventory: Inventory,
     private readonly terrain: TerrainQuery, private readonly obstacles: readonly ObstacleDefinition[],
     readonly cellSize: number, private readonly playAreaRadius: number,
-    private readonly deposits: readonly ResourceDeposit[] = []) {
+    private readonly deposits: readonly ResourceDeposit[] = [],
+    private readonly dynamicObstacles: () => readonly ObstacleDefinition[] = () => []) {
     if (!Number.isFinite(cellSize) || cellSize <= 0 || !Number.isFinite(playAreaRadius) || playAreaRadius <= 0) {
       throw new RangeError('Invalid construction grid or world bounds.');
     }
@@ -91,7 +92,7 @@ export class BuildingSystem {
       if (this.all().some((building) => building.depositId === deposit?.id)) return fail('occupied space', transform);
     }
     if (intersecting.some((building) => building.id !== supportingFoundation?.id) ||
-        this.obstacles.some((obstacle) => (!deposit || obstacle.id !== `${deposit.id}-collider`) && circleIntersects(f, obstacle.x, obstacle.z, obstacle.radius))) return fail('occupied space', transform);
+        [...this.obstacles, ...this.dynamicObstacles()].some((obstacle) => (!deposit || obstacle.id !== `${deposit.id}-collider`) && circleIntersects(f, obstacle.x, obstacle.z, obstacle.radius))) return fail('occupied space', transform);
     let connection: 'connected' | 'disconnected' | undefined;
     if (definition.placement === 'logistics' || typeId === 'miner-mk1') {
       const result = connectionStatus(typeId, transform, this.all(), this.cellSize);

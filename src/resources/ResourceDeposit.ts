@@ -1,6 +1,5 @@
 import type { ResourceConfig } from '../core/Configuration';
 import type { Interactable, InteractionOutcome } from '../interaction/Interactable';
-import type { Inventory } from '../items/Inventory';
 import type { ItemRegistry } from '../items/ItemRegistry';
 import type { ObstacleDefinition } from '../world/ObstacleField';
 import { createRandom } from '../world/rng';
@@ -15,7 +14,7 @@ export interface ResourceDeposit {
   readonly z: number;
   readonly radius: number;
   readonly purity: Purity;
-  /** Extraction multiplier based on purity; manual gathering is unaffected. */
+  /** Extraction multiplier based on deposit purity. */
   readonly productionMultiplier: number;
   readonly extractionCompatible: boolean;
 }
@@ -56,22 +55,18 @@ export function generateDeposits(terrain: TerrainQuery, obstacles: readonly Obst
   return Object.freeze(deposits);
 }
 
-/** Adapter to the existing interaction registry; deposit data remains renderer-free. */
+/** Inspect a deposit; raw materials require a Miner rather than digging the terrain. */
 export class DepositInteractable implements Interactable {
   readonly descriptor;
-  constructor(readonly deposit: ResourceDeposit, private readonly inventory: Inventory,
-    registry: ItemRegistry, private readonly gatherQuantity: number, range: number, private readonly available: () => boolean = () => true) {
+  constructor(readonly deposit: ResourceDeposit, registry: ItemRegistry, range: number,
+    private readonly available: () => boolean = () => true) {
     const item = registry.get(deposit.itemId);
     this.descriptor = Object.freeze({ id: deposit.id, displayName: `${item.name} Deposit`,
-      hint: `Purity: ${deposit.purity.toUpperCase()} · Gather`,
+      hint: `Purity: ${deposit.purity.toUpperCase()} · Requires Miner`,
       position: Object.freeze({ x: deposit.x, y: deposit.y + 1.1, z: deposit.z }), targetRadius: 1.1, range });
   }
   isAvailable(): boolean { return this.available(); }
   interact(): InteractionOutcome {
-    const result = this.inventory.addItem(this.deposit.itemId, this.gatherQuantity);
-    const name = this.inventory.registry.get(this.deposit.itemId).name;
-    return result.moved === 0
-      ? { ok: false, message: `Inventory full — could not collect ${name}.` }
-      : { ok: true, message: `Collected ${result.moved} ${name}${result.remainder ? ' (inventory full)' : ''}.` };
+    return { ok: false, message: 'Place a Miner on this deposit to extract resources.' };
   }
 }

@@ -109,6 +109,7 @@ export class Engine implements GameEngine {
     if (!this.initialized || this.disposed) {
       return;
     }
+    this.sceneManager.environment.syncGatherables();
     this.renderer.render(this.sceneManager.scene, this.cameraManager.camera);
   }
 

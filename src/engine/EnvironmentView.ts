@@ -2,6 +2,7 @@ import {
   BackSide,
   BufferAttribute,
   BufferGeometry,
+  BoxGeometry,
   Color,
   CylinderGeometry,
   DodecahedronGeometry,
@@ -21,6 +22,7 @@ import {
 
 import type { World } from '../world/World';
 import type { ResourceDeposit } from '../resources/ResourceDeposit';
+import type { GatherableField } from '../resources/Gatherables';
 import type { InteractableDefinition } from '../world/World';
 
 /**
@@ -65,8 +67,12 @@ export class EnvironmentView {
   private readonly geometries: BufferGeometryType[] = [];
   private readonly materials: Material[] = [];
   private highlightedId: string | null = null;
+  private readonly gatherables: GatherableField;
+  private readonly gatherableModels = new Map<string, Group>();
+  private gatherablesRevision = -1;
 
   constructor(world: World) {
+    this.gatherables = world.gatherables;
     this.group = new Group();
     this.group.name = 'environment';
 
@@ -74,6 +80,8 @@ export class EnvironmentView {
     this.group.add(this.createTerrain(world));
     this.group.add(this.createRocks(world));
     this.group.add(this.createDeposits(world));
+    this.group.add(this.createGatherables(world));
+    this.syncGatherables();
 
     const props = new Group();
     props.name = 'environment:props';
@@ -100,6 +108,13 @@ export class EnvironmentView {
     }
   }
 
+  /** Called before rendering; removed resources disappear without rebuilding the world. */
+  syncGatherables(): void {
+    if (this.gatherablesRevision === this.gatherables.revision) return;
+    for (const [id, model] of this.gatherableModels) model.visible = this.gatherables.active(id);
+    this.gatherablesRevision = this.gatherables.revision;
+  }
+
   get highlighted(): string | null {
     return this.highlightedId;
   }
@@ -114,6 +129,7 @@ export class EnvironmentView {
     this.geometries.length = 0;
     this.materials.length = 0;
     this.highlightBindings.clear();
+    this.gatherableModels.clear();
     // Resources were disposed explicitly above; only detach the graph here.
     this.group.clear();
   }
@@ -369,6 +385,38 @@ export class EnvironmentView {
     const geometry = new BufferGeometry();
     geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3));
     return geometry;
+  }
+
+  private createGatherables(world: World): Group {
+    const group = new Group(); group.name = 'environment:gatherables';
+    const trunk = new BoxGeometry(.55, 2, .55), leaves = new BoxGeometry(1.55, 1.5, 1.55);
+    const branch = new BoxGeometry(.75, .12, .18), stone = new BoxGeometry(.5, .35, .42);
+    const ring = new TorusGeometry(.55, .035, 6, 24);
+    for (const geometry of [trunk, leaves, branch, stone, ring]) this.registerGeometry(geometry);
+    const bark = new MeshStandardMaterial({ color: 0x79502f, roughness: 1 });
+    const foliage = new MeshStandardMaterial({ color: 0x4b8a4f, roughness: 1 });
+    const rock = new MeshStandardMaterial({ color: 0xb4b6a7, roughness: 1 });
+    const highlight = new MeshBasicMaterial({ color: 0x8ff3ff });
+    for (const material of [bark, foliage, rock, highlight]) this.registerMaterial(material);
+    for (const d of world.gatherables.definitions) {
+      const model = new Group(); model.name = `environment:gatherable:${d.id}`;
+      model.position.set(d.x, d.y, d.z);
+      if (d.kind === 'tree') {
+        const body = new Mesh(trunk, bark); body.position.y = 1; body.castShadow = true;
+        const crown = new Mesh(leaves, foliage); crown.position.y = 2.5; crown.castShadow = true;
+        model.add(body, crown);
+      } else {
+        const body = new Mesh(d.kind === 'branch' ? branch : stone, d.kind === 'branch' ? bark : rock);
+        body.position.y = d.kind === 'branch' ? .08 : .18; body.rotation.y = d.kind === 'branch' ? .6 : .2;
+        body.castShadow = true; body.receiveShadow = true; model.add(body);
+      }
+      const halo = new Mesh(ring, highlight); halo.name = `${model.name}:highlight-ring`;
+      halo.rotation.x = Math.PI / 2; halo.position.y = d.kind === 'tree' ? 3.35 : .42;
+      halo.scale.setScalar(d.kind === 'tree' ? 1.4 : .72); halo.visible = false;
+      model.add(halo); group.add(model);
+      this.highlightBindings.set(d.id, { ring: halo }); this.gatherableModels.set(d.id, model);
+    }
+    return group;
   }
 
   private createInteractableProp(definition: InteractableDefinition): Group {

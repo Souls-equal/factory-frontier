@@ -4,7 +4,7 @@
 **Version:** 0.3.0
 **Current Phase:** Phase 5 — Conveyor foundation (in progress)
 **Phase Status:** 🟡 In progress — headless WebGL path verified; user acceptance pending
-**Next Recommended Task:** Complete physical voxel acceptance and implement the new bootstrap resource loop and voxel visuals without losing Phase 5 functionality
+**Next Recommended Task:** Validate the voxel bootstrap and Phase 5 chain in a real browser; then migrate remaining machine/resource visuals to voxel style
 **Last Updated:** 2026-11-11
 
 ---
@@ -13,8 +13,10 @@
 
 - The user chose indestructible voxel terrain and voxel-style resources and
   machines, with trees, branches and loose stones providing initial materials.
-  A Miner without an iron requirement is proposed to avoid an iron bootstrap
-  deadlock; this cost and the new resource loop have **not** been implemented.
+  Starter trees/branches/stones are implemented with block-shaped visuals and
+  finite quantities. A Miner costs 10 stone and 10 wood (no iron); direct
+  gathering from deposits is replaced by Miner-only extraction. This is a
+  deliberate progression change requested for the voxel transition.
 - The playable world now samples the seeded heightfield into immutable solid
   voxel columns, renders exposed block faces and resolves swept horizontal wall
   contacts plus footprint-aware landing. The default block size is 1 m and the
@@ -28,13 +30,22 @@
   the snapped Miner footprint; locations may therefore differ from the old world.
   Tests cover generated deposits across representative seeds and the full existing
   Miner-to-terminal chain on the default voxel world, not all possible worlds.
-  Typecheck, test, build and verify pass: 433 tests in 49 files.
-- **Still pending:** manual collection of branches/stones and breakable trees,
-  revised first Miner cost, voxel styling of machines/resources, and the full
-  browser/user acceptance. For now the old deposit-gathering loop and models
-  remain available; this is an interim step, not the requested final gameplay.
-  The voxel movement/rendering changes have not yet been validated by a person
-  or through WebGL here. Phase 5 physical acceptance remains pending, not waived.
+  Prior integration passed typecheck, test, build and verify: 433 tests in 49 files.
+- Starter objects are seeded, finite and session-only: branches and loose stones
+  give 5 each; trees require three E presses and provide 20 wood. Partial/full
+  inventory leaves the remainder in place. Trees block movement and all starter
+  objects block building until collected; collision and visuals follow shared state.
+  Generation uses bounded retries; representative default seeds provide enough
+  materials, but extreme custom worlds or a very small playable radius may not.
+  The old `resources.gatherQuantity` setting remains accepted for configuration
+  compatibility but no longer controls collection.
+- Automated verification: 436 tests in 50 files, including an empty-inventory
+  bootstrap through Miner and terminal, inventory conservation, active placement
+  obstacles and synchronized collision/scene state.
+- **Still pending:** voxel styling of deposit and machine/building models, and
+  actual WebGL and physical user acceptance of terrain, bootstrap and Phase 5.
+  Tests and mocked rendering do not prove browser usability; phase 5 is not
+  accepted and phase 6 is not started.
 
 ---
 
@@ -119,7 +130,7 @@
 
 - The user reports Phase 3 construction, preview and demolition were manually
   tested. This is a user report, not an agent-run browser acceptance.
-- The construction menu includes Miner Mk.1 (20 iron ore, 10 stone, 10 wood).
+- The construction menu includes Miner Mk.1 (originally 20 iron ore, 10 stone, 10 wood; now 10 stone and 10 wood).
   Its 2 × 2 m default footprint snaps to the construction grid. Preview and
   placement use the same terrain, slope, bounds, player, obstacle and cost
   validator, additionally requiring exactly one compatible deposit centre inside
@@ -256,14 +267,13 @@ and the new Phase 2.1 UX requires its own browser verification.
   limits; no water item. The solid slot inventory is renderer-independent and
   supports partial add/remove/transfers, quantity/capacity queries, move, split
   and merge. Every operation validates before mutation and reports quantities.
-- Default inventory: 24 configurable slots; gathering: 5 configurable units per
-  press. Purity multipliers 0.5/1/2 are configurable and informational only.
+- Historical Phase 2: 24 configurable inventory slots and 5 configurable units per deposit-gathering press. This loop has since been replaced; see voxel transition above. Purity now affects Miner extraction.
 - Seeded deposits form a starting iron cluster and five exploration clusters;
   they query terrain, avoid existing obstacles, other deposits and the spawn, and
   carry their own logical IDs, purity and extraction metadata. Solid deposit
   colliders reuse `ObstacleField` and Three.js meshes consume deposit data.
-- The existing interaction system handles targeting and edge-triggered gathering;
-  partial/full results appear in its feedback. Inventory opens with Tab, closes
+- The existing interaction system handles targeting and edge-triggered interaction;
+  partial/full results for finite starter resources appear in its feedback. Inventory opens with Tab, closes
   with Tab/Escape/button, and supports slot selection, inspection, moving,
   merging and half-stack splitting. Modal input clears held/queued actions and
   releases pointer lock; Phase 2.1 now attempts to restore previous capture.

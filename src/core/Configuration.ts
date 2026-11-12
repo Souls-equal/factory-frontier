@@ -106,6 +106,7 @@ export const DEFAULT_RESOURCE_CONFIG = Object.freeze({
 
 export interface ResourceConfig {
   readonly inventorySlots: number;
+  /** Legacy deposit-gathering setting; retained for configuration compatibility, unused by finite starter objects. */
   readonly gatherQuantity: number;
   readonly depositsPerType: number;
   readonly impureMultiplier: number;

@@ -59,7 +59,7 @@ export function createDefaultBuildingRegistry(items: ItemRegistry): BuildingRegi
     maxGroundVariation: 0.12, color: 0x778b91 });
   registry.register({ id: 'miner-mk1', name: 'Miner Mk.1', category: 'Extraction',
     description: 'Automated extractor for a compatible resource deposit.',
-    cost: [{ itemId: 'iron-ore', quantity: 20 }, { itemId: 'stone', quantity: 10 }, { itemId: 'wood', quantity: 10 }],
+    cost: [{ itemId: 'stone', quantity: 10 }, { itemId: 'wood', quantity: 10 }],
     widthCells: 2, depthCells: 2, height: 2.4, maxSlope: 0.58, maxGroundVariation: 0.8,
     color: 0xb58b42, placement: 'deposit' });
   for (const [id, name, description, height] of [

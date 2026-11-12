@@ -848,12 +848,12 @@ preserves items; slot moving/merging and half-stack splitting use the same model
 independent IDs, resource type, position, purity and future extraction metadata.
 Placement rejects spawn/solid/deposit overlaps and steep samples. Attempts are
 bounded, so constrained configurations can place fewer than requested; reachable
-paths are not guaranteed. Purity multipliers are configurable but do not affect
-manual gathering. Deposits are infinite and not persistent in this phase.
+paths are not guaranteed. Purity multipliers are configurable and affect automated extraction. Deposits are infinite and not persistent in this phase.
 
-`DepositInteractable` adapts a logical deposit and inventory to the existing
-`Interactable` contract; the existing fixed-step interaction system owns raycast,
-range checks and E-edge consumption. Feedback uses the actual added quantity.
+`DepositInteractable` adapts a logical deposit to the existing `Interactable`
+contract for inspection; it no longer grants materials. The fixed-step interaction
+system owns raycast, range checks and E-edge consumption. Starter-object feedback
+uses the actual added quantity.
 `EnvironmentView` derives geometry/materials/highlight from logical deposits and
 shares geometry and per-type materials. Deposit colliders use the existing obstacle
 field; no visual object owns gameplay state.
@@ -915,7 +915,7 @@ exempted. The committed building stores the session-stable deposit and item IDs.
 The fixed-step `MachineManager` follows building lifecycles and blocks demolition
 while machine output contains items; normal deletion refunds the cost atomically.
 The bootstrap synchronizes machine interactables with the central interaction
-registry and suppresses gathering on occupied deposits, so deposit targeting cannot
+registry and suppresses inspection on occupied deposits, so deposit targeting cannot
 hide machine inspection. Rendering consumes logical state and never drives it.
 
 `Miner` implements the reusable `Machine` interface and state vocabulary. The
@@ -1012,3 +1012,20 @@ footprint, and generated deposits are filtered against Miner support. The old
 heightfield remains the procedural source, not the rendered/physical surface.
 The initial resource loop and block-style machine/resource models are not yet
 implemented; browser and physical acceptance remain pending.
+
+## Appendix — finite voxel-transition starter resources
+
+`GatherableField` owns seeded tree, branch and loose-stone state separately from
+Three.js. Bounded placement avoids existing obstacles, deposits, spawn and other
+starter objects. Trees take three E presses for up to 20 wood; branches and stones
+give up to 5 wood/stone. Full or partial inventory leaves the untransferred
+remainder available; there is no respawn or persistence. `GatherableCollision`
+rebuilds its obstacle hash after depletion; trees block movement while loose
+objects do not. Building placement checks all live objects dynamically, so none
+leaves a ghost collider or becomes buried in a building. `EnvironmentView`
+synchronizes shared block meshes from logical availability before rendering.
+Deposits are inspect-only until a Miner is placed; its cost is 10 stone and
+10 wood, breaking the old circular iron requirement. Legacy `gatherQuantity`
+configuration is retained but unused. Bounded generation does not guarantee a
+bootstrap in every constrained custom world. Existing deposit and machine models
+are not yet voxel-styled, and no browser acceptance is inferred from tests.
