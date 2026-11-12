@@ -333,7 +333,7 @@ async function boot(): Promise<void> {
       engine.setBuildingPreview?.(construction.selected, preview ?? undefined);
       constructionStatus.hidden = !construction.active;
       if (construction.active) constructionStatus.textContent = preview
-        ? `${preview.reason === 'valid' ? 'Valid placement' : `Cannot place: ${preview.reason}`} · R rotate · C place again · Esc cancel${preview.connection ? ` · ${preview.connection} port` : ''}${construction.selected?.startsWith('conveyor-') ? ' · conveyor adapts to its neighbours; R sets initial direction' : ''}`
+        ? `${preview.reason === 'valid' ? 'Valid placement' : `Cannot place: ${preview.reason}`} · R rotate · C place again · Esc cancel${preview.connection ? ` · ${preview.connection} port` : ''}${construction.selected?.startsWith('conveyor-') ? ' · cyan input → yellow output · R sets initial direction' : ''}${preview.snappedToConveyor ? ' · aligned to neighbour' : ''}${preview.conveyorPreviewChanges?.length ? ' · green preview shows belt after C' : ''}`
         : `Aim at ground within ${config.construction.reach} m · R rotate · Esc cancel`;
       const target = inventoryUI?.isOpen || constructionUI?.isOpen || machineUI?.isOpen || logisticsUI?.isOpen || construction.active ? null : interaction.target;
       engine.setHighlight?.(target?.id ?? null);

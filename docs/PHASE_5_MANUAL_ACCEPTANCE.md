@@ -67,8 +67,12 @@ No save system exists: a reload resets all construction and inventory.
    Escape cancels placement. An isolated tile uses R for its initial direction.
    Before adding a terminal, wait for items: they should queue at the open end,
    which should report BLOCKED, not DISCONNECTED. An unsourced line is DISCONNECTED.
-5. Place more Conveyor tiles in a line and then to either side: the preceding tile
-   should automatically become a right or left turn, with matching coloured ports.
+5. Place more Conveyor tiles in a line and aim a new tile to either side. Before
+   pressing C, expect the preceding tile to be replaced visually by a green ghost
+   showing the planned turn; cyan is its input and yellow its output. Moving aim
+   away or cancelling restores the actual straight tile. Partially aligned edge
+   contacts may snap to a neighbour. C commits the same turn and the materials
+   should follow it. A red/invalid preview must not show neighbour changes.
    Test all rotations and build some sections before attaching a Miner. Try rising
    and falling terrain or foundations: the preview, surface and moving items must
    agree. Place a Receiving Terminal facing the last output and observe transport.

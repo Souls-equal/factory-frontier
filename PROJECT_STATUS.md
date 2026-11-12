@@ -4,7 +4,7 @@
 **Version:** 0.3.0
 **Current Phase:** Phase 5 — Conveyor foundation (in progress)
 **Phase Status:** 🟡 In progress — headless WebGL path verified; user acceptance pending
-**Next Recommended Task:** Verify sideways turns with live items and the brighter visuals in a WebGL browser; complete Phase 5 player acceptance.
+**Next Recommended Task:** Verify the new turn preview and live material path in a real browser with the player; complete Phase 5 acceptance.
 **Last Updated:** 2026-11-11
 
 ---
@@ -56,6 +56,23 @@
   usability; phase 5 is not accepted and phase 6 is not started.
 
 ---
+
+## Phase 5 — turn preview follow-up (in progress)
+
+- The user still reports that material routes do not turn and asks to see the
+  turn before placement. Previously only the candidate was previewed: the
+  existing belt that becomes a curve was still shown straight. The validator now
+  returns the changed existing belt shapes, which are displayed as green ghosts
+  with cyan inputs and yellow outputs; the real belts and items do not change
+  until confirmation. Invalid placements show no hypothetical neighbour changes.
+- Partially edge-aligned automatic belts snap to an unambiguous adjacent belt
+  centre; overlapping footprints and ambiguous contacts are not auto-aligned.
+  Confirmation applies the same validated plan rather than resolving it again.
+  Tests cover both turn directions, all four rotations, items already in motion,
+  slopes, cancellation, and one generated-world Miner. Actual WebGL/user retest
+  remains necessary; these tests do not identify every possible reported layout.
+  `npm run verify` passes: 510 tests in 51 files, plus typecheck, build and
+  server checks.
 
 ## Phase 5 — open-ended conveyor fix (in progress)
 

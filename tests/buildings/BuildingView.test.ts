@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { Mesh } from 'three';
+import { Mesh, MeshStandardMaterial } from 'three';
 import { BuildingView } from '../../src/engine/BuildingView';
 import { createDefaultBuildingRegistry } from '../../src/buildings/BuildingRegistry';
 import { snapFootprint } from '../../src/buildings/Transform';
@@ -146,4 +146,57 @@ it.each(['straight', 'curve-left', 'curve-right', 'incline'] as const)('adds pat
   view.setPreview('conveyor-auto', { reason: 'valid', transform, autoConveyor });
   expect(view.group.getObjectByName('building-preview')!.getObjectByName('conveyor-rail')).toBeDefined();
   view.sync([]); expect(dispose).toHaveBeenCalledOnce(); view.dispose();
+});
+
+it.each(['curve-left', 'curve-right'] as const)('shows the changed existing %s path as a reversible preview', async (shape) => {
+  const { Vector3 } = await import('three');
+  const { pathForBuilding } = await import('../../src/logistics/ConveyorDefinitions');
+  const registry = createDefaultBuildingRegistry(createDefaultItemRegistry()), view = new BuildingView(registry, 1);
+  const transform = snapFootprint(registry.get('conveyor-auto'), 0, 0, 0, 1);
+  const straight = { shape: 'straight' as const, rotation: 0, rise: 0, offset: 0 };
+  const turn = { shape, rotation: 0, rise: 0, offset: 0 };
+  const existing = { id: 'belt', typeId: 'conveyor-auto', transform, autoConveyor: straight };
+  const changed = { ...existing, autoConveyor: turn };
+  const candidate = { ...transform, x: shape === 'curve-right' ? 2 : -2 };
+  view.sync([existing]); const actual = view.group.getObjectByName('belt')!;
+  const placement = { reason: 'valid' as const, transform: candidate, autoConveyor: straight, conveyorPreviewChanges: [changed] };
+  view.setPreview('conveyor-auto', placement);
+  expect(actual.visible).toBe(false);
+  const ghost = view.group.getObjectByName('building-change-preview:belt')!;
+  expect(ghost.visible).toBe(true);
+  expect(ghost.children.filter((x) => x.name === 'conveyor-surface')).toHaveLength(16);
+  expect(((ghost.getObjectByName('conveyor-input') as Mesh).material as MeshStandardMaterial).color.getHex()).toBe(0x59dce1);
+  expect(((ghost.getObjectByName('conveyor-output') as Mesh).material as MeshStandardMaterial).color.getHex()).toBe(0xf5d056);
+  expect(((view.group.getObjectByName('building-preview')!.getObjectByName('conveyor-output') as Mesh).material as MeshStandardMaterial).color.getHex()).toBe(0xf5d056);
+  view.group.updateMatrixWorld(true);
+  const pos = new Vector3(); ghost.getObjectByName('conveyor-output')!.getWorldPosition(pos);
+  const path = pathForBuilding(changed, 1)!, end = path.point(path.length);
+  expect(pos.x).toBeCloseTo(end.x); expect(pos.z).toBeCloseTo(end.z); expect(pos.y).toBeCloseTo(end.y + .1);
+  view.setPreview('conveyor-auto', placement);
+  expect(view.group.getObjectByName('building-change-preview:belt')).toBe(ghost);
+  const dispose = vi.spyOn((ghost.getObjectByName('conveyor-surface') as Mesh).geometry, 'dispose');
+  view.setPreview('conveyor-auto', { ...placement, reason: 'occupied space' });
+  expect(actual.visible).toBe(true); expect(view.group.getObjectByName('building-change-preview:belt')).toBeUndefined();
+  expect(dispose).toHaveBeenCalledOnce();
+  const red = view.group.getObjectByName('building-preview')!.getObjectByName('conveyor-output') as Mesh;
+  expect((red.material as MeshStandardMaterial).color.getHex()).toBe(0xff5363);
+  view.setPreview('conveyor-auto', placement); expect(actual.visible).toBe(false);
+  view.setPreview(null); expect(actual.visible).toBe(true); expect(view.group.getObjectByName('building-change-preview:belt')).toBeUndefined();
+  view.dispose();
+});
+
+it('updates and removes hypothetical neighbouring belt shapes as aim or world changes', () => {
+  const registry = createDefaultBuildingRegistry(createDefaultItemRegistry()), view = new BuildingView(registry, 1);
+  const transform = snapFootprint(registry.get('conveyor-auto'), 0, 0, 0, 1);
+  const belt = { id: 'a', typeId: 'conveyor-auto', transform, autoConveyor: { shape: 'straight' as const, rotation: 0, rise: 0, offset: 0 } };
+  const changed = { ...belt, autoConveyor: { ...belt.autoConveyor, shape: 'curve-right' as const } };
+  view.sync([belt]);
+  view.setPreview('conveyor-auto', { reason: 'valid', transform, conveyorPreviewChanges: [changed] });
+  const ghost = view.group.getObjectByName('building-change-preview:a')!;
+  const geometry = (ghost.getObjectByName('conveyor-surface') as Mesh).geometry, dispose = vi.spyOn(geometry, 'dispose');
+  const left = { ...changed, autoConveyor: { ...changed.autoConveyor, shape: 'curve-left' as const } };
+  view.setPreview('conveyor-auto', { reason: 'valid', transform, conveyorPreviewChanges: [left] });
+  expect(dispose).toHaveBeenCalledOnce(); expect(view.group.getObjectByName('building-change-preview:a')).not.toBe(ghost);
+  view.sync([]); view.setPreview('conveyor-auto', { reason: 'valid', transform, conveyorPreviewChanges: [left] });
+  expect(view.group.getObjectByName('building-change-preview:a')).toBeUndefined(); view.dispose();
 });
