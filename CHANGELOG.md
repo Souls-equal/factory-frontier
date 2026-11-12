@@ -7,6 +7,18 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Fixed — source-connected conveyors with open ends
+
+- Source-connected linear belts now transport items before a terminal is placed;
+  items queue and report BLOCKED at an open end and resume when a receiver is
+  connected. No-source routes remain DISCONNECTED and preserve in-flight items.
+- Logistics inspection explains the missing output, and tests cover four
+  rotations, backpressure, reconnection and the bootstrap with a mocked renderer.
+  Typecheck, test, build and verify passed: 452 tests in 50 files.
+- The requested single, neighbour-adapting conveyor remains unimplemented; the
+  three explicit variants are still available. Physical/WebGL validation remains
+  pending, including any other cause behind the reported disconnected layout.
+
 ### Changed — block-style current world objects
 
 - Replaced Miner drill/head, deposits, natural rocks and outpost props with block

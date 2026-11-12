@@ -39,7 +39,7 @@ describe('building-to-logistics lifecycle', () => {
     if (inBelt) expect(buildings.demolish(conveyor.id)).toBe('output not empty');
     const result = logistics.retrieve(terminal.id, playerInventory); expect(result.moved).toBe(inTerminal);
     expect(buildings.demolish(terminal.id)).toBe('removed'); logistics.sync();
-    expect(logistics.network.get(conveyor.id)?.state).toBe('DISCONNECTED');
+    expect(logistics.network.get(conveyor.id)?.state).not.toBe('DISCONNECTED');
     expect(logistics.network.get(conveyor.id)!.items.length).toBe(inBelt);
   });
   it('honors orientation and refuses to draw from disconnected or disabled miners', () => {
@@ -139,7 +139,7 @@ it('updates routes when an empty receiver is removed and preserves all in-transi
   const source = machines.get(miner.id)!.output; source.addItem('iron-ore', 10); logistics.fixedUpdate(50);
   expect(logistics.network.get(belt.id)!.items).toHaveLength(1);
   expect(buildings.demolish(terminal.id)).toBe('removed'); logistics.sync();
-  expect(logistics.network.get(belt.id)!.state).toBe('DISCONNECTED');
+  expect(logistics.network.get(belt.id)!.state).not.toBe('DISCONNECTED');
   for (let i = 0; i < 100; i++) logistics.fixedUpdate(50);
   expect(source.getItemCount('iron-ore') + logistics.network.get(belt.id)!.items.length).toBe(10);
   expect(buildings.demolish(belt.id)).toBe('output not empty');
@@ -223,19 +223,23 @@ it('restores a disconnected route with the same in-flight items after repeated r
   const miner = place(buildings, 'miner-mk1', 0, 0), belt = place(buildings, 'conveyor-straight', 0, -2);
   let terminal = place(buildings, 'receiving-terminal', 0, -4); logistics.sync();
   const stock = machines.get(miner.id)!.output; stock.addItem('iron-ore', 10);
+  let collected = 0;
   for (let cycle = 0; cycle < 2; cycle++) {
     logistics.fixedUpdate(50);
+    collected += logistics.terminal(terminal.id)!.removeItem('iron-ore', logistics.terminal(terminal.id)!.getItemCount('iron-ore') || 1).moved;
     const before = logistics.network.get(belt.id)!.items.map(({ id, distance }) => ({ id, distance }));
     expect(before.length).toBeGreaterThan(0);
     expect(buildings.demolish(terminal.id)).toBe('removed'); logistics.sync();
     for (let i = 0; i < 50; i++) logistics.fixedUpdate(50);
-    expect(logistics.network.get(belt.id)!.items.map(({ id, distance }) => ({ id, distance }))).toEqual(before);
+    const after = logistics.network.get(belt.id)!.items;
+    for (const item of before) { const same = after.find((entry) => entry.id === item.id); expect(same).toBeDefined(); expect(same!.distance).toBeGreaterThanOrEqual(item.distance); }
+    expect(stock.getItemCount('iron-ore') + after.length + collected).toBe(10);
     terminal = place(buildings, 'receiving-terminal', 0, -4); logistics.sync();
     expect(logistics.network.get(belt.id)!.receiver?.id).toBe(terminal.id);
   }
   for (let i = 0; i < 250; i++) logistics.fixedUpdate(50);
   expect(logistics.terminal(terminal.id)!.getItemCount('iron-ore')).toBeGreaterThan(0);
-  expect(stock.getItemCount('iron-ore') + logistics.network.get(belt.id)!.items.length + logistics.terminal(terminal.id)!.getItemCount('iron-ore')).toBe(10);
+  expect(stock.getItemCount('iron-ore') + logistics.network.get(belt.id)!.items.length + logistics.terminal(terminal.id)!.getItemCount('iron-ore') + collected).toBe(10);
 });
 
 it('rejects a miner against an elevated pre-existing input without charging', () => {
@@ -326,4 +330,34 @@ it('rejects a connection above the bounded terrain support height without paymen
   expect(preview.reason).toBe('unsupported height'); expect(preview.transform.y).toBeCloseTo(3);
   expect(buildings.place('receiving-terminal', 12, -2, 0, player).reason).toBe('unsupported height');
   expect(playerInventory.snapshot()).toEqual(before);
+});
+
+it.each([0, 1, 2, 3])('runs a connected Miner and open two-belt route at rotation %s, then resumes into a terminal', (rotation) => {
+  const { buildings, machines, logistics } = setup();
+  const direction = [{ x: 0, z: -1 }, { x: -1, z: 0 }, { x: 0, z: 1 }, { x: 1, z: 0 }][rotation]!;
+  const miner = place(buildings, 'miner-mk1', 0, 0, rotation);
+  const a = place(buildings, 'conveyor-straight', direction.x * 2, direction.z * 2, rotation);
+  const b = place(buildings, 'conveyor-straight', direction.x * 4, direction.z * 4, rotation);
+  logistics.sync(); const stock = machines.get(miner.id)!.output; stock.addItem('iron-ore', 12);
+  for (let tick = 0; tick < 350; tick++) {
+    logistics.fixedUpdate(50);
+    const first = logistics.network.get(a.id)!, last = logistics.network.get(b.id)!;
+    const all = [...first.items, ...last.items];
+    expect(stock.getItemCount('iron-ore') + all.length).toBe(12);
+    expect(new Set(all.map((item) => item.id)).size).toBe(all.length);
+    for (const s of [first, last]) for (let j = 1; j < s.items.length; j++) expect(s.items[j - 1]!.distance - s.items[j]!.distance).toBeGreaterThanOrEqual(.5 - 1e-8);
+    if (first.items[0] && last.items.at(-1)) expect(first.path.length - first.items[0].distance + last.items.at(-1)!.distance).toBeGreaterThanOrEqual(.5 - 1e-8);
+  }
+  expect(logistics.network.get(a.id)!.source?.id).toBe(miner.id);
+  expect(logistics.network.get(a.id)!.output).toBe(b.id);
+  expect(logistics.network.get(b.id)!.state).toBe('BLOCKED');
+  expect(logistics.network.get(b.id)!.items[0]!.distance).toBeCloseTo(logistics.network.get(b.id)!.path.length);
+  expect(buildings.demolish(b.id)).toBe('output not empty');
+  const terminal = place(buildings, 'receiving-terminal', direction.x * 6, direction.z * 6, rotation);
+  logistics.sync(); const sink = logistics.terminal(terminal.id)!;
+  for (let tick = 0; tick < 500; tick++) {
+    logistics.fixedUpdate(50);
+    expect(stock.getItemCount('iron-ore') + sink.getItemCount('iron-ore') + logistics.network.all().reduce((n, s) => n + s.items.length, 0)).toBe(12);
+  }
+  expect(sink.getItemCount('iron-ore')).toBeGreaterThan(0);
 });

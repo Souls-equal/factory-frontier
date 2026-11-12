@@ -82,7 +82,7 @@ export class ConveyorNetwork implements SimulationSystem {
   private refreshStates(): void {
     this.active.clear(); this.routes = [];
     for (const terminal of this.segments.values()) {
-      if (terminal.output || !terminal.receiver) continue;
+      if (terminal.output) continue;
       const route: InternalSegment[] = [];
       let cursor: InternalSegment | undefined = terminal;
       while (cursor) { route.push(cursor); cursor = cursor.input ? this.segments.get(cursor.input) : undefined; }
@@ -116,7 +116,7 @@ export class ConveyorNetwork implements SimulationSystem {
         const next = this.require(s.output!); const back = next.items.at(-1);
         const gap = Math.max(s.settings.spacing, next.settings.spacing);
         return !!back && first.distance >= s.path.length + back.distance - gap - 1e-9;
-      })() : first.distance >= s.path.length - 1e-9 && !!s.receiver && !s.receiver.canAccept(first.itemId));
+      })() : first.distance >= s.path.length - 1e-9 && (!s.receiver || !s.receiver.canAccept(first.itemId)));
       s.state = blocked ? 'BLOCKED' : s.items.length ? 'RUNNING' : 'IDLE';
     }
   }

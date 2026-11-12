@@ -90,3 +90,28 @@ it('targets and inspects a real belt and pauses gameplay through bootstrap modal
   key('Escape'); expect(panel.hidden).toBe(true); for (let i = 0; i < 100; i++) frame();
   expect(snapshot().received).not.toEqual(before.received);
 });
+
+it('real bootstrap starts a Miner-to-belt line before a terminal exists (mock renderer)', async () => {
+  vi.spyOn(console, 'info').mockImplementation(() => undefined);
+  await import('../../src/main'); await vi.waitFor(() => expect(state.init).toBe(1)); frame();
+  const world = state.world!, deposit = world.deposits.find((entry) => entry.itemId === 'iron-ore')!;
+  const far = { x: 80, z: 80, radius: .4 };
+  const miner = world.buildings.place('miner-mk1', deposit.x, deposit.z, 0, far);
+  const belt = world.buildings.place('conveyor-straight', miner.transform.x, miner.transform.z - 2, 0, far);
+  expect(miner.reason).toBe('valid'); expect(belt.reason).toBe('valid'); expect(belt.connection).toBe('connected');
+  for (let i = 0; i < 250; i++) frame();
+  const segment = state.segments[0]!;
+  expect(segment.source?.id).toBe(miner.building!.id); expect(segment.receiver).toBeNull();
+  expect(state.sawItem).toBe(true); expect(segment.state).toBe('BLOCKED');
+  expect(segment.items[0]!.distance).toBeCloseTo(segment.path.length);
+  const original = segment.items.map((item) => item.id);
+  const terminal = world.buildings.place('receiving-terminal', miner.transform.x, miner.transform.z - 4, 0, far);
+  expect(terminal.reason).toBe('valid');
+  frame();
+  const remaining = state.segments[0]!.items.map((item) => item.id);
+  const received = (state.segments[0]!.receiver as InventoryReceiver).inventory.getItemCount('iron-ore');
+  expect(remaining.every((id) => original.includes(id))).toBe(true);
+  expect(remaining.length + received).toBe(original.length);
+  for (let i = 0; i < 220; i++) frame();
+  expect((state.segments[0]!.receiver as InventoryReceiver).inventory.getItemCount('iron-ore')).toBeGreaterThan(0);
+});
