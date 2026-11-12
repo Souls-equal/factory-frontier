@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — aligned downhill conveyor decks
+
+- Use the entire lower tile as a railed sloping deck for an unambiguous,
+  straight downhill connection, instead of a steep half-tile overlay. The
+  simulation, preview and placed geometry share the same endpoints.
+- Keep centre-entry ramps for turns, multiple incoming routes and tiles that
+  must also climb; preserve item projection, drop collection and demolition guards.
+
 ## Unreleased — textured natural environment
 
 - Add a pixel-art atlas for voxel grass tops, grassy edges and exposed dirt; the

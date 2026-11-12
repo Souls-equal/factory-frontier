@@ -138,7 +138,7 @@ export class BuildingView {
     const shape = typeId === 'conveyor-auto' ? (auto?.shape ?? 'straight') : typeId === 'conveyor-cell' && cell?.rise ? 'incline' : CONVEYOR_SHAPES[typeId];
     if (shape) {
       material.transparent = true; material.opacity = 0; material.depthWrite = false; mesh.castShadow = false;
-      const path = new ConveyorPath({ shape, x: 0, y: BELT_HEIGHT + (auto?.offset ?? 0), z: 0, rotation: 0,
+      const path = new ConveyorPath({ shape, x: 0, y: BELT_HEIGHT + (typeId === 'conveyor-cell' ? cell?.offset ?? 0 : auto?.offset ?? 0), z: 0, rotation: 0,
         size: (typeId === 'conveyor-cell' ? 1 : 2) * this.cellSize, ...(typeId === 'conveyor-cell' ? { rise: cell?.rise ?? 0 } : auto ? { rise: auto.rise } : shape === 'incline' ? { rise: this.cellSize } : {}) });
       const count = shape.startsWith('curve-') ? 16 : 1;
       const geometry = new BoxGeometry(.8 * this.cellSize, .12, typeId === 'conveyor-cell' ? this.cellSize : path.length / count + .004);
@@ -169,8 +169,8 @@ export class BuildingView {
       // Entry ramps are confined to the receiving tile; downward transfers
       // use them rather than embedding a descending belt inside solid ground.
       if (typeId === 'conveyor-cell' && cell) for (const entry of cell.entries) {
-        const horizontal = Math.hypot(entry.x, entry.z), startY = BELT_HEIGHT + entry.startHeight, endY = BELT_HEIGHT + cell.rise / 2;
-        const deckAtEntry = BELT_HEIGHT + cell.rise * (.5 - entry.z / this.cellSize);
+        const horizontal = Math.hypot(entry.x, entry.z), startY = BELT_HEIGHT + entry.startHeight, endY = BELT_HEIGHT + (cell.offset ?? 0) + cell.rise / 2;
+        const deckAtEntry = BELT_HEIGHT + (cell.offset ?? 0) + cell.rise * (.5 - entry.z / this.cellSize);
         if (horizontal < 1e-9 || Math.abs(startY - deckAtEntry) < 1e-8) continue;
         const rampGeometry = new BoxGeometry(.48 * this.cellSize, .06, horizontal);
         const vertices = rampGeometry.attributes.position!;
@@ -216,7 +216,7 @@ export class BuildingView {
         marker.position.set(p.x, p.y - def.height / 2 + .1, p.z); marker.name = name; mesh.add(marker);
       }
       const lamp = new Mesh(new BoxGeometry(.18 * (typeId === 'conveyor-cell' ? this.cellSize : 1), .15, .18 * (typeId === 'conveyor-cell' ? this.cellSize : 1)), new MeshStandardMaterial({ color: 0xdd6954, transparent: preview, opacity: preview ? .55 : 1, depthWrite: !preview }));
-      lamp.position.set((typeId === 'conveyor-cell' ? -.38 : -.43) * this.cellSize, BELT_HEIGHT - def.height / 2 + .12, (typeId === 'conveyor-cell' ? .3 : .6) * this.cellSize);
+      lamp.position.set((typeId === 'conveyor-cell' ? -.38 : -.43) * this.cellSize, path.point(path.length * .2).y - def.height / 2 + .12, (typeId === 'conveyor-cell' ? .3 : .6) * this.cellSize);
       lamp.name = 'conveyor-indicator'; mesh.add(lamp);
       for (const fraction of [.2, .8]) {
         const p = path.point(path.length * fraction), height = Math.max(.12, p.y - .1);

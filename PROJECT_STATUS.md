@@ -9,6 +9,19 @@
 
 ---
 
+## Phase 5 — aligned downhill conveyor fix (user validation pending)
+
+- Straight descending one-cell connections with one incoming route now form a
+  full-length sloped lower deck with rails and treads, including foundation-to-
+  ground transitions. Preview, path and rendered deck use the same inlet and
+  outlet heights. Items remain protected by existing topology guards.
+- Junctions, sideways entries and tiles that must also climb retain the shorter
+  centre-entry ramp; steep or complex junctions are not fully redesigned.
+  Automated tests cover four orientations, foundation height, item conservation,
+  successive drops, preview, demolition, occupied belts and multiple inputs.
+  A headless Chromium/WebGL scene rebuilt a foundation-to-ground descent for a
+  visual check. Phase 5 and real-user validation of the reported setup remain pending.
+
 ## Phase 5 — natural environment visual refresh (user validation pending)
 
 - Grass tops, grassy edges and deeper earth have a deterministic pixel-art texture

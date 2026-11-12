@@ -12,7 +12,7 @@ export const DEFAULT_INCLINE_RISE = 1;
 export function pathForBuilding(building: BuildingInstance, cellSize: number): ConveyorPath | undefined {
   const shape = building.typeId === 'conveyor-auto' ? (building.autoConveyor?.shape ?? 'straight') : building.typeId === 'conveyor-cell' && building.cellConveyor?.rise ? 'incline' : CONVEYOR_SHAPES[building.typeId];
   if (!shape) return undefined;
-  return new ConveyorPath({ shape, x: building.transform.x, y: building.transform.y + BELT_HEIGHT + (building.autoConveyor?.offset ?? 0),
+  return new ConveyorPath({ shape, x: building.transform.x, y: building.transform.y + BELT_HEIGHT + (building.typeId === 'conveyor-cell' ? building.cellConveyor?.offset ?? 0 : building.autoConveyor?.offset ?? 0),
     z: building.transform.z, rotation: building.autoConveyor?.rotation ?? building.transform.rotation, size: (building.typeId === 'conveyor-cell' ? 1 : 2) * cellSize,
     ...(building.typeId === 'conveyor-cell' ? { rise: building.cellConveyor?.rise ?? 0 } : building.autoConveyor ? { rise: building.autoConveyor.rise } : shape === 'incline' ? { rise: DEFAULT_INCLINE_RISE * cellSize } : {}) });
 }

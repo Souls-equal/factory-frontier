@@ -128,9 +128,9 @@ export class LogisticsManager implements SimulationSystem {
   private coversDrop(building: BuildingInstance, position: { x: number; y: number; z: number }): boolean {
     const f = building.transform.footprint, base = building.transform.y;
     const height = this.buildings.registry.get(building.typeId).height;
-    const rise = building.cellConveyor?.rise ?? 0;
+    const rise = building.cellConveyor?.rise ?? 0, offset = building.cellConveyor?.offset ?? 0;
     return position.x >= f.minX && position.x < f.maxX && position.z >= f.minZ && position.z < f.maxZ &&
-      position.y >= base - .05 && position.y <= base + Math.max(height, .5 + rise) + .3;
+      position.y >= base - .05 && position.y <= base + Math.max(height, .5 + offset, .5 + offset + rise) + .3;
   }
   private collectDrops(): Set<string> {
     const priority = new Set<string>(), ground = this.groundItems;
