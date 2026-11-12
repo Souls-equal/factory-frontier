@@ -991,3 +991,16 @@ building and its rotation after placement; every confirmation still calls the
 authoritative validator and atomic payment. Escape cancels the mode and pending
 placement, allowing normal interaction and demolition. The renderer selects
 `PCFShadowMap` directly, matching Three.js's former deprecated-mode fallback.
+
+## Voxel transition — isolated data foundation
+
+`VoxelTerrain` is a renderer-independent, immutable finite column model. Each
+column samples a supplied deterministic surface at its centre, rounds to a block
+level, and represents solids from a fixed bottom up to the exclusive top. It
+exports occupancy and bounded exposed-face buffers, without internal faces; it
+has no caves, editing, chunks or bottom mesh. Surface generation rejects meshes
+over 500,000 faces before allocation. This data model is not used by `World`,
+`PlayerController`, construction or `EnvironmentView`: the active game remains
+the documented heightfield. Replacing it requires robust horizontal swept wall
+collision, vertical support/jumping, terrain-aware building validation and new
+resource interactions, not merely substituting a visual mesh.
