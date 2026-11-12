@@ -17,7 +17,7 @@
   with its browser verification still pending.
 - The construction menu exposes straight, right curve, incline and a minimal
   receiving terminal (each 4 stone and 2 wood). R rotates, C places repeatedly
-  for belts, Escape exits; invalid, disconnected and connected preview feedback
+  for all buildings, Escape exits before interaction/demolition; invalid, disconnected and connected preview feedback
   shares the authoritative placement validator. Ports are directional and
   height-matched; mismatched connections and loops are rejected before payment.
   Miner placement now validates adjacent ports even when the belt was placed first.
@@ -38,7 +38,8 @@
   presentation only. Modal panels pause production/transport. DISCONNECTED,
   IDLE, RUNNING and BLOCKED are assigned; INVALID and ERROR are reserved, not
   currently runtime states (invalid placement has explicit feedback).
-- **Automated:** typecheck, test, build and verify pass: 402 tests in 45 files.
+- **Automated:** typecheck, test, build and verify pass: 410 tests in 46 files
+  after the usability follow-up (the earlier integrated baseline had 402 / 45).
   Coverage includes a real Miner → straight → curve → incline → terminal,
   conservation, full/recovery, disabled source, removal, terrain support,
   construction/UI and bootstrap (mock renderer), and Three.js scene graph tests.
@@ -58,6 +59,19 @@
   flow resumed (13 items received). A 4-second terminal modal held item positions
   and inventories unchanged. No page errors occurred; Three.js logged its existing
   PCFSoftShadowMap fallback warning.
+- **User-reported manual feedback (merged Phase 5 build):** basic controls and
+  UI, inventory quantities/splitting/full behavior, construction/rotation/invalid
+  placement and a foundation were reported working. The disconnected preview
+  hint was not noticed. The user could not locate iron, so the iron-dependent
+  chain and remaining acceptance checks were not completed. The only reported
+  console warning was the Three.js soft-shadow fallback. These are user reports,
+  not additional agent-executed tests.
+- **Follow-up:** deposits have per-resource coloured aura rings and terrain-sampled
+  ground traces, without changes to logical generation, collision or harvesting.
+  All building selections persist for repeat placement; Escape cancels before E/F.
+  Renderer selects PCFShadowMap directly, matching Three.js's prior fallback.
+  Scene graph and mocked-renderer tests cannot establish visual legibility or
+  absence of console warnings in a real browser; both still require user retest.
 - **Physical/user acceptance remains pending.** The headless run used one layout,
   synthetic input and software rendering; it is not a manual usability assessment.
   Other rotations, foundation interaction, invalid-payment behavior, belt/miner

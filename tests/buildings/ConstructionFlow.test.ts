@@ -34,7 +34,7 @@ describe('construction flow', () => {
     const rotated = controller.preview(view, player)!; expect(rotated.transform.rotation).toBe(1);
     const result = controller.confirm(view, player)!;
     expect(result.transform).toEqual(rotated.transform); expect(result.reason).toBe('valid');
-    expect(controller.active).toBe(false); expect(system.all()).toHaveLength(1);
+    expect(controller.selected).toBe('foundation'); expect(system.all()).toHaveLength(1);
     expect(inventory.getItemCount('stone')).toBe(10); expect(inventory.getItemCount('wood')).toBe(5);
     const surface = new BuildingTerrain(terrain, system);
     expect(surface.heightAt(result.transform.x, result.transform.z)).toBeCloseTo(0.4);
@@ -53,7 +53,7 @@ describe('construction flow', () => {
     const initial = inventory.snapshot(); controller.select('foundation'); controller.cancel();
     expect(controller.preview(view, player)).toBeNull(); expect(inventory.snapshot()).toEqual(initial);
     controller.select('foundation'); controller.confirm(view, player);
-    const after = inventory.snapshot(); controller.select('foundation');
+    const after = inventory.snapshot();
     expect(controller.confirm(view, player)?.reason).toBe('occupied space');
     expect(controller.active).toBe(true); expect(system.all()).toHaveLength(1); expect(inventory.snapshot()).toEqual(after);
   });
@@ -101,4 +101,40 @@ describe('building/player integration', () => {
     expect(system.demolish(result.building!.id)).toBe('removed');
     expect(new BuildingTerrain(terrain, system).heightAt(0, 2)).toBe(0);
   });
+});
+
+describe('repeat placement for every registered building', () => {
+  it.each(['foundation', 'miner-mk1', 'conveyor-straight', 'conveyor-curve', 'conveyor-incline', 'receiving-terminal'])(
+    'keeps %s selected, validates and pays each time, and cancels', (id) => {
+      const items = createDefaultItemRegistry();
+      const inventory = new Inventory(items, 10);
+      const registry = createDefaultBuildingRegistry(items);
+      const definition = registry.get(id);
+      for (const cost of definition.cost) inventory.addItem(cost.itemId, cost.quantity * 2);
+      const deposits = [0, 6, 12].map((x, index) => ({ id: `deposit-${index}`, itemId: 'iron-ore',
+        x, z: 0, y: 0, radius: .8, purity: 'normal' as const, productionMultiplier: 1, extractionCompatible: true }));
+      const system = new BuildingSystem(registry, inventory, terrain, [], 1, 40, deposits);
+      const controller = new ConstructionController(system, terrain);
+      const player = { x: 30, z: 30, radius: .4 };
+      const viewAt = (x: number) => ({ position: { x, y: 3, z: 0 }, yaw: 0, pitch: -Math.PI / 2 });
+      controller.select(id); controller.rotate();
+      const first = controller.confirm(viewAt(0), player)!;
+      expect(first.reason).toBe('valid'); expect(first.transform.rotation).toBe(1);
+      expect(controller.selected).toBe(id);
+      const afterFirst = inventory.snapshot();
+      expect(controller.confirm(viewAt(0), player)?.reason).toBe('occupied space');
+      expect(inventory.snapshot()).toEqual(afterFirst);
+      const second = controller.confirm(viewAt(6), player)!;
+      expect(second.reason).toBe('valid'); expect(second.transform.rotation).toBe(1);
+      expect(controller.selected).toBe(id); expect(system.all()).toHaveLength(2);
+      for (const cost of definition.cost) expect(inventory.getItemCount(cost.itemId)).toBe(0);
+      const afterSecond = inventory.snapshot();
+      expect(controller.confirm(viewAt(12), player)?.reason).toBe('insufficient materials');
+      expect(inventory.snapshot()).toEqual(afterSecond); expect(system.all()).toHaveLength(2);
+      expect(controller.selected).toBe(id);
+      controller.cancel();
+      expect(controller.confirm(viewAt(12), player)).toBeNull();
+      expect(controller.preview(viewAt(12), player)).toBeNull();
+    },
+  );
 });

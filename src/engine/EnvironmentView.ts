@@ -5,6 +5,7 @@ import {
   Color,
   CylinderGeometry,
   DodecahedronGeometry,
+  DoubleSide,
   Group,
   IcosahedronGeometry,
   InstancedMesh,
@@ -19,6 +20,7 @@ import {
 } from 'three';
 
 import type { World } from '../world/World';
+import type { ResourceDeposit } from '../resources/ResourceDeposit';
 import type { InteractableDefinition } from '../world/World';
 
 /**
@@ -298,6 +300,11 @@ export class EnvironmentView {
     const wood = new CylinderGeometry(0.42, 0.52, 1.8, 7);
     const ringGeometry = new TorusGeometry(1.05, 0.045, 6, 24);
     const ringMaterial = new MeshBasicMaterial({ color: 0x8ff3ff });
+    const auraGeometry = new TorusGeometry(1.05, 0.035, 6, 32);
+    this.registerGeometry(auraGeometry);
+    const markerColors: Record<string, number> = { 'iron-ore': 0x63cfff, 'copper-ore': 0xff9a52,
+      limestone: 0xffe397, coal: 0xb69eff, stone: 0xa8d2bd, wood: 0x83d46b };
+    const markerMaterials = new Map<string, { aura: MeshBasicMaterial; ground: MeshBasicMaterial }>();
     this.registerGeometry(rock); this.registerGeometry(wood); this.registerGeometry(ringGeometry);
     this.registerMaterial(ringMaterial);
     const colors: Record<string, number> = { 'iron-ore': 0x63757c, 'copper-ore': 0xb87348,
@@ -310,6 +317,17 @@ export class EnvironmentView {
           roughness: 0.8, metalness: deposit.itemId.endsWith('-ore') ? 0.45 : 0.05, flatShading: true });
         materials.set(deposit.itemId, material); this.registerMaterial(material);
       }
+      let marker = markerMaterials.get(deposit.itemId);
+      if (!marker) {
+        const color = markerColors[deposit.itemId] ?? 0xffffff;
+        marker = {
+          aura: new MeshBasicMaterial({ color, transparent: true, opacity: 0.75, depthWrite: false }),
+          ground: new MeshBasicMaterial({ color, transparent: true, opacity: 0.45, depthWrite: false,
+            side: DoubleSide, polygonOffset: true, polygonOffsetFactor: -1 }),
+        };
+        markerMaterials.set(deposit.itemId, marker);
+        this.registerMaterial(marker.aura); this.registerMaterial(marker.ground);
+      }
       const model = new Group(); model.name = `environment:deposit:${deposit.id}`;
       model.position.set(deposit.x, deposit.y, deposit.z);
       const body = new Mesh(deposit.itemId === 'wood' ? wood : rock, material);
@@ -318,10 +336,39 @@ export class EnvironmentView {
       const ring = new Mesh(ringGeometry, ringMaterial);
       ring.name = `${model.name}:highlight-ring`; ring.rotation.x = Math.PI / 2;
       ring.position.y = 1.65; ring.visible = false;
-      model.add(body, ring); group.add(model);
+      const aura = new Mesh(auraGeometry, marker.aura);
+      aura.name = `${model.name}:aura`; aura.rotation.x = Math.PI / 2; aura.position.y = 1.4;
+      const groundGeometry = this.createDepositGroundMark(world, deposit);
+      this.registerGeometry(groundGeometry);
+      const ground = new Mesh(groundGeometry, marker.ground);
+      ground.name = `${model.name}:ground-mark`;
+      model.add(body, ring, aura, ground); group.add(model);
       this.highlightBindings.set(deposit.id, { ring });
     }
     return group;
+  }
+
+  /** Broken radial bands follow the actual terrain and are presentation only. */
+  private createDepositGroundMark(world: World, deposit: ResourceDeposit): BufferGeometry {
+    const positions: number[] = [];
+    const segments = 48;
+    const vertex = (radius: number, angle: number): void => {
+      const x = Math.cos(angle) * radius, z = Math.sin(angle) * radius;
+      positions.push(x, world.terrain.heightAt(deposit.x + x, deposit.z + z) - deposit.y + 0.035, z);
+    };
+    // Short dashes create visible mineral traces without implying collision or build footprint.
+    for (let i = 0; i < segments; i++) {
+      if (i % 4 === 3) continue;
+      const a = i * Math.PI * 2 / segments, b = (i + 1) * Math.PI * 2 / segments;
+      for (let band = 0; band < 3; band++) {
+        const inner = 1.15 + band * 0.3, outer = inner + 0.3;
+        vertex(inner, a); vertex(outer, a); vertex(outer, b);
+        vertex(inner, a); vertex(outer, b); vertex(inner, b);
+      }
+    }
+    const geometry = new BufferGeometry();
+    geometry.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3));
+    return geometry;
   }
 
   private createInteractableProp(definition: InteractableDefinition): Group {

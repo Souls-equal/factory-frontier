@@ -177,7 +177,7 @@ async function boot(): Promise<void> {
   inventoryUI = new InventoryUI(inventoryRoot, inventory, closeInventory);
   constructionUI = new ConstructionUI(constructionRoot, buildingRegistry, inventory, (id) => {
     construction.select(id); closeConstruction();
-    interactionPrompt.showFeedback('Aim at nearby ground. R rotates · C places · Esc cancels.');
+    interactionPrompt.showFeedback('Aim at nearby ground. R rotates · C places repeatedly · Esc cancels.');
   }, closeConstruction);
   createdInput = new InputManager(canvas as HTMLCanvasElement, {
     onPointerLockChange: (locked) => controlsHint.setPointerLocked(locked),
@@ -328,7 +328,7 @@ async function boot(): Promise<void> {
       engine.setBuildingPreview?.(construction.selected, preview ?? undefined);
       constructionStatus.hidden = !construction.active;
       if (construction.active) constructionStatus.textContent = preview
-        ? `${preview.reason === 'valid' ? 'Valid placement' : `Cannot place: ${preview.reason}`} · R rotate · C place · Esc cancel${preview.connection ? ` · ${preview.connection} port` : ''}${construction.selected?.startsWith('conveyor-') ? ' · belt runs rear → front; curve exits right' : ''}`
+        ? `${preview.reason === 'valid' ? 'Valid placement' : `Cannot place: ${preview.reason}`} · R rotate · C place again · Esc cancel${preview.connection ? ` · ${preview.connection} port` : ''}${construction.selected?.startsWith('conveyor-') ? ' · belt runs rear → front; curve exits right' : ''}`
         : `Aim at ground within ${config.construction.reach} m · R rotate · Esc cancel`;
       const target = inventoryUI?.isOpen || constructionUI?.isOpen || machineUI?.isOpen || logisticsUI?.isOpen || construction.active ? null : interaction.target;
       engine.setHighlight?.(target?.id ?? null);
