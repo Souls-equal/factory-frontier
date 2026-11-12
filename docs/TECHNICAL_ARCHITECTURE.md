@@ -1166,3 +1166,20 @@ without positional correction: outward and tangential motion remain possible,
 while inward movement is constrained. Other buildings and natural obstacles are
 still swept; conservative square corners remain an approximation, not an exact
 capsule-box shape. Real player validation of the reported case remains pending.
+
+### Dropped-item recovery and paired inventories
+
+At each unpaused positive logistics tick, covered ground items near a terminal's
+level are transferred into its authoritative inventory only when accepted. A cell
+conveyor admits one covered item at the centre when spacing allows, preserving
+its ID. While drops remain, that cell reserves incoming capacity for them before
+upstream belts or source transfers. Unaccepted drops are lifted visibly above the
+building and retried, remaining available to the player; unrelated height layers
+are not collected. Half-open footprints assign boundary points deterministically.
+This applies to the one-cell player-facing conveyor, not legacy internal paths.
+
+The paired terminal view reuses slot elements for both the receiver snapshot and
+the player's inventory, each rebuilt on revision changes. Selection is inspection
+only; the existing Retrieve contents action is the only terminal-to-player
+transfer and respects capacity. The layout is responsive, with simple colored
+voxel icons and accessible item labels. It does not offer drag-and-drop transfer.

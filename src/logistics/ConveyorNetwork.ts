@@ -69,6 +69,15 @@ export class ConveyorNetwork implements SimulationSystem {
     }
     return false;
   }
+  /** Admit a dropped item at the cell centre only when spacing permits. */
+  insertDropped(id: string, itemId: string, segmentId: string): boolean {
+    const segment = this.segments.get(segmentId);
+    const distance = segment ? segment.path.length / 2 : 0;
+    if (!segment || !this.cells.has(segmentId) || !id || !itemId || this.findItem(id) ||
+        segment.items.some((item) => Math.abs(item.distance - distance) < segment.settings.spacing - 1e-8)) return false;
+    segment.items.push({ id, itemId, distance, previousPosition: segment.path.point(distance) });
+    segment.items.sort((a, b) => b.distance - a.distance); this.refreshStates(); return true;
+  }
   add(id: string, path: ConveyorPath, settings: ConveyorSettings = DEFAULT_CONVEYOR_SETTINGS): ConveyorSegment {
     if (!id.trim() || this.segments.has(id) || ![settings.speed, settings.throughputPerMinute, settings.spacing].every(Number.isFinite) ||
         settings.speed <= 0 || settings.throughputPerMinute <= 0 || settings.spacing <= 0 || settings.spacing > path.length) {
@@ -226,12 +235,12 @@ export class ConveyorNetwork implements SimulationSystem {
     }
     for (const s of this.segments.values()) s.state = this.cells.has(s.id) ? (s.items.length ? 'RUNNING' : 'IDLE') : !this.active.has(s.id) ? 'DISCONNECTED' : s.items.length ? 'RUNNING' : 'IDLE';
   }
-  fixedUpdate(deltaMs: number): void {
+  fixedUpdate(deltaMs: number, priorityInputs: ReadonlySet<string> = new Set()): void {
     if (!Number.isFinite(deltaMs) || deltaMs < 0) throw new RangeError('Invalid conveyor tick.');
     if (deltaMs === 0 || this.paused()) return;
     this.timeMs += deltaMs;
     for (const segment of this.segments.values()) for (const item of segment.items) item.previousPosition = transportPosition(item, segment.path);
-    this.advanceCells(deltaMs);
+    this.advanceCells(deltaMs, priorityInputs);
     // Walk each path downstream-to-upstream. Newly transferred items do not move twice.
     for (const route of this.routes) for (const segment of route) this.advance(segment, deltaMs);
     for (const s of this.segments.values()) {
@@ -258,7 +267,7 @@ export class ConveyorNetwork implements SimulationSystem {
   }
   /** Fixed-tick two-phase update: movement first, then deterministic transfers.
    * This handles cycles and fan-in without moving an item twice in a tick. */
-  private advanceCells(deltaMs: number): void {
+  private advanceCells(deltaMs: number, priorityInputs: ReadonlySet<string>): void {
     const cells = [...this.cells].map((id) => this.require(id));
     for (const s of cells) {
       let ahead = Infinity;
@@ -281,7 +290,7 @@ export class ConveyorNetwork implements SimulationSystem {
       if (s.output) {
         const next = this.require(s.output), distance = this.cellInputDistance.get(s.id)!;
         const gap = Math.max(s.settings.spacing, next.settings.spacing);
-        if (next.items.every((other) => Math.abs(other.distance - distance) >= gap - 1e-8)) {
+        if (!priorityInputs.has(next.id) && next.items.every((other) => Math.abs(other.distance - distance) >= gap - 1e-8)) {
           const from = s.path.point(s.path.length), to = next.path.point(distance);
           const length = Math.hypot(to.x - from.x, to.y - from.y, to.z - from.z);
           item.distance = distance;
@@ -298,7 +307,7 @@ export class ConveyorNetwork implements SimulationSystem {
       if (transferred) { s.items.shift(); s.nextOutputMs = this.timeMs + 60000 / s.settings.throughputPerMinute; }
     }
     for (const s of cells) {
-      if (s.source && this.timeMs >= s.nextInputMs) {
+      if (s.source && !priorityInputs.has(s.id) && this.timeMs >= s.nextInputMs) {
         const distance = this.cellInputDistance.get(`source:${s.id}`) ?? 0;
         if (s.items.every((other) => Math.abs(other.distance - distance) >= s.settings.spacing - 1e-8)) {
           const itemId = s.source.peek();
@@ -314,7 +323,7 @@ export class ConveyorNetwork implements SimulationSystem {
       const first = s.items[0];
       s.state = first && first.distance >= s.path.length - 1e-9 &&
         (s.output ? (() => { const next = this.require(s.output!); const at = this.cellInputDistance.get(s.id)!;
-          return next.items.some((item) => Math.abs(item.distance - at) < Math.max(s.settings.spacing, next.settings.spacing) - 1e-8); })() :
+          return priorityInputs.has(next.id) || next.items.some((item) => Math.abs(item.distance - at) < Math.max(s.settings.spacing, next.settings.spacing) - 1e-8); })() :
           s.receiver ? !s.receiver.canAccept(first.itemId) : this.cellObstacle.has(s.id) || !this.drop)
         ? 'BLOCKED' : s.items.length ? 'RUNNING' : 'IDLE';
     }

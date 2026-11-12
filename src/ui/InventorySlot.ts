@@ -7,6 +7,8 @@ export function createInventorySlot(document: Document, inventory: Inventory, sl
   if (slot) {
     const item = inventory.registry.get(slot.itemId);
     button.textContent = `${item.icon} · ${item.name} ×${slot.quantity}`;
+    button.dataset.item = item.id; button.dataset.icon = item.icon; button.dataset.quantity = String(slot.quantity);
+    button.title = `${item.name} · ${slot.quantity} / ${item.maxStackSize}`;
     button.setAttribute('aria-label', `${item.name}, ${slot.quantity} of ${item.maxStackSize}`);
   } else {
     button.textContent = 'Empty'; button.setAttribute('aria-label', `Empty slot ${index + 1}`);

@@ -262,7 +262,7 @@ async function boot(): Promise<void> {
       if (groundInteractions.has(item.id)) continue;
       const id = item.id;
       groundInteractions.set(id, interaction.register({
-        get descriptor() { return { id, displayName: registry.get(item.itemId).name, hint: 'Pick up',
+        get descriptor() { return { id: `ground:${id}`, displayName: registry.get(item.itemId).name, hint: 'Pick up',
           position: groundItems.get(id)?.position ?? item.position, targetRadius: .3, range: config.interaction.range }; },
         isAvailable: () => !!groundItems.get(id),
         interact: () => groundItems.pickup(id, inventory) ? { ok: true, message: 'Item picked up.' } : { ok: false, message: 'Inventory full.' },
@@ -293,7 +293,7 @@ async function boot(): Promise<void> {
       if (beltItemInteractions.has(item.id)) continue;
       const id = item.id, initial = logistics.network.findItem(id)!.position;
       beltItemInteractions.set(id, interaction.register({
-        get descriptor() { const p = logistics.network.findItem(id)?.position ?? initial; return { id, displayName: registry.get(item.itemId).name,
+        get descriptor() { const p = logistics.network.findItem(id)?.position ?? initial; return { id: `belt:${id}`, displayName: registry.get(item.itemId).name,
           hint: 'Pick up', position: { x: p.x, y: p.y + .22, z: p.z }, targetRadius: .3, range: config.interaction.range }; },
         isAvailable: () => !!logistics.network.findItem(id),
         interact: () => logistics.network.pickup(id, inventory) ? { ok: true, message: 'Item picked up.' } : { ok: false, message: 'Inventory full.' },

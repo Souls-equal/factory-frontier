@@ -9,6 +9,19 @@
 
 ---
 
+## Phase 5 — dropped items and two-panel terminal (user validation pending)
+
+- A terminal collects covered dropped items until full; directional cells admit
+  covered drops one at a time with spacing and priority over upstream traffic.
+  Surplus remains visible and retried, not lost. Height filtering avoids collecting
+  objects from beneath raised buildings. Ground and transport keep distinct
+  interaction registrations when ownership changes.
+- The terminal and player inventories appear side by side in compact voxel-like
+  grids (stacked on narrow screens); selecting a slot inspects it and Retrieve
+  contents remains the transfer action. No per-slot drag transfer is implemented.
+  Automated tests exercise the real bootstrap with a mocked renderer, not a
+  physical play session. Phase 5 and visual/player acceptance remain pending.
+
 ## Phase 5 — terminal slots and contact recovery (user validation pending)
 
 - The receiving terminal shows its actual inventory slots using the same slot

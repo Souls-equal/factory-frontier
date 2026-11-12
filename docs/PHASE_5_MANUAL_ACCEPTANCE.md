@@ -85,6 +85,13 @@ including near corners and next to another belt. Walk away and along it: the pla
 must not become stuck, teleport, or pass through solid buildings. Repeat after
 jumping beside a belt and report the terrain and exact position if blocked.
 
+Let several items fall off an open belt, then place a new directional cell over
+that pile and connect it onward. Confirm the drops enter before newly arriving
+items, wait visibly when blocked, and resume without loss. Repeat by placing a
+terminal over drops, including more than its capacity and different item types;
+remaining items must stay visible and enter only when compatible space is freed.
+Try a raised foundation over items below it: it must not collect the lower layer.
+
 ## Run, inspect and recover
 
 7. Leave menus closed and watch the full chain. Expect individual ore items to
@@ -92,7 +99,7 @@ jumping beside a belt and report the terrain and exact position if blocked.
    record any visible jumps, overlap or disappearing items. E on a
    moving ore item should pick it up without opening a conveyor panel. With a full
    inventory it should remain on the belt. E on the terminal should show iron and
-   its single-slot capacity as an inventory-style slot. Select it to inspect the
+   its single-slot capacity as an inventory-style slot beside your player inventory. Select it to inspect the
    stack, then use Retrieve contents; the slot should update and retain any amount
    that does not fit. Try feeding both lanes on each of its four cyan-marked
    sides, with the terminal placed before and after the belt. Observe the turn

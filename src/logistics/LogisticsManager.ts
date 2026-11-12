@@ -1,5 +1,5 @@
 import { cellAhead, cellEntryFraction, cellTouchesMachine } from './CellConveyor';
-import type { BuildingSystem } from '../buildings/BuildingSystem';
+import type { BuildingInstance, BuildingSystem } from '../buildings/BuildingSystem';
 import type { SimulationSystem } from '../core/Game';
 import { Inventory, type QuantityResult } from '../items/Inventory';
 import type { ItemRegistry } from '../items/ItemRegistry';
@@ -123,5 +123,46 @@ export class LogisticsManager implements SimulationSystem {
     }
     this.seenRevision = this.buildings.revision;
   }
-  fixedUpdate(deltaMs: number): void { this.sync(); if (!this.paused()) { this.groundItems?.fixedUpdate(deltaMs); this.network.fixedUpdate(deltaMs); } }
+  /** Items must be inside the footprint and near the building's own level, not
+   * beneath a raised foundation or on another floor. Half-open edges disambiguate neighbours. */
+  private coversDrop(building: BuildingInstance, position: { x: number; y: number; z: number }): boolean {
+    const f = building.transform.footprint, base = building.transform.y;
+    const height = this.buildings.registry.get(building.typeId).height;
+    const rise = building.cellConveyor?.rise ?? 0;
+    return position.x >= f.minX && position.x < f.maxX && position.z >= f.minZ && position.z < f.maxZ &&
+      position.y >= base - .05 && position.y <= base + Math.max(height, .5 + rise) + .3;
+  }
+  private collectDrops(): Set<string> {
+    const priority = new Set<string>(), ground = this.groundItems;
+    if (!ground) return priority;
+    const buildings = this.buildings.all();
+    // Terminal accepts as much as its real inventory permits, in stable drop order.
+    for (const terminal of buildings.filter((b) => b.typeId === RECEIVER_TYPE)) {
+      const inventory = this.terminals.get(terminal.id)!;
+      for (const item of ground.all()) if (this.coversDrop(terminal, item.position)) {
+        if (!ground.transfer(item.id, (drop) => {
+          try { return inventory.addItem(drop.itemId, 1).moved === 1; } catch { return false; }
+        })) ground.lift(item.id, terminal.transform.y + this.buildings.registry.get(terminal.typeId).height + .15);
+      }
+    }
+    for (const cell of buildings.filter((b) => b.typeId === 'conveyor-cell')) {
+      const covered = ground.all().filter((item) => this.coversDrop(cell, item.position));
+      if (!covered.length) continue;
+      // Reserve this tick for floor items, even when the belt is currently full.
+      priority.add(cell.id);
+      ground.transfer(covered[0]!.id, (drop) => this.network.insertDropped(drop.id, drop.itemId, cell.id));
+      const path = this.network.get(cell.id)!.path, deck = path.point(path.length / 2).y;
+      for (const item of covered) ground.lift(item.id, deck + .22);
+    }
+    return priority;
+  }
+  fixedUpdate(deltaMs: number): void {
+    this.sync();
+    if (!Number.isFinite(deltaMs) || deltaMs < 0) throw new RangeError('Invalid logistics tick');
+    if (deltaMs > 0 && !this.paused()) {
+      const priority = this.collectDrops();
+      this.groundItems?.fixedUpdate(deltaMs);
+      this.network.fixedUpdate(deltaMs, priority);
+    }
+  }
 }

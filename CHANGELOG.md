@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — dropped-item recovery and terminal inventory
+
+- Directional conveyor cells collect covered drops at their centre with spacing
+  and priority over incoming traffic; terminals collect covered items up to their
+  capacity. Remaining items stay visible above the building and retry later.
+- The terminal modal now shows storage and the player's inventory in separate,
+  responsive compact slot grids. Select either side for details; Retrieve contents
+  still transfers what fits. The slot graphics are inspired by voxel inventory UI.
+
 ## Unreleased — terminal slots and building contact
 
 - Render the terminal's actual slot inventory with the shared player-inventory
