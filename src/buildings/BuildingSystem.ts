@@ -93,7 +93,7 @@ export class BuildingSystem {
     if (intersecting.some((building) => building.id !== supportingFoundation?.id) ||
         this.obstacles.some((obstacle) => (!deposit || obstacle.id !== `${deposit.id}-collider`) && circleIntersects(f, obstacle.x, obstacle.z, obstacle.radius))) return fail('occupied space', transform);
     let connection: 'connected' | 'disconnected' | undefined;
-    if (definition.placement === 'logistics') {
+    if (definition.placement === 'logistics' || typeId === 'miner-mk1') {
       const result = connectionStatus(typeId, transform, this.all(), this.cellSize);
       if (result === 'incompatible') return fail('incompatible connection', transform);
       connection = result;

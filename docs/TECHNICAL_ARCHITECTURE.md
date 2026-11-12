@@ -939,7 +939,8 @@ The prior Three-free prototype (`ConveyorPath`, `Ports`, `ConveyorNetwork`) rema
 transport authority. Segments have directional coincident ports and grid-aligned
 straight, quarter-circle right-curve or inclined paths. `ConveyorDefinitions`
 provides common geometry/ports; `ConveyorPlacement` derives connection height and
-rejects incompatible touching ports and cycles. `BuildingSystem` validates preview
+rejects incompatible touching ports and cycles, including Miner output when the
+Miner is placed after a belt. `BuildingSystem` validates preview
 and placement identically, pays atomically, tracks topology revisions and composes
 independent demolition guards. A foundation supporting logistics cannot be removed.
 Terrain placement uses the existing slope and variation limits and sinks at most
@@ -968,4 +969,6 @@ reports invalidity separately. No error-recovery model is implemented.
 Neither owns simulation state. DOM inspection exposes direction, connections,
 count, maximum throughput and status; terminal inventory can be collected.
 Tests cover real systems, scene graph and mocked-renderer bootstrap, not a real
-WebGL browser. Browser and user acceptance remain pending; Phase 5 is not complete.
+WebGL browser. Real-building chains have been tested at all four rotations and
+for 300 simulated seconds under repeated blockage and recovery, not exhaustively.
+Browser and user acceptance remain pending; Phase 5 is not complete.

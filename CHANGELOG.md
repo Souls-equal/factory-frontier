@@ -14,7 +14,11 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
   inspection, modal pause, procedural visuals and interpolated transport items.
 - Added building-backed end-to-end, blockage/recovery and conservation tests,
   construction/bootstrap, UI and Three.js scene-graph tests. Typecheck, tests,
-  build and verify pass: **382 tests across 45 files**.
+  build and verify pass: **402 tests across 45 files**.
+- Fixed Miner placement bypassing incompatible pre-existing conveyor ports;
+  preview and placement now reject incompatible direction/height before payment.
+  Added four-rotation building chains, repeated topology changes, extended
+  conservation/spacing, instanced growth and bootstrap modal tests.
 - Browser/WebGL and user acceptance are not performed. INVALID and ERROR states
   are reserved, not currently assigned; linear acyclic routes only. Phase 5 is
   in progress, not complete. The user authorized proceeding from Phase 4 while

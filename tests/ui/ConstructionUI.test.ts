@@ -21,3 +21,22 @@ describe('construction menu', () => {
     ui.closePanel(); expect(ui.isOpen).toBe(false); ui.dispose();
   });
 });
+
+it('offers all Phase 5 entries with exact costs and rejects unaffordable selection', () => {
+  document.body.innerHTML = '<section hidden><button data-construction-close>Close</button><div data-construction-list></div></section>';
+  const root = document.querySelector('section')!, inventory = new Inventory(createDefaultItemRegistry(), 4), select = vi.fn();
+  const ui = new ConstructionUI(root, createDefaultBuildingRegistry(inventory.registry), inventory, select, vi.fn()); ui.open();
+  const ids = ['conveyor-straight', 'conveyor-curve', 'conveyor-incline', 'receiving-terminal'];
+  for (const id of ids) {
+    const entry = root.querySelector<HTMLButtonElement>(`[data-building="${id}"]`)!;
+    expect(entry).not.toBeNull(); expect(entry.disabled).toBe(true);
+    expect(entry.textContent).toContain('Stone: 0 / 4'); expect(entry.textContent).toContain('Wood: 0 / 2');
+    entry.click(); expect(select).not.toHaveBeenCalled();
+  }
+  inventory.addItem('stone', 4); inventory.addItem('wood', 2); ui.update();
+  for (const id of ids) {
+    const entry = root.querySelector<HTMLButtonElement>(`[data-building="${id}"]`)!;
+    expect(entry.disabled).toBe(false); entry.click(); expect(select).toHaveBeenLastCalledWith(id);
+  }
+  ui.dispose();
+});

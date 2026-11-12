@@ -146,9 +146,10 @@ Acceptance criteria:
 
 ## PHASE 5 — Conveyor foundation
 
-Status: integration implemented and automated checks pass (382 tests / 45 files),
+Status: integration implemented and automated checks pass (402 tests / 45 files),
 but real-browser and user acceptance are pending. The previous prototype alone
 was not playable. INVALID/ERROR runtime handling remains reserved, not implemented.
+See `docs/PHASE_5_MANUAL_ACCEPTANCE.md` for pending real-browser checks.
 Do not advance to Phase 6 until Phase 5 is accepted and explicitly authorized.
 
 

@@ -34,7 +34,7 @@ export function connectionStatus(typeId: string, transform: BuildingTransform, e
   const candidate: BuildingInstance = { id: '__preview__', typeId, transform };
   const path = pathForBuilding(candidate, cellSize);
   const input = path ? { position: path.point(0), direction: path.direction('input') } : typeId === RECEIVER_TYPE ? machinePort(candidate, cellSize, 'receiver') : undefined;
-  const output = path ? { position: path.point(path.length), direction: path.direction('output') } : undefined;
+  const output = path ? { position: path.point(path.length), direction: path.direction('output') } : typeId === 'miner-mk1' ? machinePort(candidate, cellSize, 'source') : undefined;
   let connected = false, incompatible = false;
   function touch(a: PortPose | undefined, b: PortPose | undefined, allowed: boolean): void {
     if (!a || !b || Math.hypot(a.position.x - b.position.x, a.position.z - b.position.z) > 1e-7) return;

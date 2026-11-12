@@ -20,6 +20,7 @@
   for belts, Escape exits; invalid, disconnected and connected preview feedback
   shares the authoritative placement validator. Ports are directional and
   height-matched; mismatched connections and loops are rejected before payment.
+  Miner placement now validates adjacent ports even when the belt was placed first.
   Disconnecting a route pauses its items rather than discarding them.
 - A foundation may support a whole logistics footprint; removing a loaded
   foundation is refused. Otherwise placement follows terrain slope/variation
@@ -37,14 +38,17 @@
   presentation only. Modal panels pause production/transport. DISCONNECTED,
   IDLE, RUNNING and BLOCKED are assigned; INVALID and ERROR are reserved, not
   currently runtime states (invalid placement has explicit feedback).
-- **Automated:** typecheck, test, build and verify pass: 382 tests in 45 files.
+- **Automated:** typecheck, test, build and verify pass: 402 tests in 45 files.
   Coverage includes a real Miner → straight → curve → incline → terminal,
   conservation, full/recovery, disabled source, removal, terrain support,
   construction/UI and bootstrap (mock renderer), and Three.js scene graph tests.
-  These do not demonstrate browser/WebGL, pointer lock or actual usability.
+  Added rotation, placement-order, repeated topology rebuild, 300-second blocked/recovery,
+  instanced growth and real-bootstrap modal regression coverage. These do not
+  demonstrate browser/WebGL, pointer lock or actual usability.
 - **Browser/manual acceptance: not performed.** No browser executable is available;
-  a previous isolated Chromium launch lacked NSS/NSPR libraries. All manual Phase 5
-  checks remain pending. Consequently Phase 5 is **not complete or accepted**;
+  an isolated Chromium package also could not start without NSS/NSPR system
+  libraries. The procedure is in `docs/PHASE_5_MANUAL_ACCEPTANCE.md`. All manual
+  Phase 5 checks remain pending. Consequently Phase 5 is **not complete or accepted**;
   no Phase 6 scope has been started.
 - Limits: only linear acyclic networks; no splitters/mergers or save/load. State
   ERROR is not detected/recovered. Tests do not prove universal non-overlap or
