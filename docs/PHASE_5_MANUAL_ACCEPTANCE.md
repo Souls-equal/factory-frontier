@@ -58,13 +58,13 @@ No save system exists: a reload resets all construction and inventory.
 
 3. Q → Miner Mk.1. Aim at the iron deposit from nearby ground; the preview must
    say valid and identify a usable spot. Use the default rotation (do not press R)
-   and C to place. Expect one Miner and a deduction of 10 stone and 10 wood, with no iron required.
+   and left-click to place. Expect one Miner and a deduction of 10 stone and 10 wood, with no iron required.
    Escape exits placement; press E while targeting it: expect its deposit purity,
    output and running state.
 4. Q → Conveyor. Each belt occupies exactly one grid square and costs 4 stone
    and 2 wood. Aim beside the Miner's yellow output; each half of its two-cell
    edge has an available lane. The green preview faces the camera's horizontal
-   direction, yellow is the output, R adds a quarter turn, C places and Escape
+   direction, yellow is the output, R adds a quarter turn, left click places and Escape
    cancels. Check all four directions and that the mesh stays within the square.
 5. Aim each belt's yellow output at the next square. Place a perpendicular belt
    there and verify ore changes direction onto it; repeat on both sides, with
@@ -104,7 +104,7 @@ Try a raised foundation over items below it: it must not collect the lower layer
    that does not fit. Try feeding both lanes on each of its four cyan-marked
    sides, with the terminal placed before and after the belt. Observe the turn
    skin and opened side rail for left/right and multi-input turns, including ramps.
-8. With a gameplay panel open, wait and try WASD, Q, C and F. Expect player
+8. With a gameplay panel open, wait and try WASD, Q, left click and F. Expect player
    motion, placement/demolition, Miner output and belt positions to remain unchanged.
    Close the panel: expect gameplay and transport to resume. Check pointer-lock
    restoration; if denied, click the canvas again or use drag-look.

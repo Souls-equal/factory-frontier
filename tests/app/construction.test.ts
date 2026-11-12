@@ -24,6 +24,11 @@ const html = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../.
 let frames: Array<(t: number) => void> = [];
 const frame = (time: number) => { const fn = frames.shift(); if (!fn) throw new Error('missing frame'); fn(time); };
 const key = (code: string, repeat = false) => window.dispatchEvent(new KeyboardEvent('keydown', { code, repeat, cancelable: true }));
+const clickCanvas = () => {
+  const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
+  canvas.dispatchEvent(new MouseEvent('mousedown', { button: 0, bubbles: true }));
+  canvas.dispatchEvent(new MouseEvent('mouseup', { button: 0, bubbles: true }));
+};
 beforeEach(() => {
   vi.resetModules(); state.buildings = []; state.preview = null; state.selected = null; state.init = 0; state.disposed = 0; frames = [];
   document.body.innerHTML = /<body[^>]*>([\s\S]*)<\/body>/i.exec(html)?.[1] ?? '';
@@ -69,17 +74,43 @@ describe('construction bootstrap wiring', () => {
     key('PageDown'); key('KeyR'); frame(116); expect(state.preview?.transform.rotation).toBe(1);
     expect(state.preview!.transform.y).toBeCloseTo(initialHeight);
     const transform = state.preview!.transform;
-    key('KeyC'); key('KeyC', true); frame(166);
+    key('KeyC'); frame(141); expect(state.buildings).toHaveLength(0);
+    clickCanvas(); frame(166);
     expect(state.buildings).toHaveLength(1); expect(state.buildings[0]?.transform).toEqual(transform);
     expect(state.selected).toBe('foundation'); expect(state.preview?.reason).toBe('occupied space');
     key('KeyF'); frame(191); expect(state.buildings).toHaveLength(1); // demolition is disabled while placing
-    key('KeyC'); key('Escape'); frame(216); expect(state.selected).toBeNull(); expect(state.buildings).toHaveLength(1);
+    clickCanvas(); key('Escape'); frame(216); expect(state.selected).toBeNull(); expect(state.buildings).toHaveLength(1);
     key('KeyF'); frame(266); expect(state.buildings).toHaveLength(0);
     expect(document.querySelector('[data-ui="interaction-feedback"]')?.textContent).toContain('materials refunded');
     key('KeyQ'); expect(menu.textContent).toContain('Stone: 20 / 10');
     key('Escape'); expect(menu.hidden).toBe(true);
     key('Tab'); expect(document.querySelector<HTMLElement>('[data-ui="inventory"]')!.hidden).toBe(false);
     expect(document.querySelector('[data-ui="inventory"]')?.textContent).toContain('Stone ×20');
+  });
+  it('places on primary press with captured mouse, ignores menu clicks and does not repeat while held', async () => {
+    vi.spyOn(console, 'info').mockImplementation(() => undefined);
+    await import('../../src/main'); await vi.waitFor(() => expect(state.init).toBe(1)); frame(16);
+    const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
+    key('KeyQ');
+    clickCanvas(); frame(66); expect(state.buildings).toHaveLength(0);
+    const menu = document.querySelector<HTMLElement>('[data-ui="construction"]')!;
+    menu.querySelector<HTMLButtonElement>('[data-building="foundation"]')!.click();
+    canvas.dispatchEvent(new MouseEvent('mousedown', { button: 0, clientX: 500, clientY: 500, bubbles: true }));
+    window.dispatchEvent(new MouseEvent('mousemove', { clientX: 500, clientY: 857 }));
+    window.dispatchEvent(new MouseEvent('mouseup', { button: 0, clientX: 500, clientY: 857 }));
+    frame(116); expect(state.preview?.reason).toBe('valid');
+    const expected = state.preview!.transform;
+    Object.defineProperty(document, 'pointerLockElement', { configurable: true, value: canvas });
+    document.dispatchEvent(new Event('pointerlockchange'));
+    canvas.dispatchEvent(new MouseEvent('mousedown', { button: 0, bubbles: true }));
+    canvas.dispatchEvent(new MouseEvent('mousedown', { button: 0, bubbles: true }));
+    frame(166); expect(state.buildings).toHaveLength(1); expect(state.buildings[0]!.transform).toEqual(expected);
+    frame(216); expect(state.buildings).toHaveLength(1);
+    canvas.dispatchEvent(new MouseEvent('mouseup', { button: 0, bubbles: true }));
+    key('Escape'); frame(266); key('KeyQ');
+    expect(menu.textContent).toContain('Stone: 10 / 10');
+    Object.defineProperty(document, 'pointerLockElement', { configurable: true, value: null });
+    document.dispatchEvent(new Event('pointerlockchange'));
   });
   it('exposes conveyor construction, rotation and repeat-placement with atomic costs', async () => {
     vi.spyOn(console, 'info').mockImplementation(() => undefined);
@@ -93,10 +124,10 @@ describe('construction bootstrap wiring', () => {
     frame(66); expect(state.preview?.reason).toBe('valid'); expect(state.preview?.connection).toBe('disconnected');
     key('KeyR'); frame(116); expect(state.preview?.transform.rotation).toBe(1);
     const expected = state.preview!.transform;
-    key('KeyC'); frame(166);
+    clickCanvas(); frame(166);
     expect(state.buildings).toHaveLength(1); expect(state.buildings[0]!.transform).toEqual(expected);
     expect(state.selected).toBe('conveyor-cell'); expect(state.preview?.reason).toBe('occupied space');
-    key('KeyC'); frame(216); expect(state.buildings).toHaveLength(1);
+    clickCanvas(); frame(216); expect(state.buildings).toHaveLength(1);
     key('Escape'); frame(266); key('KeyF'); frame(316); expect(state.buildings).toHaveLength(0);
     key('KeyQ'); expect(menu.textContent).toContain('Stone: 20 / 4');
   });

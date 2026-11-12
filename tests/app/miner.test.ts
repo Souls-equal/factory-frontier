@@ -63,7 +63,9 @@ describe('miner through real bootstrap with mocked rendering', () => {
     const entry = menu.querySelector<HTMLButtonElement>('[data-building="miner-mk1"]')!;
     expect(entry.disabled).toBe(false); entry.click(); frame();
     expect(state.preview?.reason).toBe('valid'); expect(state.preview?.depositId).toBe(deposit.id);
-    key('KeyC'); frame(); expect(state.buildings).toHaveLength(1); expect(state.buildings[0]?.typeId).toBe('miner-mk1');
+    canvas.dispatchEvent(new MouseEvent('mousedown', { button: 0, bubbles: true }));
+    canvas.dispatchEvent(new MouseEvent('mouseup', { button: 0, bubbles: true }));
+    frame(); expect(state.buildings).toHaveLength(1); expect(state.buildings[0]?.typeId).toBe('miner-mk1');
     key('Escape'); frame();
     for (let i = 0; i < 200; i++) frame();
     key('KeyE'); frame(); const panel = document.querySelector<HTMLElement>('[data-ui="machine"]')!;

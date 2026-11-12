@@ -27,6 +27,9 @@ export interface InputManagerOptions {
   readonly onInventoryToggle?: () => void;
   readonly onInventoryClose?: () => void;
   readonly onConstructionKey?: (code: string) => boolean;
+  /** True only while the placement tool is active. */
+  readonly isConstructionActive?: () => boolean;
+  readonly onConstructionClick?: () => void;
 }
 
 const FORWARD_CODES = new Set(['KeyW']);
@@ -39,6 +42,8 @@ const INTERACT_CODES = new Set(['KeyE']);
 // Browser/device pointer warps can report enormous deltas in one event.
 // Filter individual outliers, not the sum of normal fast mouse events.
 const MAX_LOOK_EVENT_PIXELS = 300;
+// Distinguish a click from fallback drag-look without requiring pointer lock.
+const MAX_CLICK_DRAG_PIXELS = 5;
 
 export class InputManager {
   private readonly element: HTMLElement;
@@ -49,10 +54,15 @@ export class InputManager {
   private readonly onInventoryToggle: (() => void) | undefined;
   private readonly onInventoryClose: (() => void) | undefined;
   private readonly onConstructionKey: ((code: string) => boolean) | undefined;
+  private readonly isConstructionActive: (() => boolean) | undefined;
+  private readonly onConstructionClick: (() => void) | undefined;
   private gameplayEnabled = true;
   private restorePointerLockAfterModal = false;
 
   private dragging = false;
+  private primaryDown = false;
+  private placementGesture = false;
+  private dragDistance = 0;
   private disposed = false;
   private lastPointerX = 0;
   private lastPointerY = 0;
@@ -74,8 +84,11 @@ export class InputManager {
     this.onInventoryToggle = options.onInventoryToggle;
     this.onInventoryClose = options.onInventoryClose;
     this.onConstructionKey = options.onConstructionKey;
+    this.isConstructionActive = options.isConstructionActive;
+    this.onConstructionClick = options.onConstructionClick;
 
     this.element.addEventListener('mousedown', this.handleMouseDown);
+    this.element.addEventListener('contextmenu', this.handleContextMenu);
     this.view.addEventListener('keydown', this.handleKeyDown);
     this.view.addEventListener('keyup', this.handleKeyUp);
     this.view.addEventListener('mousemove', this.handleMouseMove);
@@ -128,7 +141,7 @@ export class InputManager {
   /** Suspend gameplay while a modal is open; clear queued input and release capture. */
   setGameplayEnabled(enabled: boolean): void {
     this.gameplayEnabled = enabled;
-    this.keys.clear(); this.dragging = false;
+    this.keys.clear(); this.resetPointerGesture();
     this.jumpQueued = false; this.interactQueued = false;
     this.lookX = 0; this.lookY = 0;
     if (!enabled && this.isPointerLocked) {
@@ -181,6 +194,7 @@ export class InputManager {
     this.restorePointerLockAfterModal = false;
 
     this.element.removeEventListener('mousedown', this.handleMouseDown);
+    this.element.removeEventListener('contextmenu', this.handleContextMenu);
     this.view.removeEventListener('keydown', this.handleKeyDown);
     this.view.removeEventListener('keyup', this.handleKeyUp);
     this.view.removeEventListener('mousemove', this.handleMouseMove);
@@ -190,7 +204,7 @@ export class InputManager {
     this.document.removeEventListener('visibilitychange', this.handleVisibilityChange);
 
     this.keys.clear();
-    this.dragging = false;
+    this.resetPointerGesture();
     this.lookX = 0;
     this.lookY = 0;
     this.jumpQueued = false;
@@ -214,18 +228,44 @@ export class InputManager {
     return false;
   }
 
+  private resetPointerGesture(): void {
+    this.dragging = false; this.primaryDown = false; this.placementGesture = false; this.dragDistance = 0;
+  }
+
   private readonly handleMouseDown = (event: MouseEvent): void => {
-    if (!this.gameplayEnabled || event.button !== 0) {
+    if (!this.gameplayEnabled) return;
+    if (event.button === 2 && this.isConstructionActive?.()) {
+      event.preventDefault();
+      if (!this.isPointerLocked) this.requestPointerLock();
+      return;
+    }
+    if (event.button !== 0 || this.primaryDown) return;
+    this.primaryDown = true;
+    const placing = this.isConstructionActive?.() === true;
+    if (this.isPointerLocked) {
+      if (placing) this.onConstructionClick?.();
       return;
     }
     this.dragging = true;
-    this.lastPointerX = event.clientX;
-    this.lastPointerY = event.clientY;
-    this.requestPointerLock();
+    this.lastPointerX = event.clientX; this.lastPointerY = event.clientY;
+    this.placementGesture = placing; this.dragDistance = 0;
+    // When placement starts without capture, reserve short clicks for placement
+    // and drags for looking. Do not let the capture gesture place by accident.
+    if (!placing) this.requestPointerLock();
   };
 
-  private readonly handleMouseUp = (): void => {
-    this.dragging = false;
+  private readonly handleContextMenu = (event: MouseEvent): void => {
+    if (this.gameplayEnabled && this.isConstructionActive?.()) event.preventDefault();
+  };
+
+  private readonly handleMouseUp = (event: MouseEvent): void => {
+    if (event.button !== 0) return;
+    const isCanvasTarget = event.target instanceof Node && this.element.contains(event.target);
+    if (this.placementGesture && !this.isPointerLocked) this.dragDistance += Math.hypot(event.clientX - this.lastPointerX, event.clientY - this.lastPointerY);
+    const place = this.gameplayEnabled && this.primaryDown && this.placementGesture && !this.isPointerLocked &&
+      this.dragDistance <= MAX_CLICK_DRAG_PIXELS && isCanvasTarget && this.isConstructionActive?.() === true;
+    this.resetPointerGesture();
+    if (place) this.onConstructionClick?.();
   };
 
   private readonly handleMouseMove = (event: MouseEvent): void => {
@@ -244,6 +284,7 @@ export class InputManager {
     const dx = event.clientX - this.lastPointerX, dy = event.clientY - this.lastPointerY;
     this.lastPointerX = event.clientX;
     this.lastPointerY = event.clientY;
+    if (this.placementGesture) this.dragDistance += Math.hypot(dx, dy);
     this.addLook(dx, dy);
   };
 
@@ -256,9 +297,9 @@ export class InputManager {
     if (isTypingTarget(event.target)) {
       return;
     }
-    if (this.onConstructionKey && ['KeyQ', 'KeyR', 'KeyC', 'KeyF', 'PageUp', 'PageDown', 'Escape'].includes(event.code)) {
+    if (this.onConstructionKey && ['KeyQ', 'KeyR', 'KeyF', 'PageUp', 'PageDown', 'Escape'].includes(event.code)) {
       if (!event.repeat && this.onConstructionKey(event.code)) { event.preventDefault(); return; }
-      if (event.repeat && ['KeyQ', 'KeyR', 'KeyC', 'KeyF', 'PageUp', 'PageDown'].includes(event.code)) { event.preventDefault(); return; }
+      if (event.repeat && ['KeyQ', 'KeyR', 'KeyF', 'PageUp', 'PageDown'].includes(event.code)) { event.preventDefault(); return; }
     }
     if (event.code === 'Tab' && this.onInventoryToggle) {
       event.preventDefault();
@@ -297,7 +338,7 @@ export class InputManager {
   private readonly handleBlur = (): void => {
     this.lookX = 0; this.lookY = 0;
     this.keys.clear();
-    this.dragging = false;
+    this.resetPointerGesture();
     this.jumpQueued = false;
     this.interactQueued = false;
   };
@@ -306,7 +347,7 @@ export class InputManager {
     if (this.document.visibilityState === 'hidden') {
       this.lookX = 0; this.lookY = 0;
       this.keys.clear();
-      this.dragging = false;
+      this.resetPointerGesture();
       this.jumpQueued = false;
       this.interactQueued = false;
     }
@@ -316,7 +357,7 @@ export class InputManager {
     if (this.disposed) {
       return;
     }
-    this.dragging = false;
+    this.resetPointerGesture();
     this.lookX = 0; this.lookY = 0;
     // A pending pointer-lock request may resolve after the inventory opens.
     if (!this.gameplayEnabled && this.isPointerLocked) {
