@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — textured natural environment
+
+- Add a pixel-art atlas for voxel grass tops, grassy edges and exposed dirt; the
+  terrain still uses one mesh built from the authoritative column surface.
+- Replace decorative rock boxes with three textured, irregular faceted variants;
+  add textured bark, layered foliage, forked branches and small faceted stones.
+  The placement, collision, collection and interaction state remain unchanged.
+
 ## Unreleased — voxel inventory artwork
 
 - Restyle the player and terminal inventories with six-column, dark blue square

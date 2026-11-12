@@ -9,6 +9,17 @@
 
 ---
 
+## Phase 5 — natural environment visual refresh (user validation pending)
+
+- Grass tops, grassy edges and deeper earth have a deterministic pixel-art texture
+  atlas. Decorative rocks use three instanced faceted variants, and starter trees,
+  fallen branches and loose stones have new models and pixel textures. These are
+  presentation changes: generation, collision, collection and placement are
+  unchanged. Decorative rocks retain their approximate cylindrical colliders.
+- Headless Chromium/WebGL screenshots checked the actual scene and close views of
+  trees and rocks. Physical play and user visual approval remain outstanding;
+  Phase 5 is still in progress.
+
 ## Phase 5 — inventory visual refresh (user validation pending)
 
 - Player and terminal inventories use the same dark six-column square slots and

@@ -186,7 +186,7 @@ describe('SceneManager', () => {
   });
 });
 
-it('renders block-shaped deposits, natural rocks and props without changing logical world data', () => {
+it('renders deposits, natural rocks and props without changing logical world data', () => {
   const { manager, world } = createHarness();
   const snapshot = JSON.stringify({ deposits: world.deposits, obstacles: world.obstacleDefinitions, interactables: world.interactables });
   const colors = new Map<string, number>();
@@ -207,7 +207,11 @@ it('renders block-shaped deposits, natural rocks and props without changing logi
   expect(new Set(bodies.map((body) => body.geometry)).size).toBe(1);
   const dispose = vi.spyOn(bodies[0]!.geometry, 'dispose');
   for (const object of manager.scene.getObjectByName('environment:rocks')!.children) {
-    expect((object as InstancedMesh).geometry.type).toBe('BoxGeometry');
+    const geometry = (object as InstancedMesh).geometry;
+    expect(geometry.type).toBe('BufferGeometry');
+    expect(geometry.getAttribute('position').count).toBeGreaterThan(24);
+    expect((object as InstancedMesh).material).toBeInstanceOf(MeshStandardMaterial);
+    expect(((object as InstancedMesh).material as MeshStandardMaterial).map).not.toBeNull();
   }
   for (const prop of world.interactables) for (const part of ['base', 'mast', 'cap']) {
     expect(findObject<Mesh>(manager, `environment:prop:${prop.id}:${part}`).geometry.type).toBe('BoxGeometry');
