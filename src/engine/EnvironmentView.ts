@@ -4,11 +4,8 @@ import {
   BufferGeometry,
   BoxGeometry,
   Color,
-  CylinderGeometry,
-  DodecahedronGeometry,
   DoubleSide,
   Group,
-  IcosahedronGeometry,
   InstancedMesh,
   Mesh,
   MeshBasicMaterial,
@@ -243,9 +240,9 @@ export class EnvironmentView {
     }
 
     const variants: BufferGeometryType[] = [
-      new IcosahedronGeometry(1, 0),
-      new DodecahedronGeometry(1, 0),
-      new IcosahedronGeometry(1, 1),
+      new BoxGeometry(1.3, 1, 1.1),
+      new BoxGeometry(1.1, 1, 1.3),
+      new BoxGeometry(1.2, 1, 1.2),
     ];
     for (const geometry of variants) {
       this.registerGeometry(geometry);
@@ -287,7 +284,7 @@ export class EnvironmentView {
         const width = obstacle.radius;
         const height = obstacle.height;
 
-        dummy.position.set(obstacle.x, obstacle.y + height * 0.24, obstacle.z);
+        dummy.position.set(obstacle.x, obstacle.y + height * (isFormation ? 0.31 : 0.275), obstacle.z);
         dummy.rotation.set(0, obstacle.yaw, 0);
         dummy.scale.set(width, height * (isFormation ? 0.62 : 0.55), width);
         dummy.updateMatrix();
@@ -312,8 +309,8 @@ export class EnvironmentView {
   private createDeposits(world: World): Group {
     const group = new Group();
     group.name = 'environment:deposits';
-    const rock = new IcosahedronGeometry(1, 0);
-    const wood = new CylinderGeometry(0.42, 0.52, 1.8, 7);
+    const bodyGeometry = new BoxGeometry(1, 1, 1);
+    const detailGeometry = new BoxGeometry(1, 1, 1);
     const ringGeometry = new TorusGeometry(1.05, 0.045, 6, 24);
     const ringMaterial = new MeshBasicMaterial({ color: 0x8ff3ff });
     const auraGeometry = new TorusGeometry(1.05, 0.035, 6, 32);
@@ -321,7 +318,7 @@ export class EnvironmentView {
     const markerColors: Record<string, number> = { 'iron-ore': 0x63cfff, 'copper-ore': 0xff9a52,
       limestone: 0xffe397, coal: 0xb69eff, stone: 0xa8d2bd, wood: 0x83d46b };
     const markerMaterials = new Map<string, { aura: MeshBasicMaterial; ground: MeshBasicMaterial }>();
-    this.registerGeometry(rock); this.registerGeometry(wood); this.registerGeometry(ringGeometry);
+    this.registerGeometry(bodyGeometry); this.registerGeometry(detailGeometry); this.registerGeometry(ringGeometry);
     this.registerMaterial(ringMaterial);
     const colors: Record<string, number> = { 'iron-ore': 0x63757c, 'copper-ore': 0xb87348,
       limestone: 0xd0c8aa, coal: 0x202830, stone: 0x89928c, wood: 0x895e3c };
@@ -346,9 +343,15 @@ export class EnvironmentView {
       }
       const model = new Group(); model.name = `environment:deposit:${deposit.id}`;
       model.position.set(deposit.x, deposit.y, deposit.z);
-      const body = new Mesh(deposit.itemId === 'wood' ? wood : rock, material);
-      if (deposit.itemId !== 'wood') body.scale.set(0.8, 1.1, 0.8);
-      body.position.y = 0.85; body.castShadow = true; body.receiveShadow = true;
+      const body = new Mesh(bodyGeometry, material); body.name = `${model.name}:body`;
+      const isWood = deposit.itemId === 'wood';
+      body.scale.set(isWood ? .72 : 1.05, isWood ? 1.25 : .7, isWood ? .72 : 1.05);
+      body.position.y = isWood ? .625 : .35; body.castShadow = true; body.receiveShadow = true;
+      // Shared cube geometry, type-specific material: a stepped silhouette within the collider.
+      const detail = new Mesh(detailGeometry, material); detail.name = `${model.name}:detail`;
+      detail.scale.set(isWood ? .5 : .65, isWood ? .3 : .48, isWood ? .5 : .65);
+      detail.position.set(isWood ? 0 : .16, isWood ? 1.4 : .94, isWood ? 0 : -.14);
+      detail.castShadow = true; detail.receiveShadow = true;
       const ring = new Mesh(ringGeometry, ringMaterial);
       ring.name = `${model.name}:highlight-ring`; ring.rotation.x = Math.PI / 2;
       ring.position.y = 1.65; ring.visible = false;
@@ -358,7 +361,7 @@ export class EnvironmentView {
       this.registerGeometry(groundGeometry);
       const ground = new Mesh(groundGeometry, marker.ground);
       ground.name = `${model.name}:ground-mark`;
-      model.add(body, ring, aura, ground); group.add(model);
+      model.add(body, detail, ring, aura, ground); group.add(model);
       this.highlightBindings.set(deposit.id, { ring });
     }
     return group;
@@ -444,9 +447,9 @@ export class EnvironmentView {
     this.registerMaterial(dark);
     this.registerMaterial(capMaterial);
 
-    const baseGeometry = new CylinderGeometry(1.1, 1.3, 0.28, 8);
-    const mastGeometry = new CylinderGeometry(0.16, 0.24, definition.kind === 'relay-mast' ? 5.4 : 3.6, 8);
-    const capGeometry = new SphereGeometry(0.32, 16, 12);
+    const baseGeometry = new BoxGeometry(1.55, 0.28, 1.55);
+    const mastGeometry = new BoxGeometry(0.32, definition.kind === 'relay-mast' ? 5.4 : 3.6, 0.32);
+    const capGeometry = new BoxGeometry(0.64, 0.64, 0.64);
     const ringGeometry = new TorusGeometry(0.62, 0.045, 8, 28);
     this.registerGeometry(baseGeometry);
     this.registerGeometry(mastGeometry);

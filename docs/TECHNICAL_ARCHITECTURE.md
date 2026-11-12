@@ -1010,8 +1010,8 @@ ledge does not teleport the player through a wall. The default fixed-step jump
 speed is 8.4 m/s. Voxel building support takes exact column extrema over the
 footprint, and generated deposits are filtered against Miner support. The old
 heightfield remains the procedural source, not the rendered/physical surface.
-The initial resource loop and block-style machine/resource models are not yet
-implemented; browser and physical acceptance remain pending.
+The initial resource loop and block-style current models were added subsequently;
+browser and physical acceptance remain pending.
 
 ## Appendix — finite voxel-transition starter resources
 
@@ -1027,5 +1027,23 @@ synchronizes shared block meshes from logical availability before rendering.
 Deposits are inspect-only until a Miner is placed; its cost is 10 stone and
 10 wood, breaking the old circular iron requirement. Legacy `gatherQuantity`
 configuration is retained but unused. Bounded generation does not guarantee a
-bootstrap in every constrained custom world. Existing deposit and machine models
-are not yet voxel-styled, and no browser acceptance is inferred from tests.
+bootstrap in every constrained custom world. No browser acceptance is inferred
+from tests.
+
+## Appendix — block-style current models
+
+`EnvironmentView` shares cube geometries across each stepped deposit body and
+detail, while preserving item-specific colours, auras, terrain-following marks
+and target rings. Natural rocks remain instanced (up to three box variants);
+beacon and relay use box primitives. Existing obstacle physics remains cylindrical,
+so collisions are approximate rather than per-voxel. The sky and circular
+interaction/deposit indicators are deliberately unchanged.
+
+`BuildingView` renders the Miner with block drill and stepped head, foundation
+tiles and a terminal lid/panel. Conveyors already use box surfaces: curves and
+inclines keep their angled segments to follow the logical paths and ports.
+Ore instances remain cubes. All placed state lamps and port colours are preserved;
+preview parts use the same valid/invalid tint and do not write depth. The
+renderers read authoritative gameplay state and do not alter placement, machines
+or transport. Scene graph and port-coordinate tests do not establish visual
+clarity or working WebGL; physical browser acceptance remains required.
