@@ -16,6 +16,11 @@
 **Last updated:** 2026-11-11
 **Current phase:** Phase 5 in progress; Phase 4 accepted by user with browser verification pending
 
+The voxel transition is underway within Phase 5: finite starter resources and a
+no-iron first Miner are implemented, while block-style machine/deposit visuals and
+physical browser acceptance remain pending. This explicitly replaces the earlier
+direct deposit-gathering loop to avoid mining terrain blocks.
+
 The phase definitions below are authoritative. This tracker only records status;
 detailed evidence and verification results live in `PROJECT_STATUS.md`.
 

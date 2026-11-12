@@ -20,17 +20,19 @@ No save system exists: a reload resets all construction and inventory.
    errors. Click the canvas for pointer lock; if denied, drag to look. WASD moves,
    Shift sprints, Space jumps, E interacts, Tab opens inventory, Q opens
    construction. Close panels with Escape or their Close button.
-2. Find deposits, aim until the gathering prompt appears and press E repeatedly
-   (5 items per press). From spawn facing the beacon, the first iron deposit is
-   approximately 7 m left
-   and 1 m behind (with up to 1 m jitter); look for its pale blue aura and blue
-   ground markings. Other resources have different marker colours; explore for
-   stone and wood deposits. Confirm markers are visible on slopes as well as flat
-   ground. Gather at least **20 iron ore, 30 stone and 20 wood** for
-   one Miner, straight, right curve, incline and terminal. Expect Tab inventory
-   to show the gathered quantities. Gather extra for experiments. For the partial
-   retrieval test below, gather at least 115 iron and 50 stone before building,
-   and merge the remaining iron into one stack after paying for the Miner.
+2. Near spawn, look down for small block-shaped branches and pale stones; aim
+   until their prompt appears and press E once each. Trees take three distinct E
+   presses and give wood. Expect 5 wood per branch, 5 stone per stone and 20 wood
+   per tree; collected objects disappear. Check Tab shows the quantities. With a
+   full inventory, expect the object and remaining contents to stay. Trees block
+   movement until collected; loose objects block placement but not movement.
+   Collect at least **26 stone and 18 wood** for the Miner and four logistics
+   buildings. The finite starting supply can be exhausted; place a Miner on stone
+   or wood deposits for more. Deposits can be inspected with E but no longer yield
+   items directly. From spawn facing the beacon, the first iron deposit is
+   approximately 7 m left and 1 m behind (up to 1 m jitter); look for its pale
+   blue aura and blue ground markings. Other resources have different colours.
+   Confirm markers are visible on slopes as well as flat ground.
 
 ## Voxel terrain checks (integration pending physical acceptance)
 
@@ -41,14 +43,14 @@ No save system exists: a reload resets all construction and inventory.
 - Place a foundation on a flat top; attempt to place one across a height change.
   The latter should be rejected without charging resources. Check deposits and
   the factory chain below still work. Record any visual/collision mismatch.
-- Terrain cannot be broken. The new tree/branch/loose-stone bootstrap and voxel
-  machine models are not implemented yet; the previous resource loop is interim.
+- Terrain cannot be broken. Starter objects use block meshes; deposit and machine
+  models are not yet fully voxel-styled.
 
 ## Construct and connect
 
 3. Q → Miner Mk.1. Aim at the iron deposit from nearby ground; the preview must
    say valid and identify a usable spot. Use the default rotation (do not press R)
-   and C to place. Expect one Miner and a deduction of 20 iron, 10 stone, 10 wood.
+   and C to place. Expect one Miner and a deduction of 10 stone and 10 wood, with no iron required.
    Escape exits placement; press E while targeting it: expect its deposit purity,
    output and running state.
 4. Q → Conveyor: Straight. Each logistics building costs 4 stone and 2 wood.
@@ -97,8 +99,7 @@ No save system exists: a reload resets all construction and inventory.
    verify no resources vanish. Disabling the Miner via E stops new extraction and
    source transfers; re-enabling resumes them.
 10. For partial retrieval, ensure the player has one iron stack below 100 and all
-    other 23 inventory slots occupied. With at least 23 stone/wood left after
-    construction, Tab → select a stack → Split repeatedly to occupy spare slots;
+    other 23 inventory slots occupied. After acquiring at least 23 stone/wood (a Miner on a matching deposit can replenish them), Tab → select a stack → Split repeatedly to occupy spare slots;
     merge iron stacks by dragging first if needed. Leave, for example, 95 iron in
     the sole iron stack. With more than five iron in the terminal, E → Retrieve
     contents should report 5 transferred and the exact remainder; inventory should

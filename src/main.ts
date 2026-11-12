@@ -17,6 +17,7 @@ import { Engine } from './engine/Engine';
 import { InputManager } from './input/InputManager';
 import { Inventory } from './items/Inventory';
 import { createDefaultItemRegistry } from './items/ItemRegistry';
+import { GatherableCollision } from './resources/Gatherables';
 import { DepositInteractable } from './resources/ResourceDeposit';
 import { InventoryUI } from './ui/InventoryUI';
 import { InteractionSystem } from './interaction/InteractionSystem';
@@ -148,7 +149,7 @@ async function boot(): Promise<void> {
   engine.initBuildings?.(buildingRegistry, config.construction.gridSize);
   const player = new PlayerController({
     controls: config.controls, player: config.player, terrain: new BuildingTerrain(world.terrain, buildings),
-    obstacles: new BuildingCollision(new VoxelCollision(world.terrain, world.obstacles), buildings), spawn: world.spawn,
+    obstacles: new BuildingCollision(new VoxelCollision(world.terrain, new GatherableCollision(world.obstacles, world.gatherables)), buildings), spawn: world.spawn,
   });
   const playerFootprint = () => ({ x: player.position.x, z: player.position.z, radius: config.player.radius });
   const machines = new MachineManager(buildings, registry, () => world.deposits, config.miner,
@@ -220,9 +221,12 @@ async function boot(): Promise<void> {
     interaction.register(interactable);
   }
   for (const deposit of world.deposits) {
-    interaction.register(new DepositInteractable(deposit, inventory, registry,
-      config.resources.gatherQuantity, config.interaction.range,
+    interaction.register(new DepositInteractable(deposit, registry, config.interaction.range,
       () => !buildings.all().some((building) => building.depositId === deposit.id)));
+  }
+
+  for (const gatherable of world.gatherables.interactables(inventory, config.interaction.range)) {
+    interaction.register(gatherable);
   }
 
   const machineInteractions = new Map<string, () => void>();

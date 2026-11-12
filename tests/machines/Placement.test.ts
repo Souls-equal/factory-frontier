@@ -25,7 +25,7 @@ describe('miner placement and lifecycle', () => {
     const preview = buildings.validate('miner-mk1', 0, 0, 0, player);
     expect(preview.reason).toBe('valid'); expect(preview.depositId).toBe('iron');
     const result = buildings.place('miner-mk1', 0, 0, 0, player); expect(result.building?.depositId).toBe('iron');
-    expect(inv.getItemCount('iron-ore')).toBe(0); machines.sync(); expect(machines.all()).toHaveLength(1);
+    expect(inv.getItemCount('iron-ore')).toBe(20); expect(inv.getItemCount('wood')).toBe(0); expect(inv.getItemCount('stone')).toBe(0); machines.sync(); expect(machines.all()).toHaveLength(1);
     const miner = machines.get(result.building!.id)!; machines.fixedUpdate(2000);
     expect(miner.output.getItemCount('iron-ore')).toBe(1);
     expect(buildings.demolish(result.building!.id)).toBe('output not empty');

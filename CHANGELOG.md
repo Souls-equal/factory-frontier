@@ -7,6 +7,18 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added — voxel starter resources
+
+- Added seeded, finite trees (three E presses, 20 wood), branches (5 wood) and
+  loose stones (5 stone), with block visuals, inventory-safe partial pickup and
+  synchronized movement/placement collision and disappearance.
+- Miner Mk.1 now costs 10 stone and 10 wood, no iron. Deposits are inspect-only
+  and require a Miner rather than direct gathering; terrain remains indestructible.
+- Automated suite: 436 tests in 50 files; typecheck, test, build and verify.
+- Bounded generation is tested for representative default seeds, not all custom
+  worlds. WebGL and physical acceptance of this update remain pending; voxel
+  models for existing machines and deposits remain future work.
+
 ### In progress — voxel terrain integration
 
 - Replaced the playable smooth surface with seeded, indestructible column
@@ -15,9 +27,8 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 - Building support uses all intersected columns; generated deposits are checked
   for Miner support. Large, complex worlds may use larger blocks to stay within
   the mesh budget. Actual browser rendering and usability remain unverified.
-- Tree/branch/stone collection, the first Miner cost change and voxel-style
-  machine/resource models remain unimplemented. The old gathering loop remains
-  temporarily available. Phase 5 acceptance remains pending.
+- At the time of terrain integration the new collection loop and cost were
+  pending; see the newer entry above. Phase 5 acceptance remains pending.
 - Typecheck, tests, build and verify pass: 433 tests in 49 files.
 
 ### Earlier — voxel transition foundation (initially isolated)

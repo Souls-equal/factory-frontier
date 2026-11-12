@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createGameConfig } from '../../src/core/Configuration';
 import { InteractionSystem } from '../../src/interaction/InteractionSystem';
-import { Inventory } from '../../src/items/Inventory';
 import { createDefaultItemRegistry } from '../../src/items/ItemRegistry';
 import { DepositInteractable, RESOURCE_TYPES } from '../../src/resources/ResourceDeposit';
 import { createWorld } from '../../src/world/World';
@@ -69,78 +68,24 @@ describe('seeded resource deposits', () => {
   });
 });
 
-describe('gathering through the existing interaction system', () => {
-  it('targets, gathers once per request, reports partial collection and full inventory', () => {
-    const deposit = createWorld(config).deposits[0];
-    if (!deposit) throw new Error('missing deposit');
-    const registry = createDefaultItemRegistry(); const inventory = new Inventory(registry, 1);
-    const item = new DepositInteractable(deposit, inventory, registry, 5, 3.6);
+describe('deposit inspection', () => {
+  it('targets a deposit and explains extraction requires a Miner', () => {
+    const deposit = createWorld(config).deposits[0]!;
+    const registry = createDefaultItemRegistry();
+    const item = new DepositInteractable(deposit, registry, 3.6);
     const view = { position: { x: deposit.x, y: deposit.y + 1.1, z: deposit.z + 2 }, yaw: 0, pitch: 0 };
     const interaction = new InteractionSystem({ range: 3.6, viewProvider: () => view });
     interaction.register(item); interaction.fixedUpdate(50);
     expect(interaction.target?.id).toBe(deposit.id);
     expect(interaction.target?.hint).toContain(deposit.purity.toUpperCase());
     interaction.requestInteraction(); interaction.fixedUpdate(50);
-    expect(inventory.getItemCount(deposit.itemId)).toBe(5);
-    for (let i = 0; i < 20; i++) interaction.fixedUpdate(50);
-    expect(inventory.getItemCount(deposit.itemId)).toBe(5);
-    inventory.addItem(deposit.itemId, 93);
-    interaction.requestInteraction(); interaction.fixedUpdate(50);
-    expect(inventory.getItemCount(deposit.itemId)).toBe(100);
-    expect(interaction.lastOutcome?.message).toContain('Collected 2');
-    interaction.requestInteraction(); interaction.fixedUpdate(50);
-    expect(interaction.lastOutcome?.ok).toBe(false);
-    expect(interaction.lastOutcome?.message).toContain('Inventory full');
-    expect(inventory.getItemCount(deposit.itemId)).toBe(100);
+    expect(interaction.lastOutcome?.message).toContain('Miner');
   });
-  it('cannot gather when out of range', () => {
-    const deposit = createWorld(config).deposits[0]; if (!deposit) throw new Error('missing');
-    const registry = createDefaultItemRegistry(); const inventory = new Inventory(registry, 2);
+  it('cannot inspect out of range', () => {
+    const deposit = createWorld(config).deposits[0]!;
     const interaction = new InteractionSystem({ range: 3.6, viewProvider: () => ({ position: { x: deposit.x, y: deposit.y + 1.1, z: deposit.z + 20 }, yaw: 0, pitch: 0 }) });
-    interaction.register(new DepositInteractable(deposit, inventory, registry, 5, 3.6));
+    interaction.register(new DepositInteractable(deposit, createDefaultItemRegistry(), 3.6));
     interaction.requestInteraction(); interaction.fixedUpdate(50);
-    expect(interaction.target).toBeNull(); expect(inventory.usedSlots).toBe(0);
-  });
-});
-
-describe('full inventory gathering regression', () => {
-  it('does not collect into a completely full 24-slot inventory', () => {
-    const deposit = createWorld(config).deposits[0]; if (!deposit) throw new Error('missing deposit');
-    const registry = createDefaultItemRegistry(); const inventory = new Inventory(registry, 24);
-    inventory.addItem(deposit.itemId, 2400);
-    const before = inventory.snapshot();
-    const interaction = new DepositInteractable(deposit, inventory, registry, 5, 3.6);
-    expect(interaction.interact()).toEqual({ ok: false, message: 'Inventory full — could not collect Iron Ore.' });
-    expect(inventory.snapshot()).toEqual(before);
-    expect(inventory.getItemCount(deposit.itemId)).toBe(2400);
-  });
-  it('fills multiple partial stacks, reports partial gathering, and retains the uncollected remainder', () => {
-    const deposit = createWorld(config).deposits[0]; if (!deposit) throw new Error('missing deposit');
-    const registry = createDefaultItemRegistry(); const inventory = new Inventory(registry, 3);
-    inventory.addItem(deposit.itemId, 197); inventory.removeItem(deposit.itemId, 1);
-    inventory.addItem('coal', 100);
-    expect(inventory.snapshot().map((slot) => slot?.quantity)).toEqual([99, 97, 100]);
-    expect(inventory.getAvailableSpace(deposit.itemId)).toBe(4);
-    const interaction = new DepositInteractable(deposit, inventory, registry, 5, 3.6);
-    const result = interaction.interact();
-    expect(result.ok).toBe(true);
-    expect(result.message).toContain('Collected 4 Iron Ore');
-    expect(result.message).toContain('inventory full');
-    expect(inventory.snapshot().map((slot) => slot?.quantity)).toEqual([100, 100, 100]);
-    expect(inventory.getItemCount(deposit.itemId)).toBe(200);
-    expect(inventory.getItemCount('coal')).toBe(100);
-    // Deposits are infinite: the uncollected unit was not created or removed.
-    expect(interaction.interact().ok).toBe(false);
-    inventory.removeItem(deposit.itemId, 1);
-    const next = interaction.interact();
-    expect(next.message).toContain('Collected 1 Iron Ore');
-    expect(inventory.getItemCount(deposit.itemId)).toBe(200);
-  });
-  it('returns the exact uncollected remainder across multiple partial stacks', () => {
-    const inventory = new Inventory(createDefaultItemRegistry(), 3);
-    inventory.addItem('iron-ore', 197); inventory.removeItem('iron-ore', 1); inventory.addItem('coal', 100);
-    expect(inventory.addItem('iron-ore', 5)).toEqual({ requested: 5, moved: 4, remainder: 1 });
-    expect(inventory.addItem('iron-ore', 5)).toEqual({ requested: 5, moved: 0, remainder: 5 });
-    expect(inventory.getItemCount('iron-ore')).toBe(200);
+    expect(interaction.target).toBeNull(); expect(interaction.executions).toBe(0);
   });
 });
