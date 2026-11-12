@@ -138,3 +138,62 @@ describe('repeat placement for every registered building', () => {
     },
   );
 });
+
+describe('close placement and contact recovery', () => {
+  it('rejects placing a belt within the conservative corner and accepts a clear near placement', () => {
+    const { system } = setup();
+    const corner = { x: -.3, z: -.3, radius: .4 };
+    expect(system.place('conveyor-cell', .5, .5, 0, corner).reason).toBe('player overlap');
+    const near = { x: -.401, z: -.3, radius: .4 };
+    expect(system.place('conveyor-cell', .5, .5, 0, near).reason).toBe('valid');
+  });
+  it('lets an overlapping player move out or slide but not further into the building', () => {
+    const { system, collision } = setup();
+    expect(system.place('conveyor-cell', .5, .5, 0, { x: 8, z: 8, radius: .4 }).reason).toBe('valid');
+    const retreat = collision.moveCircle(-.39, .5, -.4, 0, .4, 0, 1.8);
+    expect(retreat.x).toBeCloseTo(-.79); expect(retreat.blocked).toBe(false);
+    const into = collision.moveCircle(-.39, .5, .4, .2, .4, 0, 1.8);
+    expect(into.x).toBeCloseTo(-.39); expect(into.z).toBeCloseTo(.7); expect(into.blocked).toBe(false);
+    const corner = collision.moveCircle(-.399999999999, -.399999999999, -.2, -.2, .4, 0, 1.8);
+    expect(corner.x).toBeCloseTo(-.6); expect(corner.z).toBeCloseTo(-.6);
+    const through = collision.moveCircle(-1, .5, 4, 0, .4, 0, 1.8);
+    expect(through.x).toBeCloseTo(-.4); expect(through.collided).toBe(true);
+  });
+  it('recovers under the real player controller without teleporting or a speed spike', async () => {
+    const { createGameConfig } = await import('../../src/core/Configuration');
+    const { PlayerController } = await import('../../src/player/PlayerController');
+    const { system, collision } = setup();
+    expect(system.place('conveyor-cell', .5, .5, 0, { x: 8, z: 8, radius: .4 }).reason).toBe('valid');
+    const config = createGameConfig();
+    const p = new PlayerController({ controls: config.controls, player: config.player, terrain: new BuildingTerrain(terrain, system), obstacles: collision,
+      spawn: { x: -.399999999999, z: .5, y: 0, yaw: 0 } });
+    for (let i = 0; i < 30; i++) {
+      const before = p.position; p.step(.05, { moveX: -1, moveZ: 0, sprint: false, lookDeltaX: 0, lookDeltaY: 0 });
+      expect(Math.hypot(p.position.x - before.x, p.position.z - before.z)).toBeLessThanOrEqual(config.controls.moveSpeed * .05 + 1e-7);
+    }
+    expect(p.position.x).toBeLessThan(-1);
+  });
+});
+
+it.each([0, 1, 2, 3])('moves away after placing a cell at contact on side %i', async (side) => {
+  const { createGameConfig } = await import('../../src/core/Configuration');
+  const { PlayerController } = await import('../../src/player/PlayerController');
+  const { system, collision } = setup(), config = createGameConfig();
+  const positions = [{ x: -.4, z: .5 }, { x: 1.4, z: .5 }, { x: .5, z: -.4 }, { x: .5, z: 1.4 }];
+  const moves = [{ moveX: -1, moveZ: 0 }, { moveX: 1, moveZ: 0 }, { moveX: 0, moveZ: 1 }, { moveX: 0, moveZ: -1 }];
+  const pos = positions[side]!, input = moves[side]!;
+  const p = new PlayerController({ controls: config.controls, player: config.player, terrain: new BuildingTerrain(terrain, system), obstacles: collision,
+    spawn: { ...pos, y: 0, yaw: 0 } });
+  const result = system.place('conveyor-cell', .5, .5, 0, { x: p.position.x, z: p.position.z, radius: config.player.radius });
+  expect(result.reason).toBe('valid');
+  for (let i = 0; i < 20; i++) p.step(.05, { ...input, sprint: false, lookDeltaX: 0, lookDeltaY: 0 });
+  expect(Math.hypot(p.position.x - pos.x, p.position.z - pos.z)).toBeGreaterThan(1);
+});
+
+it('rechecks escape movement against other solid buildings', () => {
+  const { system, collision } = setup(), far = { x: 9, z: 9, radius: .4 };
+  expect(system.place('conveyor-cell', .5, .5, 0, far).reason).toBe('valid');
+  expect(system.place('conveyor-cell', -1.5, .5, 0, far).reason).toBe('valid');
+  const result = collision.moveCircle(-.39, .5, -4, 0, .4, 0, 1.8);
+  expect(result.x).toBeCloseTo(-.6); expect(result.collided).toBe(true);
+});

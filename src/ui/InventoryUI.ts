@@ -1,4 +1,5 @@
 import type { Inventory } from '../items/Inventory';
+import { createInventorySlot } from './InventorySlot';
 
 /** DOM-only presentation. Inventory remains authoritative and Three-free. */
 export class InventoryUI {
@@ -120,15 +121,9 @@ export class InventoryUI {
     const slots = this.inventory.snapshot();
     this.grid.replaceChildren();
     slots.forEach((slot, index) => {
-      const button = this.root.ownerDocument.createElement('button');
-      button.type = 'button'; button.className = 'inventory__slot'; button.dataset.slot = String(index);
+      const button = createInventorySlot(this.root.ownerDocument, this.inventory, slot, index);
       button.classList.toggle('is-selected', index === this.selected);
       button.draggable = slot !== null;
-      if (slot) {
-        const item = this.inventory.registry.get(slot.itemId);
-        button.textContent = `${item.icon} · ${item.name} ×${slot.quantity}`;
-        button.setAttribute('aria-label', `${item.name}, ${slot.quantity} of ${item.maxStackSize}`);
-      } else { button.textContent = 'Empty'; button.setAttribute('aria-label', `Empty slot ${index + 1}`); }
       this.grid.append(button);
     });
     const selected = this.selected === null ? null : slots[this.selected];

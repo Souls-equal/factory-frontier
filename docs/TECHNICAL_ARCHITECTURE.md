@@ -1149,3 +1149,20 @@ atomically to inventory or leaves it on the belt if full. The shared target is
 unregistered when an item is received or dropped; dropped-item interactions then
 take over. Starter generation has additional tree and stone candidates with the
 same seeded collision, spawn, and deposit exclusions and bounded retries.
+
+### Terminal slots and building-contact recovery
+
+`InventorySlot` provides shared DOM slot creation for the player inventory and
+terminal. The terminal iterates the authoritative inventory snapshot, rebuilding
+only on revision or selection changes, and displays empty and occupied slots at
+any configured capacity. Slot selection is inspection only; Retrieve contents
+continues to transfer all items that fit, retaining any remainder. Production
+terminals still have one slot, with no upgrade mechanism yet.
+
+Placement rejects the player's conservative square-expanded building footprint.
+`BuildingCollision` also handles an unexpected initial overlap (including tiny
+round-off overlaps) by projecting attempted motion against the nearest exit face,
+without positional correction: outward and tangential motion remain possible,
+while inward movement is constrained. Other buildings and natural obstacles are
+still swept; conservative square corners remain an approximation, not an exact
+capsule-box shape. Real player validation of the reported case remains pending.

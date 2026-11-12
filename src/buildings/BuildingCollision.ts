@@ -17,14 +17,35 @@ export class BuildingCollision implements CollisionQuery {
     let buildingHit = false;
     for (let pass = 0; pass < 8; pass++) {
       let nearest = Infinity, nx = 0, nz = 0;
+      // A newly placed/landed building or floating-point contact can leave the
+      // player just inside the conservative expanded box. Permit escape and
+      // tangential motion, but never motion deeper through the nearest face.
+      // No positional push is generated, so recovery cannot create velocity.
+      for (let projection = 0; projection < 4; projection++) {
+        let changed = false;
+        for (const building of solids) {
+          const f = building.transform.footprint;
+          const minX = f.minX - radius, maxX = f.maxX + radius, minZ = f.minZ - radius, maxZ = f.maxZ + radius;
+          if (!(px > minX && px < maxX && pz > minZ && pz < maxZ)) continue;
+          const faces = [
+            { depth: px - minX, x: -1, z: 0 }, { depth: maxX - px, x: 1, z: 0 },
+            { depth: pz - minZ, x: 0, z: -1 }, { depth: maxZ - pz, x: 0, z: 1 },
+          ];
+          faces.sort((a, b) => a.depth - b.depth || (rx * b.x + rz * b.z) - (rx * a.x + rz * a.z));
+          const face = faces[0]!, inward = rx * face.x + rz * face.z;
+          buildingHit = true; collided = true;
+          if (inward < 0) {
+            rx -= inward * face.x; rz -= inward * face.z;
+            normals.push({ x: face.x, z: face.z }); changed = true;
+          }
+        }
+        if (!changed) break;
+      }
       for (const building of solids) {
         const f = building.transform.footprint;
         const minX = f.minX - radius, maxX = f.maxX + radius, minZ = f.minZ - radius, maxZ = f.maxZ + radius;
-        // Conservative square corner expansion keeps the capsule out of the real rectangle.
-        if (px > minX && px < maxX && pz > minZ && pz < maxZ) {
-          // Do not manufacture a correction velocity for unexpected initial overlap.
-          return { x: px, z: pz, collided: true, normals, blocked: true };
-        }
+        // Overlap was handled above; only sweep boxes we start outside of.
+        if (px > minX && px < maxX && pz > minZ && pz < maxZ) continue;
         let enter = -Infinity, exit = Infinity, hitX = 0, hitZ = 0;
         for (const axis of ['x', 'z'] as const) {
           const pos = axis === 'x' ? px : pz, delta = axis === 'x' ? rx : rz;
@@ -35,8 +56,8 @@ export class BuildingCollision implements CollisionQuery {
           if (near > enter) { enter = near; hitX = axis === 'x' ? (delta > 0 ? -1 : 1) : 0; hitZ = axis === 'z' ? (delta > 0 ? -1 : 1) : 0; }
           exit = Math.min(exit, far);
         }
-        if (enter >= 0 && enter <= 1 && enter <= exit && enter < nearest && rx * hitX + rz * hitZ < 0) {
-          nearest = enter; nx = hitX; nz = hitZ;
+        if (enter >= -1e-9 && enter <= 1 && enter <= exit && enter < nearest && rx * hitX + rz * hitZ < 0) {
+          nearest = Math.max(0, enter); nx = hitX; nz = hitZ;
         }
       }
       if (!Number.isFinite(nearest)) {

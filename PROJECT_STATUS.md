@@ -9,6 +9,17 @@
 
 ---
 
+## Phase 5 — terminal slots and contact recovery (user validation pending)
+
+- The receiving terminal shows its actual inventory slots using the same slot
+  presentation as the player inventory. Slots can be selected for details;
+  Retrieve contents still transfers only what fits. Production capacity remains
+  one slot; the UI and tests also support configurable multi-slot inventories.
+- Conservative building contact now permits sliding or moving outward from an
+  existing overlap without a teleport or inward tunnelling. Placement still
+  rejects the player's expanded footprint. The reported in-game case needs player
+  re-testing; this fix covers a reproducible overlap/contact failure mode.
+
 ## Phase 5 — latest iteration (user validation pending)
 
 - Directional cells display curved guides and open incoming side rails for turns;

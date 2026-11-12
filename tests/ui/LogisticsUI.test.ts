@@ -12,7 +12,7 @@ import type { TerrainQuery } from '../../src/world/terrain/TerrainHeightfield';
 const terrain: TerrainQuery = { bounds: { minX: -20, maxX: 20, minZ: -20, maxZ: 20 }, size: 40, resolution: 20, cellSize: 2,
   contains: () => true, clampXZ: (x,z) => ({x,z}), heightAt: () => 0, slopeAt: () => 0, normalAt: () => ({ x: 0, y: 1, z: 0 }) };
 it('inspects real segment state and retrieves only what fits from a terminal', () => {
-  document.body.innerHTML = '<section hidden><h2 data-logistics-title></h2><button data-logistics-close>close</button><p data-logistics-details></p><button data-logistics-retrieve>retrieve</button><p data-logistics-notice></p></section>';
+  document.body.innerHTML = '<section hidden><h2 data-logistics-title></h2><button data-logistics-close>close</button><p data-logistics-details></p><div data-logistics-grid hidden></div><p data-logistics-slot-detail></p><button data-logistics-retrieve>retrieve</button><p data-logistics-notice></p></section>';
   const root = document.querySelector('section')!, items = createDefaultItemRegistry(), builder = new Inventory(items, 5);
   builder.addItem('stone', 20); builder.addItem('wood', 10);
   const buildings = new BuildingSystem(createDefaultBuildingRegistry(items), builder, terrain, [], 1, 19);
@@ -25,7 +25,9 @@ it('inspects real segment state and retrieves only what fits from a terminal', (
   const close = vi.fn(), ui = new LogisticsUI(root, logistics, playerInventory, close); ui.open(belt.id);
   expect(root.textContent).toContain('DISCONNECTED'); expect(root.textContent).toContain(terminal.id); expect(root.textContent).toContain('60 items/min');
   expect(root.querySelector<HTMLButtonElement>('[data-logistics-retrieve]')!.hidden).toBe(true);
-  ui.open(terminal.id); expect(root.textContent).toContain('Iron Ore: 10');
+  ui.open(terminal.id); expect(root.querySelector('[data-logistics-grid]')!.textContent).toContain('Iron Ore ×10');
+  root.querySelector<HTMLButtonElement>('[data-logistics-grid] [data-slot="0"]')!.click();
+  expect(root.querySelector('[data-logistics-slot-detail]')!.textContent).toContain('10 / 100');
   root.querySelector<HTMLButtonElement>('[data-logistics-retrieve]')!.click();
   expect(root.textContent).toContain('Transferred 3; 7 remain.');
   expect(logistics.terminal(terminal.id)!.getItemCount('iron-ore')).toBe(7);
@@ -35,7 +37,7 @@ it('inspects real segment state and retrieves only what fits from a terminal', (
 });
 
 it('explains an open end and reports BLOCKED rather than disconnected when a source is connected', () => {
-  document.body.innerHTML = '<section hidden><h2 data-logistics-title></h2><button data-logistics-close>close</button><p data-logistics-details></p><button data-logistics-retrieve>retrieve</button><p data-logistics-notice></p></section>';
+  document.body.innerHTML = '<section hidden><h2 data-logistics-title></h2><button data-logistics-close>close</button><p data-logistics-details></p><div data-logistics-grid hidden></div><p data-logistics-slot-detail></p><button data-logistics-retrieve>retrieve</button><p data-logistics-notice></p></section>';
   const root = document.querySelector('section')!, items = createDefaultItemRegistry(), builder = new Inventory(items, 5);
   builder.addItem('stone', 30); builder.addItem('wood', 20);
   const deposit = { id: 'ore', itemId: 'iron-ore', x: 0, y: 0, z: 0, radius: .8, purity: 'normal' as const, productionMultiplier: 1, extractionCompatible: true };
@@ -50,4 +52,28 @@ it('explains an open end and reports BLOCKED rather than disconnected when a sou
   for (let i = 0; i < 100; i++) logistics.fixedUpdate(50);
   ui.update(); expect(root.textContent).toContain('BLOCKED'); expect(root.textContent).toContain('Open end: connect another belt or a receiver.');
   expect(root.textContent).not.toContain('DISCONNECTED'); ui.dispose();
+});
+
+it('renders all configurable terminal slots, updates and preserves partial transfer', () => {
+  document.body.innerHTML = '<section hidden><h2 data-logistics-title></h2><button data-logistics-close>close</button><p data-logistics-details></p><div data-logistics-grid hidden></div><p data-logistics-slot-detail></p><button data-logistics-retrieve>retrieve</button><p data-logistics-notice></p></section>';
+  const root = document.querySelector('section')!, items = createDefaultItemRegistry(), builder = new Inventory(items, 5);
+  builder.addItem('stone', 10); builder.addItem('wood', 10);
+  const buildings = new BuildingSystem(createDefaultBuildingRegistry(items), builder, terrain, [], 1, 19);
+  const machines = new MachineManager(buildings, items, () => []), logistics = new LogisticsManager(buildings, machines, items, () => false, 3);
+  const terminal = buildings.place('receiving-terminal', 0, 0, 0, { x: 8, z: 8, radius: .4 }).building!;
+  logistics.sync(); const receiver = logistics.terminal(terminal.id)!;
+  receiver.addItem('iron-ore', 105); receiver.addItem('coal', 2);
+  const player = new Inventory(items, 1); player.addItem('iron-ore', 97);
+  const ui = new LogisticsUI(root, logistics, player, vi.fn()); ui.open(terminal.id);
+  const slots = () => [...root.querySelectorAll<HTMLButtonElement>('[data-logistics-grid] [data-slot]')];
+  expect(slots()).toHaveLength(3); expect(slots().map((s) => s.textContent)).toEqual(['Fe · Iron Ore ×100', 'Fe · Iron Ore ×5', 'C · Coal ×2']);
+  expect(slots()[2]!.getAttribute('aria-label')).toBe('Coal, 2 of 100'); slots()[2]!.click();
+  expect(root.textContent).toContain('Carbon-rich fuel');
+  const first = slots()[0]; ui.update(); expect(slots()[0]).toBe(first); // no rebuilding every frame
+  root.querySelector<HTMLButtonElement>('[data-logistics-retrieve]')!.click();
+  expect(player.getItemCount('iron-ore')).toBe(100); expect(receiver.getItemCount('iron-ore')).toBe(102);
+  expect(receiver.getItemCount('coal')).toBe(2); expect(root.textContent).toContain('Transferred 3; 104 remain.');
+  receiver.removeItem('coal', 2); ui.update(); expect(slots()[2]!.textContent).toBe('Empty');
+  expect(root.querySelector('[data-logistics-slot-detail]')!.textContent).not.toContain('Carbon-rich');
+  ui.closePanel(); ui.open(terminal.id); expect(slots()).toHaveLength(3); ui.dispose();
 });
