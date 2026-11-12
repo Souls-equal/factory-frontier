@@ -23,6 +23,8 @@ describe('starter resources', () => {
       const world = createWorld(config), definitions = world.gatherables.definitions;
       expect(definitions).toEqual(createWorld(config).gatherables.definitions);
       expect(new Set(definitions.map((d) => d.id)).size).toBe(definitions.length);
+      expect(definitions.filter((d) => d.kind === 'tree').length).toBeGreaterThanOrEqual(5);
+      expect(definitions.filter((d) => d.kind === 'stone').length).toBeGreaterThanOrEqual(10);
       expect(definitions.filter((d) => d.itemId === 'wood').reduce((n, d) => n + d.quantity, 0)).toBeGreaterThanOrEqual(20);
       expect(definitions.filter((d) => d.itemId === 'stone').reduce((n, d) => n + d.quantity, 0)).toBeGreaterThanOrEqual(30);
       for (const d of definitions) {

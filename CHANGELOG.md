@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — Phase 5 feedback
+
+- Add distinctive guided turn skins and open side rails on directional cells.
+- Accept one-cell conveyor output on all four marked terminal sides, preserving
+  one-stack capacity and backpressure; align heights for either placement order.
+- Replace E inspection of belts with pickup of moving items; preserve items when
+  inventory is full. Add more seeded starter trees and stones.
+- Automated coverage is not a substitute for player acceptance in a real browser.
+
 ## Unreleased — directional one-cell conveyors
 
 - Replace the automatic belt menu option with a one-cell belt facing the player's

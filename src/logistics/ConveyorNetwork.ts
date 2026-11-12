@@ -1,3 +1,4 @@
+import type { Inventory } from '../items/Inventory';
 import type { SimulationSystem } from '../core/Game';
 import { matchesPort, type ItemReceiver, type ItemSource } from './Ports';
 import { ConveyorPath, type Point3 } from './ConveyorPath';
@@ -52,6 +53,22 @@ export class ConveyorNetwork implements SimulationSystem {
   isCell(id: string): boolean { return this.cells.has(id); }
   get(id: string): ConveyorSegment | undefined { return this.segments.get(id); }
   all(): readonly ConveyorSegment[] { return [...this.segments.values()]; }
+  findItem(id: string): { item: TransportItem; position: Point3 } | undefined {
+    for (const segment of this.segments.values()) {
+      const item = segment.items.find((entry) => entry.id === id);
+      if (item) return { item, position: transportPosition(item, segment.path) };
+    }
+    return undefined;
+  }
+  pickup(id: string, inventory: Inventory): boolean {
+    for (const segment of this.segments.values()) {
+      const index = segment.items.findIndex((item) => item.id === id);
+      if (index < 0) continue;
+      if (inventory.addItem(segment.items[index]!.itemId, 1).moved !== 1) return false;
+      segment.items.splice(index, 1); this.refreshStates(); return true;
+    }
+    return false;
+  }
   add(id: string, path: ConveyorPath, settings: ConveyorSettings = DEFAULT_CONVEYOR_SETTINGS): ConveyorSegment {
     if (!id.trim() || this.segments.has(id) || ![settings.speed, settings.throughputPerMinute, settings.spacing].every(Number.isFinite) ||
         settings.speed <= 0 || settings.throughputPerMinute <= 0 || settings.spacing <= 0 || settings.spacing > path.length) {

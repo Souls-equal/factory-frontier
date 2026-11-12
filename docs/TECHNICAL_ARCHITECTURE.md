@@ -1113,8 +1113,9 @@ placement. Its straight path stays within the cell. Output targets the immediate
 adjacent cell regardless of the destination's heading: straight entry is at the
 inlet, side and opposite entry are at the centre. Existing legacy 2-cell paths
 remain separate and cannot connect to cells. Machine ports cover either one-cell
-lane across their 2-cell edge; a Miner uses one lane, while a terminal can receive
-from both. Non-accepting buildings at an output block instead of deleting items.
+lane across their 2-cell edge; a Miner uses one lane at its output, while a
+terminal accepts both lanes on any of its four sides when the belt points inward
+at matching height. New connected cells anchor to an existing terminal and vice versa. Non-accepting buildings at an output block instead of deleting items.
 
 The fixed tick moves cell contents first, then processes outputs in rotating order
 with capacity checks, so fan-in and cycles do not move items twice or duplicate
@@ -1136,3 +1137,15 @@ box-based rather than a precise ramp collider.
 
 Ground items are session-only, unstacked and unbounded. Physical browser
 validation and user acceptance remain outstanding.
+
+### Phase 5 interaction and turn presentation update
+
+Lateral cell entries produce curved guide markings and open the appropriate side
+rail; the same topology drives placed and preview meshes, including entry ramps.
+The terminal has cyan markings on each accepting side. Conveyor bodies are no
+longer E interactables. Moving items register dynamic targets using their stable
+transport IDs and authoritative transition position; pickup transfers one item
+atomically to inventory or leaves it on the belt if full. The shared target is
+unregistered when an item is received or dropped; dropped-item interactions then
+take over. Starter generation has additional tree and stone candidates with the
+same seeded collision, spawn, and deposit exclusions and bounded retries.

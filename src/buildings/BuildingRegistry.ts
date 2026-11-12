@@ -68,7 +68,7 @@ export function createDefaultBuildingRegistry(items: ItemRegistry): BuildingRegi
     ['conveyor-straight', 'Conveyor: Straight', 'Straight belt; arrow points in item direction.', .55],
     ['conveyor-curve', 'Conveyor: Right Curve', 'Quarter-turn belt; input at rear, output at right.', .55],
     ['conveyor-incline', 'Conveyor: Incline', 'Ascending belt; output is one metre above input.', 1.55],
-    ['receiving-terminal', 'Receiving Terminal', 'Small collection endpoint for conveyor output.', 1.2],
+    ['receiving-terminal', 'Receiving Terminal', 'Stores one stack; accepts conveyor outputs on any side.', 1.2],
   ] as const) registry.register({ id, name, description, category: 'Logistics', placement: 'logistics',
     cost: [{ itemId: 'stone', quantity: 4 }, { itemId: 'wood', quantity: 2 }], widthCells: 2, depthCells: 2,
     height, maxSlope: .58, maxGroundVariation: .8, color: 0x697f83 });

@@ -85,8 +85,11 @@ No save system exists: a reload resets all construction and inventory.
 7. Leave menus closed and watch the full chain. Expect individual ore items to
    move from the Miner through directional tiles, turns and ramps into the terminal;
    record any visible jumps, overlap or disappearing items. E on a
-   belt should show its shape, state, direction, input/output IDs, item count and
-   maximum throughput. E on the terminal should show iron and its slot capacity.
+   moving ore item should pick it up without opening a conveyor panel. With a full
+   inventory it should remain on the belt. E on the terminal should show iron and
+   its single-slot capacity. Try feeding both lanes on each of its four cyan-marked
+   sides, with the terminal placed before and after the belt. Observe the turn
+   skin and opened side rail for left/right and multi-input turns, including ramps.
 8. With a gameplay panel open, wait and try WASD, Q, C and F. Expect player
    motion, placement/demolition, Miner output and belt positions to remain unchanged.
    Close the panel: expect gameplay and transport to resume. Check pointer-lock

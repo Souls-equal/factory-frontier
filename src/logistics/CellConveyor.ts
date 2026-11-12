@@ -1,5 +1,5 @@
 import type { BuildingInstance } from '../buildings/BuildingSystem';
-import { machinePort, pathForBuilding } from './ConveyorDefinitions';
+import { BELT_HEIGHT, machinePort, pathForBuilding } from './ConveyorDefinitions';
 
 const epsilon = 1e-7;
 /** Whether a machine's 2-cell-wide port touches a particular one-cell lane. */
@@ -8,11 +8,12 @@ export function cellTouchesMachine(cell: BuildingInstance, machine: BuildingInst
   const port = machinePort(machine, cellSize, kind);
   const d = port.direction;
   if (kind === 'receiver') {
-    const out = path.direction('output');
-    if (out.x !== d.x || out.z !== d.z) return false;
-    const p = path.point(path.length), dx = p.x - port.position.x, dz = p.z - port.position.z;
-    return Math.abs(dx * d.x + dz * d.z) < epsilon && Math.abs(dx * d.z - dz * d.x) <= cellSize / 2 + epsilon &&
-      (ignoreHeight || Math.abs(p.y - port.position.y) < epsilon);
+    // A terminal accepts a belt pointing into any of its four faces. Its
+    // two-cell-wide footprint has two one-cell lanes on each side.
+    const d = path.direction('output'), p = path.point(path.length), f = machine.transform.footprint;
+    const acrossX = d.x !== 0 && Math.abs(p.x - (d.x > 0 ? f.minX : f.maxX)) < epsilon && p.z > f.minZ + epsilon && p.z < f.maxZ - epsilon;
+    const acrossZ = d.z !== 0 && Math.abs(p.z - (d.z > 0 ? f.minZ : f.maxZ)) < epsilon && p.x > f.minX + epsilon && p.x < f.maxX - epsilon;
+    return (acrossX || acrossZ) && (ignoreHeight || Math.abs(p.y - (machine.transform.y + BELT_HEIGHT)) < epsilon);
   }
   const dx = cell.transform.x - port.position.x, dz = cell.transform.z - port.position.z;
   return Math.abs(dx * d.x + dz * d.z - cellSize / 2) < epsilon &&
