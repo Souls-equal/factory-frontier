@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — construction menu previews
+
+- Show a static isometric thumbnail of each selectable building in the Q menu,
+  generated from the same meshes as placed buildings and cached for menu refreshes.
+- Keep previews visible for unaffordable entries, while preserving disabled selection.
+
 ## Unreleased — adjustable foundation platforms
 
 - Adjust foundation base height with Page Up/Down in 0.1 m steps; allow floating

@@ -475,9 +475,18 @@ body {
   clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 @media (max-width: 430px) { .inventory { padding: 10px; } .inventory__panel.inventory-panel { padding: 14px; } }
 
-.construction__list { display: grid; gap: .65rem; }
-.construction__entry { display: grid; gap: .35rem; text-align: left; padding: 1rem; color: #d7eef0; background: #152933; border: 1px solid #57818b; border-radius: .3rem; cursor: pointer; }
-.construction__entry:disabled { opacity: .55; cursor: not-allowed; }
+.construction__list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+.inventory .construction__entry { display: grid; grid-template-columns: 105px minmax(0, 1fr); align-items: center; gap: .8rem; text-align: left; padding: .7rem; min-width: 0; color: #d7eef0; background: #152933; border: 1px solid #57818b; border-radius: .4rem; cursor: pointer; }
+.inventory .construction__entry:disabled { opacity: 1; color: #a9bdc2; border-color: #3b5861; cursor: not-allowed; }
+.construction__visual { display: grid; place-items: center; aspect-ratio: 1; overflow: hidden; border: 1px solid #365b66; border-radius: .3rem; background: radial-gradient(ellipse at 50% 70%, #294d58, #0b1b25 75%); }
+.construction__visual svg { width: 100%; height: 100%; display: block; }
+.construction__details { display: grid; gap: .4rem; min-width: 0; line-height: 1.35; }
+.construction__details strong { color: #e1f4f4; }
+.construction__description { color: #a8c5c9; font-size: 12px; }
+.construction__cost { color: #9de0d5; font-size: 11px; }
+.construction__entry:disabled .construction__cost { color: #efb69d; }
+@media (max-width: 700px) { .construction__list { grid-template-columns: 1fr; } }
+@media (max-width: 430px) { .inventory .construction__entry { grid-template-columns: 78px minmax(0, 1fr); } }
 .construction-status { position: absolute; bottom: 5rem; left: 50%; transform: translateX(-50%); padding: .6rem .9rem; color: #e7f5f5; background: rgba(6,20,28,.88); border: 1px solid #5a8790; border-radius: .3rem; pointer-events: none; }
 
 /* Two separate, dark storage panels echo the reference without fake slots. */

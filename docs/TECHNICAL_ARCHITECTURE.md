@@ -909,7 +909,11 @@ rectangle sweeps. `BuildingTerrain` exposes foundation tops to the player; both
 read the current registry, so removal has immediate logical effect. The rendering
 engine's `BuildingView` mirrors snapshots and owns separate preview resources,
 which are reused while active and disposed on removal. Menus reuse the existing
-modal/pointer-lock input suspension. Demolition targeting does not perform
+modal/pointer-lock input suspension. The construction menu generates and caches
+static isometric SVG thumbnails from `BuildingView` meshes using Three.js's CPU
+SVG renderer; geometry/materials are disposed immediately and no extra WebGL
+context is created. Thumbnails are decorative; labels and costs remain text.
+Demolition targeting does not perform
 terrain/prop line-of-sight occlusion. Real-browser verification remains pending.
 
 
