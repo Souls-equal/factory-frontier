@@ -875,8 +875,10 @@ Automated tests exercise the registry, inventory conservation, seeded generation
 gathering and full/partial outcomes, drag/drop event handling, modal input, scene
 construction and the real bootstrap with a mocked WebGL engine. The user reports
 earlier Phase 2 browser acceptance passed overall, except full inventory; the new
-Phase 2.1 drag/drop and pointer-lock behavior has not been browser-verified by the
-agent. Native drag-and-drop currently has no keyboard move alternative.
+Phase 2.1 full browser acceptance was not verified at that time. A later Phase 5
+headless run exercised a native stack merge and construction-menu pointer-lock
+release/restore, not all inventory scenarios. Native drag-and-drop currently has
+no keyboard move alternative.
 
 
 ## Appendix E — Phase 3 construction integration
@@ -930,25 +932,49 @@ The temporary Phase 4 policy requires **no electricity**: NO_POWER is reserved
 for a future power model and is not produced by a pretend network. Inspection is
 DOM-only; the procedural machine indicator reads authoritative state. Renderer
 objects and the placement preview have separate lifecycles and are disposed.
-There are no conveyors, machine recipes, power connections or persistence yet.
+At the end of Phase 4 there were no conveyors, machine recipes, power connections or persistence; see Appendix G for subsequent Phase 5 work.
 
 
-## Appendix G — Phase 5 prototype (in progress; not integrated)
+## Appendix G — Phase 5 conveyor integration (in progress)
 
-`src/logistics` currently contains an isolated, Three-free prototype. Segment
-centreline paths are defined by a grid footprint, quarter-turn orientation and
-optional rise; curves use a quarter circle and inclines use three-dimensional path
-length. Ports use coincident positions, heights and matching directional tangents.
-Paths form explicit acyclic one-input/one-output routes, rebuilt only when topology
-changes. Inventory adapters move one whole item per successful synchronous transfer.
-Transport uses fixed simulation steps, per-segment speed, output/input cooldowns,
-minimum centreline spacing and downstream backpressure. Occupied segment removal
-is refused; disconnected items remain in their segments. Defaults are provisional:
-1 m/s, 60 items/minute and 0.5 m centreline spacing. Current algorithm advances at
-most one segment per tick, so very large simulation steps may under-run nominal
-speed or throughput; no wall-clock catch-up is promised.
+The prior Three-free prototype (`ConveyorPath`, `Ports`, `ConveyorNetwork`) remains
+transport authority. Segments have directional coincident ports and grid-aligned
+straight, quarter-circle right-curve or inclined paths. `ConveyorDefinitions`
+provides common geometry/ports; `ConveyorPlacement` derives connection height and
+rejects incompatible touching ports and cycles, including Miner output when the
+Miner is placed after a belt. `BuildingSystem` validates preview
+and placement identically, pays atomically, tracks topology revisions and composes
+independent demolition guards. A foundation supporting logistics cannot be removed.
+Terrain placement uses the existing slope and variation limits and sinks at most
+0.12 m; connected elevated paths may stand up to 2 m above the ground to allow a
+short incline and endpoint without introducing Phase 7 lifts or support structures.
 
-These modules are **not registered by the game**. There is no conveyor construction,
-physical machine port, player-accessible receiver, conveyor UI or conveyor/item
-rendering yet. The isolated tests do not establish playable integration or browser
-correctness, and the prototype must be reviewed and extended before adoption.
+`LogisticsManager` synchronizes buildings and topology on revision changes; it
+adapts the real Miner inventory to a source and owns one-slot configurable terminal
+inventories. Terminal retrieval transfers only what fits. Demolition refuses
+occupied segments and nonempty inventories rather than deleting resources. An
+empty removed connection disconnects and freezes any remaining items until the
+route is restored. Only complete source-to-terminal routes run; topology is linear
+and acyclic. No save/load exists. The game fixed-step stage runs machines before
+logistics and both pause during gameplay modals.
+
+Defaults are 1 m/s, 60 items/minute, 0.5 m spacing, and game ticks of 50 ms.
+Advancement is downstream first; one item cannot advance across multiple segments
+in a tick. Large steps can therefore under-run nominal rate. DISCONNECTED means no
+complete route, IDLE a complete empty route, RUNNING a complete moving/occupied
+route, BLOCKED a front item held by downstream capacity or spacing. INVALID and
+ERROR are reserved union values, not assigned runtime states; placement validation
+reports invalidity separately. No error-recovery model is implemented.
+
+`BuildingView` renders independent belt surfaces, ports and state lamps;
+`ConveyorItemsView` interpolates positions between fixed steps using instancing.
+Neither owns simulation state. DOM inspection exposes direction, connections,
+count, maximum throughput and status; terminal inventory can be collected.
+Tests cover real systems, scene graph and mocked-renderer bootstrap, not a real
+WebGL browser. Real-building chains have been tested at all four rotations and
+for 300 simulated seconds under repeated blockage and recovery, not exhaustively.
+A separate headless Chromium / SwiftShader WebGL 2 run exercised actual UI
+gathering, the full chain, modal pause, partial retrieval, full-terminal
+backpressure, terminal demolition refusal and recovery. It used synthetic input
+and DevTools observation, and does not establish physical usability. Other
+browser scenarios and user acceptance remain pending; Phase 5 is not complete.

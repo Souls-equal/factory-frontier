@@ -42,7 +42,7 @@ export class ConstructionController {
     const point = this.aim(view);
     if (!point) return null;
     const result = this.system.place(this.typeId, point.x, point.z, this.rotation, player);
-    if (result.reason === 'valid') this.cancel();
+    if (result.reason === 'valid' && !this.typeId.startsWith('conveyor-')) this.cancel();
     return result;
   }
   /** Nearest intersection with a registered building's actual box, never terrain/props. */

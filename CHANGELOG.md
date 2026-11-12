@@ -7,14 +7,26 @@ and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
-### Work in progress — Phase 5 conveyor simulation (not playable)
+### Work in progress — Phase 5 integrated conveyor foundation
 
-- Added an isolated, renderer-free path/port/transport prototype and focused tests.
-  Construction, machine connection, receiver gameplay, rendering and inspection
-  are **not integrated**; this is not a completed logistics network. Typecheck,
-  tests, build and verify passed: 366 tests across 41 files.
-- The user explicitly accepted Phase 4 for proceeding while acknowledging that
-  real-browser acceptance remains pending; no browser success is implied.
+- Reused the merged path, ports and fixed-step conveyor prototype; connected real
+  building placement, Miner inventory, oriented topology, terminal collection,
+  inspection, modal pause, procedural visuals and interpolated transport items.
+- Added building-backed end-to-end, blockage/recovery and conservation tests,
+  construction/bootstrap, UI and Three.js scene-graph tests. Typecheck, tests,
+  build and verify pass: **402 tests across 45 files**.
+- Fixed Miner placement bypassing incompatible pre-existing conveyor ports;
+  preview and placement now reject incompatible direction/height before payment.
+  Added four-rotation building chains, repeated topology changes, extended
+  conservation/spacing, instanced growth and bootstrap modal tests.
+- Headless Chromium 143 / SwiftShader WebGL 2 exercised real gathering, building,
+  the full transport path, partial collection, full blockage, terminal demolition
+  refusal and recovery. Construction-menu pointer lock release/restore also passed
+  in a separate run; Three.js logged its existing PCFSoftShadowMap fallback warning.
+  Physical/user acceptance and other browser scenarios remain pending. INVALID
+  and ERROR are reserved, not currently assigned; linear acyclic routes only.
+  Phase 5 remains in progress, not complete. The user authorized proceeding
+  from Phase 4 while its own real-browser verification remains pending.
 
 ### Added — Phase 4 Miner Mk.1 (browser acceptance pending)
 

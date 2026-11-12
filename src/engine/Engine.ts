@@ -1,3 +1,5 @@
+import { ConveyorItemsView } from './ConveyorItemsView';
+import type { ConveyorSegment, ConveyorState } from '../logistics/ConveyorNetwork';
 import { BuildingView } from './BuildingView';
 import type { BuildingRegistry } from '../buildings/BuildingRegistry';
 import type { BuildingInstance, PlacementResult } from '../buildings/BuildingSystem';
@@ -29,6 +31,7 @@ export class Engine implements GameEngine {
   private readonly lightingManager: LightingManager;
 
   private buildingView: BuildingView | undefined;
+  private conveyorItems: ConveyorItemsView | undefined;
   private initialized = false;
   private disposed = false;
 
@@ -83,11 +86,17 @@ export class Engine implements GameEngine {
     if (this.buildingView) throw new Error('Building renderer is already initialized.');
     this.buildingView = new BuildingView(registry, cellSize);
     this.sceneManager.scene.add(this.buildingView.group);
+    this.conveyorItems = new ConveyorItemsView((mesh) => this.sceneManager.scene.add(mesh), (mesh) => this.sceneManager.scene.remove(mesh));
   }
 
   syncBuildings(buildings: readonly BuildingInstance[]): void { this.buildingView?.sync(buildings); }
   setBuildingPreview(typeId: string | null, result?: PlacementResult): void { this.buildingView?.setPreview(typeId, result); }
   setMachineStates(states: readonly { readonly id: string; readonly state: MachineState }[]): void { this.buildingView?.setMachineStates(states); }
+
+  syncConveyors(segments: readonly ConveyorSegment[], alpha: number): void {
+    this.buildingView?.setConveyorStates(segments.map((segment) => ({ id: segment.id, state: segment.state as ConveyorState })));
+    this.conveyorItems?.sync(segments, alpha);
+  }
 
   setHighlight(id: string | null): void {
     if (this.disposed) {
@@ -125,6 +134,7 @@ export class Engine implements GameEngine {
     this.disposed = true;
     this.initialized = false;
 
+    this.conveyorItems?.dispose();
     this.buildingView?.dispose();
     this.lightingManager.dispose();
     this.sceneManager.dispose();

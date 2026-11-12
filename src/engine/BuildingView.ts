@@ -1,5 +1,8 @@
-import { BoxGeometry, ConeGeometry, CylinderGeometry, Group, Mesh, MeshStandardMaterial } from 'three';
+import { BoxGeometry, ConeGeometry, CylinderGeometry, Group, Mesh, MeshStandardMaterial, Vector3 } from 'three';
 import type { MachineState } from '../machines/Miner';
+import { ConveyorPath } from '../logistics/ConveyorPath';
+import { CONVEYOR_SHAPES, BELT_HEIGHT } from '../logistics/ConveyorDefinitions';
+import type { ConveyorState } from '../logistics/ConveyorNetwork';
 import type { BuildingRegistry } from '../buildings/BuildingRegistry';
 import type { BuildingInstance, PlacementResult } from '../buildings/BuildingSystem';
 
@@ -38,6 +41,14 @@ export class BuildingView {
       }
     }
   }
+  setConveyorStates(states: readonly { readonly id: string; readonly state: ConveyorState }[]): void {
+    const colors: Record<ConveyorState, number> = { RUNNING: 0x38ed8c, IDLE: 0xa8c7cf, BLOCKED: 0xffca47,
+      DISCONNECTED: 0xdd6954, INVALID: 0xff3b48, ERROR: 0xff3b48 };
+    for (const { id, state } of states) {
+      const lamp = this.meshes.get(id)?.getObjectByName('conveyor-indicator');
+      if (lamp instanceof Mesh && lamp.material instanceof MeshStandardMaterial) lamp.material.color.setHex(colors[state]);
+    }
+  }
   setPreview(typeId: string | null, placement?: PlacementResult): void {
     if (typeId === null || !placement) {
       if (this.preview) this.release(this.preview);
@@ -51,7 +62,9 @@ export class BuildingView {
     const mesh = this.preview!; const definition = this.registry.get(typeId);
     mesh.position.set(placement.transform.x, placement.transform.y + definition.height / 2, placement.transform.z);
     mesh.rotation.y = placement.transform.rotation * Math.PI / 2;
-    mesh.material.color.setHex(placement.reason === 'valid' ? 0x55e8b2 : 0xff5363);
+    const color = placement.reason === 'valid' ? 0x55e8b2 : 0xff5363;
+    mesh.material.color.setHex(color);
+    if (CONVEYOR_SHAPES[typeId]) for (const child of mesh.children) if (child instanceof Mesh && child.material instanceof MeshStandardMaterial) child.material.color.setHex(color);
   }
   dispose(): void {
     for (const mesh of this.meshes.values()) this.release(mesh);
@@ -77,6 +90,41 @@ export class BuildingView {
       part(new CylinderGeometry(.36 * scale, .48 * scale, .6, 12), 0x627882, 0, .35, 0, 'miner-drill');
       part(new ConeGeometry(.45 * scale, .6, 12), 0x92a0a0, 0, 2.05, 0, 'miner-head');
       part(new BoxGeometry(.25, .25, .12), 0x59656c, .48 * scale, 1.4, -.65 * scale, 'machine-indicator');
+      part(new BoxGeometry(.45 * scale, .3, .16), 0xf5d056, 0, .5, -scale, 'machine-output-port');
+    }
+    const shape = CONVEYOR_SHAPES[typeId];
+    if (shape) {
+      material.transparent = true; material.opacity = 0; material.depthWrite = false; mesh.castShadow = false;
+      const path = new ConveyorPath({ shape, x: 0, y: BELT_HEIGHT, z: 0, rotation: 0,
+        size: 2 * this.cellSize, ...(shape === 'incline' ? { rise: this.cellSize } : {}) });
+      const count = shape === 'curve-right' ? 16 : 1;
+      const geometry = new BoxGeometry(.8 * this.cellSize, .12, path.length / count + .004);
+      const belt = new MeshStandardMaterial({ color: 0x425961, roughness: .85, transparent: preview, opacity: preview ? .55 : 1 });
+      for (let i = 0; i < count; i++) {
+        const a = path.point(i * path.length / count), b = path.point((i + 1) * path.length / count);
+        const piece = new Mesh(geometry, belt); const tangent = new Vector3(b.x - a.x, b.y - a.y, b.z - a.z).normalize();
+        piece.position.set((a.x + b.x) / 2, (a.y + b.y) / 2 - def.height / 2, (a.z + b.z) / 2);
+        piece.quaternion.setFromUnitVectors(new Vector3(0, 0, 1), tangent); piece.name = 'conveyor-surface'; mesh.add(piece);
+      }
+      // Coloured end markers show flow: cyan = inlet, yellow = outlet.
+      for (const [distance, color, name] of [[0, 0x59dce1, 'conveyor-input'], [path.length, 0xf5d056, 'conveyor-output']] as const) {
+        const p = path.point(distance);
+        const marker = new Mesh(new BoxGeometry(.22, .12, .22), new MeshStandardMaterial({ color, transparent: preview, opacity: preview ? .65 : 1 }));
+        marker.position.set(p.x, p.y - def.height / 2 + .1, p.z); marker.name = name; mesh.add(marker);
+      }
+      const lamp = new Mesh(new BoxGeometry(.18, .15, .18), new MeshStandardMaterial({ color: 0xdd6954 }));
+      lamp.position.set(-.43 * this.cellSize, BELT_HEIGHT - def.height / 2 + .12, .6 * this.cellSize);
+      lamp.name = 'conveyor-indicator'; mesh.add(lamp);
+      for (const z of [-.6 * this.cellSize, .6 * this.cellSize]) {
+        const support = new Mesh(new BoxGeometry(.9 * this.cellSize, .35, .16),
+          new MeshStandardMaterial({ color: 0x7e8b8a, transparent: preview, opacity: preview ? .55 : 1 }));
+        support.position.set(0, .175 - def.height / 2, z); support.name = 'conveyor-support'; mesh.add(support);
+      }
+    }
+    if (typeId === 'receiving-terminal') {
+      const port = new Mesh(new BoxGeometry(.45 * this.cellSize, .3, .12),
+        new MeshStandardMaterial({ color: 0x59dce1, transparent: preview, opacity: preview ? .65 : 1 }));
+      port.position.set(0, BELT_HEIGHT - def.height / 2, this.cellSize); port.name = 'terminal-input-port'; mesh.add(port);
     }
     // A contrasting north-edge stripe makes quarter-turns visible even for a square footprint.
     const stripe = new Mesh(new BoxGeometry(def.widthCells * this.cellSize * 0.55, 0.02, 0.08),
@@ -87,8 +135,14 @@ export class BuildingView {
   }
   private release(mesh: Mesh<BoxGeometry, MeshStandardMaterial>): void {
     this.group.remove(mesh);
+    const geometries = new Set<object>(), materials = new Set<object>();
     for (const child of mesh.children) {
-      if (child instanceof Mesh) { child.geometry.dispose(); const materials = Array.isArray(child.material) ? child.material : [child.material]; materials.forEach((material) => material.dispose()); }
+      if (child instanceof Mesh) {
+        if (!geometries.has(child.geometry)) { geometries.add(child.geometry); child.geometry.dispose(); }
+        for (const material of Array.isArray(child.material) ? child.material : [child.material]) {
+          if (!materials.has(material)) { materials.add(material); material.dispose(); }
+        }
+      }
     }
     mesh.geometry.dispose(); mesh.material.dispose();
   }

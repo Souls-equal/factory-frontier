@@ -17,7 +17,7 @@
 
       <div class="hud-brand" aria-hidden="true">
         <span class="hud-brand__name">FACTORY FRONTIER</span>
-        <span class="hud-brand__phase">PHASE 4 · EXTRACTION</span>
+        <span class="hud-brand__phase">PHASE 5 · LOGISTICS</span>
       </div>
 
       <div class="crosshair" aria-hidden="true"></div>
@@ -56,7 +56,7 @@
         <div class="inventory__panel">
           <header class="inventory__header"><div><span class="inventory__eyebrow">FIELD OPERATIONS</span><h2>Construction</h2></div>
             <button type="button" data-construction-close>Close · Esc</button></header>
-          <p class="inventory__intro">Select a building, aim at nearby ground, rotate with R and place with C.</p>
+          <p class="inventory__intro">Select a building, aim at nearby ground, rotate with R and place with C. Belts travel from rear to front; curves turn right.</p>
           <div class="construction__list" data-construction-list></div>
         </div>
       </section>
@@ -69,6 +69,16 @@
           <p class="inventory__detail" data-machine-details></p>
           <div class="inventory__footer"><button type="button" data-machine-toggle>Disable</button><button type="button" data-machine-retrieve>Retrieve output</button></div>
           <p data-machine-notice role="status" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section class="inventory" data-ui="logistics" role="dialog" aria-modal="true" aria-label="Logistics inspection" hidden>
+        <div class="inventory__panel">
+          <header class="inventory__header"><div><span class="inventory__eyebrow">LOGISTICS</span><h2 data-logistics-title>Conveyor</h2></div>
+            <button type="button" data-logistics-close>Close · Esc</button></header>
+          <p class="inventory__detail" data-logistics-details></p>
+          <div class="inventory__footer"><button type="button" data-logistics-retrieve>Retrieve contents</button></div>
+          <p data-logistics-notice role="status" aria-live="polite"></p>
         </div>
       </section>
 

@@ -3,35 +3,72 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 5 — Conveyor foundation (in progress)
-**Phase Status:** 🟡 In progress — isolated simulation only; not playable
-**Next Recommended Task:** Integrate conveyor construction, machine/receiver ports, rendering and UI, then verify the complete playable path
+**Phase Status:** 🟡 In progress — headless WebGL path verified; user acceptance pending
+**Next Recommended Task:** Complete remaining physical/user acceptance, fix findings, then finish PR/CI and deployment verification
 **Last Updated:** 2026-11-11
 
 ---
 
 ## Phase 5 — Conveyor foundation (in progress, 2026-11-11)
 
-- The user explicitly accepted Phase 4 and authorized Phase 5 **with Phase 4
-  browser verification still pending**. This is not a report that browser checks
-  passed. The Phase 5 baseline passed typecheck, 353 tests in 39 files, build and
-  verify before changes.
-- An **isolated, not-yet-integrated** simulation prototype adds straight,
-  right-curve and incline centreline geometry; grid-aligned directional port
-  matching; single-input/single-output acyclic routes; one-item inventory source
-  and receiver adapters; fixed-step movement with spacing, throughput limits,
-  backpressure and refusal to remove occupied segments. These are not yet
-  available in the game, construction menu, renderer or interaction UI.
-- Tests cover the prototype's geometry, selected spacing and conservation cases,
-  blocking and recovery, one real Miner instance in an isolated test, topology
-  removal and frame partitioning. This is not evidence of an end-to-end playable
-  Miner → conveyor → receiver path, nor a comprehensive conservation proof.
-- Current verification: `npm run typecheck`, `npm test`, `npm run build`, and
-  `npm run verify` pass; **366 tests in 41 files**, including the prototype tests.
-- Still required: integrate building validation/placement and foundation support,
-  Miner output and a player-accessible receiving endpoint, topology lifecycle,
-  construction workflow, inspection, state-driven visuals, item interpolation,
-  browser acceptance and full integration/regression verification. No Phase 5 PR
-  or deployment should be considered complete until these are done.
+- The merged baseline was an isolated conveyor prototype, not a playable path.
+  This branch integrates it into construction, the game loop, machine inventory,
+  rendering and interaction. Phase 4 was accepted by the user for proceeding
+  with its browser verification still pending.
+- The construction menu exposes straight, right curve, incline and a minimal
+  receiving terminal (each 4 stone and 2 wood). R rotates, C places repeatedly
+  for belts, Escape exits; invalid, disconnected and connected preview feedback
+  shares the authoritative placement validator. Ports are directional and
+  height-matched; mismatched connections and loops are rejected before payment.
+  Miner placement now validates adjacent ports even when the belt was placed first.
+  Disconnecting a route pauses its items rather than discarding them.
+- A foundation may support a whole logistics footprint; removing a loaded
+  foundation is refused. Otherwise placement follows terrain slope/variation
+  limits, permits at most 0.12 m terrain penetration, and allows a connected
+  elevated end up to 2 m above terrain for inclines. This bounded temporary
+  support policy enables incline-to-terminal construction without a lift system.
+- Stable building IDs link a real Miner output inventory, belt segments and a
+  one-slot, configurable, inspectable terminal. Partial player retrieval conserves
+  remainders; occupied belts, non-empty miner/terminal inventories and refunds
+  that cannot fit block demolition. Shared additive guards preserve all checks.
+- Fixed-step transport uses the existing prototype's one-input/one-output acyclic
+  routes, 1 m/s speed, 60 items/minute and 0.5 m spacing by default, with
+  downstream blockage and recovery. Rendered instances interpolate logical
+  positions; cyan input and yellow output markers, shapes and state lamps are
+  presentation only. Modal panels pause production/transport. DISCONNECTED,
+  IDLE, RUNNING and BLOCKED are assigned; INVALID and ERROR are reserved, not
+  currently runtime states (invalid placement has explicit feedback).
+- **Automated:** typecheck, test, build and verify pass: 402 tests in 45 files.
+  Coverage includes a real Miner → straight → curve → incline → terminal,
+  conservation, full/recovery, disabled source, removal, terrain support,
+  construction/UI and bootstrap (mock renderer), and Three.js scene graph tests.
+  Added rotation, placement-order, repeated topology rebuild, 300-second blocked/recovery,
+  instanced growth and real-bootstrap modal regression coverage. These do not
+  demonstrate browser/WebGL, pointer lock or actual usability.
+- **Headless real-browser check:** Chromium 143 on Debian, WebGL 2 with
+  SwiftShader. The agent built NSS/NSPR from Mozilla source in temporary storage
+  to launch it; no project dependency changed. Using actual UI inputs, it gathered
+  resources, placed Miner → straight → right curve → incline → terminal, saw
+  transport and terminal receipt, and inspected the endpoint. Pointer lock released
+  and restored around construction in a separate run; the gameplay automation used
+  drag-look fallback. DevTools was used to observe, not mutate, logical state.
+- In that browser, a full 24-slot player inventory with 95 iron retrieved exactly
+  5 of 9 terminal iron, leaving 4. The terminal later reached 100; all three belt
+  segments reported BLOCKED, terminal demolition was refused, and after retrieval
+  flow resumed (13 items received). A 4-second terminal modal held item positions
+  and inventories unchanged. No page errors occurred; Three.js logged its existing
+  PCFSoftShadowMap fallback warning.
+- **Physical/user acceptance remains pending.** The headless run used one layout,
+  synthetic input and software rendering; it is not a manual usability assessment.
+  Other rotations, foundation interaction, invalid-payment behavior, belt/miner
+  demolition and disable/re-enable were not browser-tested. Follow
+  `docs/PHASE_5_MANUAL_ACCEPTANCE.md` and report results. Phase 5 is **not complete
+  or accepted**; no Phase 6 scope has been started.
+- Limits: only linear acyclic networks; no splitters/mergers or save/load. State
+  ERROR is not detected/recovered. Tests do not prove universal non-overlap or
+  absence of loss under all configurations. Large time steps can under-run nominal
+  throughput; standard game simulation uses fixed 50 ms steps. Disconnected items
+  cannot be manually collected from belts and must be reconnected before removal.
 
 ---
 
@@ -70,8 +107,9 @@
 - `npm run typecheck`, `npm test`, `npm run build` and `npm run verify` passed:
   **353 tests in 39 files**, plus build, preview and dev-server checks.
 - **Browser acceptance remains pending.** The earlier Chromium attempt failed on
-  missing NSS/NSPR libraries; no browser executable is presently available here.
-  WebGL, native pointer lock and physical usability have not been agent-verified.
+  missing NSS/NSPR libraries at that time. A later Phase 5 headless run covered
+  portions of Miner operation and pointer lock, but not full Phase 4 acceptance.
+  Physical usability has not been agent-verified.
   No conveyors, recipes, power network, saves or Phase 5 work are included.
 
 ---
@@ -138,7 +176,9 @@
   **314 tests in 27 files**. Existing click-to-move UI test was updated because
   that behavior was intentionally replaced by drag-and-drop.
 - The agent did **not** perform browser-level verification of these changes:
-  headless Chromium in the sandbox is missing NSS/NSPR system libraries. Verify
+  at that time headless Chromium lacked NSS/NSPR system libraries. The later
+  Phase 5 headless run covered a stack merge and construction-menu pointer-lock
+  restoration, but not the full Phase 2.1 acceptance. Verify
   native drag-and-drop (including cancelling outside the panel), split/merge/swap,
   pointer-lock restore and denial fallback, and full/partial gathering in a real
   browser. Native HTML drag-and-drop has no dedicated keyboard move alternative.
@@ -359,8 +399,8 @@ This task's merge is deployed by the same pipeline; the result is recorded below
 6. **Two interactable props exist as environment content.** They demonstrate the
    interaction contract (ping log, relay channel) and are not resource/gameplay
    systems.
-7. **No save system, machines or power** — by design. Buildings and inventory exist in memory only.
-8. **Source maps (~3.11 MB) ship with the production build** for debuggability.
+7. **No save system or power network** — by design. Machines, buildings and inventory exist in memory only.
+8. **Source maps (~3.27 MB) ship with the production build** for debuggability.
 9. **Collision bounds:** a deeply embedded spawn or pathological intersecting
    cylinder cluster may need a noticeable depenetration correction or remain
    overlapped. Remaining movement is conservatively stopped when the bounded
@@ -373,10 +413,12 @@ This task's merge is deployed by the same pipeline; the result is recorded below
 
 ## Next Recommended Task
 
-1. Perform and record browser checks for Phase 3 and the remaining Phase 2.1 UX; investigate any failures.
-2. Address any constrained-generation or reachability issues discovered during
-   testing. Do not start Phase 3 without explicit authorization and validated
-   Phase 2 acceptance.
+Complete Phase 5 physical/user acceptance, including remaining placement,
+connection, demolition and recovery scenarios. A subset passed headless browser
+automation as described above; repeat it for actual usability. Also verify the
+outstanding Phase 4 and earlier browser checks. Fix findings and
+complete CI, protection, PR and deployment checks before declaring acceptance.
+Do not start Phase 6 without authorization.
 
 ---
 
