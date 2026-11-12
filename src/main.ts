@@ -1,5 +1,6 @@
 import './styles/main.css';
 
+import { VoxelCollision } from './world/terrain/VoxelCollision';
 import { BuildingTerrain } from './buildings/BuildingTerrain';
 import { BuildingCollision } from './buildings/BuildingCollision';
 import { ConstructionController } from './buildings/ConstructionController';
@@ -147,7 +148,7 @@ async function boot(): Promise<void> {
   engine.initBuildings?.(buildingRegistry, config.construction.gridSize);
   const player = new PlayerController({
     controls: config.controls, player: config.player, terrain: new BuildingTerrain(world.terrain, buildings),
-    obstacles: new BuildingCollision(world.obstacles, buildings), spawn: world.spawn,
+    obstacles: new BuildingCollision(new VoxelCollision(world.terrain, world.obstacles), buildings), spawn: world.spawn,
   });
   const playerFootprint = () => ({ x: player.position.x, z: player.position.z, radius: config.player.radius });
   const machines = new MachineManager(buildings, registry, () => world.deposits, config.miner,

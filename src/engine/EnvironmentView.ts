@@ -28,7 +28,7 @@ import type { InteractableDefinition } from '../world/World';
  *
  * The view is a pure consumer of world data: it never computes gameplay values
  * and never owns player state. Terrain vertices come from
- * `TerrainHeightfield.getRenderData()`, so what is drawn is exactly what
+ * `VoxelTerrain.getRenderData()`, so what is drawn is exactly what
  * physics collides with.
  *
  * Performance notes:
@@ -209,8 +209,8 @@ export class EnvironmentView {
       color.lerp(PALETTE.ridge, clamp01((heightT - 0.6) * 2.2));
       color.lerp(PALETTE.rock, steepness * 0.85);
 
-      // Subtle per-vertex variation breaks up flat areas without textures.
-      const variation = 0.92 + 0.16 * ((vertex * 2654435761) % 1000) / 1000;
+      // One tint per quad keeps block faces flat rather than interpolating noise.
+      const variation = 0.92 + 0.16 * ((Math.floor(vertex / 4) * 2654435761) % 1000) / 1000;
       target[vertex * 3] = color.r * variation;
       target[vertex * 3 + 1] = color.g * variation;
       target[vertex * 3 + 2] = color.b * variation;

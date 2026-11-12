@@ -1,5 +1,6 @@
 import { TerrainHeightfield, type TerrainQuery } from '../world/terrain/TerrainHeightfield';
 import type { Footprint } from './Transform';
+import { VoxelTerrain } from '../world/terrain/VoxelTerrain';
 
 interface Point { x: number; z: number }
 interface Support { low: number; high: number; slope: number }
@@ -21,8 +22,21 @@ function clip(points: Point[], axis: 'x' | 'z', bound: number, greater: boolean)
   return result;
 }
 
-/** Exact extrema for the piecewise-triangular production heightfield. */
+/** Exact extrema for voxel columns or the piecewise-triangular heightfield. */
 export function terrainSupport(terrain: TerrainQuery, f: Footprint): Support | null {
+  if (terrain instanceof VoxelTerrain) {
+    const size = terrain.blockSize;
+    const imin = Math.max(0, Math.floor((f.minX - terrain.originX) / size));
+    const imax = Math.min(terrain.columnsX - 1, Math.ceil((f.maxX - terrain.originX) / size) - 1);
+    const jmin = Math.max(0, Math.floor((f.minZ - terrain.originZ) / size));
+    const jmax = Math.min(terrain.columnsZ - 1, Math.ceil((f.maxZ - terrain.originZ) / size) - 1);
+    let low = Infinity, high = -Infinity;
+    for (let j = jmin; j <= jmax; j++) for (let i = imin; i <= imax; i++) {
+      const height = terrain.topLevel(i, j)! * size;
+      low = Math.min(low, height); high = Math.max(high, height);
+    }
+    return Number.isFinite(low) && Number.isFinite(high) ? { low, high, slope: 0 } : null;
+  }
   if (!(terrain instanceof TerrainHeightfield)) {
     // Generic TerrainQuery implementations provide no triangle topology.
     let low = Infinity, high = -Infinity, slope = 0;

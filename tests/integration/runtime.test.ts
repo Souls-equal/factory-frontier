@@ -1,3 +1,6 @@
+import { BuildingTerrain } from '../../src/buildings/BuildingTerrain';
+import { BuildingCollision } from '../../src/buildings/BuildingCollision';
+import { VoxelCollision } from '../../src/world/terrain/VoxelCollision';
 import { describe, expect, it } from 'vitest';
 
 import { createGameConfig } from '../../src/core/Configuration';
@@ -33,8 +36,8 @@ function createRuntime() {
   const player = new PlayerController({
     controls: config.controls,
     player: config.player,
-    terrain: world.terrain,
-    obstacles: world.obstacles,
+    terrain: new BuildingTerrain(world.terrain, world.buildings),
+    obstacles: new BuildingCollision(new VoxelCollision(world.terrain, world.obstacles), world.buildings),
     spawn: world.spawn,
   });
   const interaction = new InteractionSystem({
@@ -164,8 +167,8 @@ describe('runtime composition', () => {
     const player = new PlayerController({
       controls: runtime.config.controls,
       player: runtime.config.player,
-      terrain: runtime.world.terrain,
-      obstacles: runtime.world.obstacles,
+      terrain: new BuildingTerrain(runtime.world.terrain, runtime.world.buildings),
+      obstacles: new BuildingCollision(new VoxelCollision(runtime.world.terrain, runtime.world.obstacles), runtime.world.buildings),
       spawn: { x: beacon.x, y: beacon.baseY, z: beacon.z + 2, yaw: 0 },
     });
     const interaction = new InteractionSystem({

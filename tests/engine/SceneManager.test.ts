@@ -42,9 +42,19 @@ describe('SceneManager', () => {
     expect(position.count).toBe(data.vertexCount);
     expect(terrain.geometry.getIndex()?.count).toBe(data.triangleCount * 3);
 
-    // A rendered vertex must sit exactly on the collision surface.
-    const sample = Math.floor(data.vertexCount / 2);
-    expect(position.getY(sample)).toBeCloseTo(data.positions[sample * 3 + 1] ?? Number.NaN, 6);
+    // Each top face centre must agree with the authoritative voxel column.
+    let tops = 0, walls = 0;
+    for (let face = 0; face < data.faceCount; face++) {
+      const offset = face * 12;
+      if (data.normals[offset + 1] === 1) {
+        const x = (data.positions[offset]! + data.positions[offset + 6]!) / 2;
+        const z = (data.positions[offset + 2]! + data.positions[offset + 8]!) / 2;
+        expect(data.positions[offset + 1]).toBeCloseTo(world.terrain.heightAt(x, z), 5);
+        tops++;
+      } else walls++;
+    }
+    expect(tops).toBe(world.terrain.columnsX * world.terrain.columnsZ);
+    expect(walls).toBeGreaterThan(0);
   });
 
   it('shades terrain with vertex colours and receives shadows', () => {
@@ -166,10 +176,12 @@ describe('SceneManager', () => {
     const config = createGameConfig({ world: { resolution: 12, obstacleCount: 4, sizeMeters: 60 } });
     const world: World = createWorld(config);
     const before = world.terrain.heightAt(4, 4);
+    const resolutionBefore = world.terrain.resolution;
 
     const manager = new SceneManager(config.render, world);
     expect(world.terrain.heightAt(4, 4)).toBe(before);
-    expect(world.terrain.resolution).toBe(12);
+    expect(world.terrain.resolution).toBe(resolutionBefore);
+    expect(resolutionBefore).toBe(60);
     manager.dispose();
   });
 });

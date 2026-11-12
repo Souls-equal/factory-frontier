@@ -4,32 +4,37 @@
 **Version:** 0.3.0
 **Current Phase:** Phase 5 — Conveyor foundation (in progress)
 **Phase Status:** 🟡 In progress — headless WebGL path verified; user acceptance pending
-**Next Recommended Task:** Integrate voxel terrain, collision and jumping, then the new bootstrap resource loop and voxel visuals without losing Phase 5 functionality
+**Next Recommended Task:** Complete physical voxel acceptance and implement the new bootstrap resource loop and voxel visuals without losing Phase 5 functionality
 **Last Updated:** 2026-11-11
 
 ---
 
-## Voxel transition — foundation only (in progress)
+## Voxel transition — terrain integration (in progress)
 
-- The user chose an indestructible voxel terrain, voxel-style resources and
-  machines, and starting resources from breakable trees, branches and small
-  loose stones rather than digging terrain. A first Miner that needs no iron is
-  proposed to avoid an iron bootstrap deadlock; its exact cost is not implemented.
-- `VoxelTerrain` is a standalone, Three-free, finite, immutable column model. It
-  quantizes sampled heights, answers occupancy and column queries, and produces
-  exposed voxel faces with a bounded allocation. It can use the existing seeded
-  terrain as a deterministic input. This is **not yet connected to the game**.
-  Typecheck, test, build and verify pass (416 tests in 47 files); these checks
-  do not demonstrate playable voxel collision, rendering or usability.
-- The playable world is still the existing smooth heightfield: the transition
-  has not delivered voxel rendering, wall collisions/jump traversal, collectible
-  trees/branches/stones, new Miner cost, or voxel-style models. The current
-  resource interactions and Phase 5 chain have not been changed.
-- Next, integrate an authoritative block surface with swept wall collision,
-  jumping/landing and terrain-aware placement; implement the new starting loop;
-  adapt visuals; rerun gameplay and browser/manual acceptance. No caves,
-  terrain destruction, chunk streaming or saving are implied by this stage.
-  Phase 5 physical acceptance remains pending, not waived.
+- The user chose indestructible voxel terrain and voxel-style resources and
+  machines, with trees, branches and loose stones providing initial materials.
+  A Miner without an iron requirement is proposed to avoid an iron bootstrap
+  deadlock; this cost and the new resource loop have **not** been implemented.
+- The playable world now samples the seeded heightfield into immutable solid
+  voxel columns, renders exposed block faces and resolves swept horizontal wall
+  contacts plus footprint-aware landing. The default block size is 1 m and the
+  default jump speed is 8.4 m/s; fixed-step tests cover a one-block jump and a
+  two-block wall. Terrain cannot be edited. The existing generation settings
+  still define the sampled heightfield. For large/complex configurations the
+  grid may be coarsened to stay under the 500,000-face mesh budget; blocks can
+  then exceed jump height. No chunk streaming, caves, terrain editing or saving.
+- Building support checks all overlapping columns and rejects footprints that
+  bridge excessive height differences. Deposit generation additionally checks
+  the snapped Miner footprint; locations may therefore differ from the old world.
+  Tests cover generated deposits across representative seeds and the full existing
+  Miner-to-terminal chain on the default voxel world, not all possible worlds.
+  Typecheck, test, build and verify pass: 433 tests in 49 files.
+- **Still pending:** manual collection of branches/stones and breakable trees,
+  revised first Miner cost, voxel styling of machines/resources, and the full
+  browser/user acceptance. For now the old deposit-gathering loop and models
+  remain available; this is an interim step, not the requested final gameplay.
+  The voxel movement/rendering changes have not yet been validated by a person
+  or through WebGL here. Phase 5 physical acceptance remains pending, not waived.
 
 ---
 

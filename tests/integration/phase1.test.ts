@@ -1,3 +1,6 @@
+import { BuildingTerrain } from '../../src/buildings/BuildingTerrain';
+import { BuildingCollision } from '../../src/buildings/BuildingCollision';
+import { VoxelCollision } from '../../src/world/terrain/VoxelCollision';
 import { describe, expect, it } from 'vitest';
 
 import { createGameConfig } from '../../src/core/Configuration';
@@ -29,8 +32,8 @@ function createScenario() {
   const player = new PlayerController({
     controls: config.controls,
     player: config.player,
-    terrain: world.terrain,
-    obstacles: world.obstacles,
+    terrain: new BuildingTerrain(world.terrain, world.buildings),
+    obstacles: new BuildingCollision(new VoxelCollision(world.terrain, world.obstacles), world.buildings),
     spawn: world.spawn,
   });
   const interaction = new InteractionSystem({

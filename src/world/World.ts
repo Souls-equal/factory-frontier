@@ -1,4 +1,6 @@
 import { BuildingSystem } from '../buildings/BuildingSystem';
+import { snapFootprint } from '../buildings/Transform';
+import { terrainSupport } from '../buildings/TerrainSupport';
 import { createDefaultBuildingRegistry } from '../buildings/BuildingRegistry';
 import { Inventory } from '../items/Inventory';
 import { createDefaultItemRegistry } from '../items/ItemRegistry';
@@ -6,7 +8,8 @@ import type { GameConfig } from '../core/Configuration';
 import { generateDeposits, type ResourceDeposit } from '../resources/ResourceDeposit';
 import { ObstacleField, type ObstacleDefinition } from './ObstacleField';
 import { createRandom } from './rng';
-import { TerrainHeightfield } from './terrain/TerrainHeightfield';
+import { TerrainHeightfield, type TerrainQuery } from './terrain/TerrainHeightfield';
+import { VoxelTerrain } from './terrain/VoxelTerrain';
 
 /**
  * Phase 1 world assembly.
@@ -46,7 +49,7 @@ export interface WorldSpawn {
 }
 
 export interface World {
-  readonly terrain: TerrainHeightfield;
+  readonly terrain: VoxelTerrain;
   readonly buildings: BuildingSystem;
   readonly obstacles: ObstacleField;
   readonly obstacleDefinitions: readonly ObstacleDefinition[];
@@ -65,7 +68,7 @@ const CLEARING_RADIUS = 15;
 export function createWorld(config: GameConfig, inventory = new Inventory(createDefaultItemRegistry(), config.resources.inventorySlots)): World {
   const { world: worldConfig, interaction } = config;
 
-  const terrain = new TerrainHeightfield({
+  const source = new TerrainHeightfield({
     seed: worldConfig.seed,
     sizeMeters: worldConfig.sizeMeters,
     resolution: worldConfig.resolution,
@@ -74,10 +77,37 @@ export function createWorld(config: GameConfig, inventory = new Inventory(create
     rimHeight: worldConfig.rimHeight,
   });
 
+  // Prefer one-metre cubes; coarsen only if a configured world exceeds the
+  // bounded mesh budget. The gameplay grid and mesh always use the same data.
+  let columns = Math.min(512, Math.ceil(worldConfig.sizeMeters));
+  let terrain: VoxelTerrain;
+  for (;;) {
+    const blockSize = worldConfig.sizeMeters / columns;
+    let lowest = Infinity;
+    for (let z = 0; z < columns; z++) for (let x = 0; x < columns; x++) {
+      const wx = source.bounds.minX + (x + .5) * blockSize, wz = source.bounds.minZ + (z + .5) * blockSize;
+      lowest = Math.min(lowest, Math.round(source.heightAt(wx, wz) / blockSize));
+    }
+    terrain = new VoxelTerrain({ originX: source.bounds.minX, originZ: source.bounds.minZ,
+      columnsX: columns, columnsZ: columns, blockSize, bottomLevel: lowest - 1,
+      sampleHeight: (x, z) => source.heightAt(x, z) });
+    if (terrain.getSurfaceFaceCount() <= 500_000) break;
+    columns = Math.max(1, Math.floor(columns * .8));
+  }
+
   const interactables = createInteractables(terrain, interaction.targetRadius);
   const original = createObstacles(terrain, worldConfig, interactables);
+  const buildingRegistry = createDefaultBuildingRegistry(inventory.registry);
+  const miner = buildingRegistry.get('miner-mk1');
   const deposits = generateDeposits(terrain, original.definitions, worldConfig.seed,
-    { x: SPAWN_X, z: SPAWN_Z }, config.resources, config.controls.playAreaRadius);
+    { x: SPAWN_X, z: SPAWN_Z }, config.resources, config.controls.playAreaRadius, (x, z) => {
+      const f = snapFootprint(miner, x, z, 0, config.construction.gridSize).footprint;
+      if (!terrain.contains(f.minX, f.minZ) || !terrain.contains(f.maxX, f.maxZ) ||
+          [[f.minX, f.minZ], [f.minX, f.maxZ], [f.maxX, f.minZ], [f.maxX, f.maxZ]]
+            .some(([px, pz]) => Math.hypot(px!, pz!) > config.controls.playAreaRadius)) return false;
+      const support = terrainSupport(terrain, f);
+      return !!support && support.slope <= miner.maxSlope && support.high - support.low <= miner.maxGroundVariation;
+    });
   const obstacles = new ObstacleField([...original.definitions, ...deposits.map((deposit) => ({
     id: `${deposit.id}-collider`, kind: 'prop' as const, x: deposit.x, y: deposit.y,
     z: deposit.z, radius: deposit.radius, height: 1.5, yaw: 0, variant: 0,
@@ -85,7 +115,7 @@ export function createWorld(config: GameConfig, inventory = new Inventory(create
 
   return {
     terrain,
-    buildings: new BuildingSystem(createDefaultBuildingRegistry(inventory.registry), inventory, terrain,
+    buildings: new BuildingSystem(buildingRegistry, inventory, terrain,
       obstacles.definitions, config.construction.gridSize, config.controls.playAreaRadius, deposits),
     obstacles,
     obstacleDefinitions: obstacles.definitions,
@@ -101,7 +131,7 @@ export function createWorld(config: GameConfig, inventory = new Inventory(create
 }
 
 function createInteractables(
-  terrain: TerrainHeightfield,
+  terrain: TerrainQuery,
   targetRadius: number,
 ): readonly InteractableDefinition[] {
   const beaconX = 0;
@@ -136,7 +166,7 @@ function createInteractables(
 }
 
 function createObstacles(
-  terrain: TerrainHeightfield,
+  terrain: TerrainQuery,
   worldConfig: GameConfig['world'],
   interactables: readonly InteractableDefinition[],
 ): ObstacleField {
