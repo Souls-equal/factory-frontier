@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — first smelter slice
+
+- Add an iron smelter, iron-ingot recipe and item, with fixed-tick production,
+  input/output buffers, status, inspection, manual recovery and demolition safety.
+- Connect the smelter to directional one-cell conveyors with filtered input,
+  backpressure and output transport. Constructor and iron plates are still planned.
+
 ## Unreleased — mouse construction placement
 
 - Confirm construction with left click instead of C. In uncaptured mode, drag

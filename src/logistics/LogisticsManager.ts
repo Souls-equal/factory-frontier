@@ -23,7 +23,7 @@ export class LogisticsManager implements SimulationSystem {
     if (!Number.isSafeInteger(terminalSlots) || terminalSlots < 1) throw new RangeError('Invalid receiver capacity');
     this.network = new ConveyorNetwork(() => false, groundItems ? (item, position) => groundItems.drop(item.id, item.itemId, position) : undefined);
     buildings.addTopologyGuard((before, after) => {
-      const relevant = (entries: typeof before) => entries.filter((b) => b.typeId.startsWith('conveyor-') || b.typeId === 'miner-mk1' || b.typeId === RECEIVER_TYPE)
+      const relevant = (entries: typeof before) => entries.filter((b) => b.typeId.startsWith('conveyor-') || b.typeId === 'miner-mk1' || b.typeId === 'smelter' || b.typeId === RECEIVER_TYPE)
         .map((b) => [b.id, b.typeId, b.transform.x, b.transform.y, b.transform.z, b.transform.rotation, b.autoConveyor, b.cellConveyor]);
       if (JSON.stringify(relevant(before)) === JSON.stringify(relevant(after))) return true;
       this.sync();
@@ -106,6 +106,25 @@ export class LogisticsManager implements SimulationSystem {
             z: cell.transform.z - port.z * this.buildings.cellSize / 2 };
           this.network.attachCellSource(cell.id, conditional, distance, start);
         } else for (const segment of legacy) if (this.network.attachSource(segment.id, conditional)) break;
+      }
+      const smelter = this.machines.smelter(building.id);
+      if (smelter) {
+        const rawSource = new InventorySource(building.id, machinePort(building, this.buildings.cellSize, 'source'), smelter.output, smelter.recipe.output.itemId);
+        const source = { id: rawSource.id, pose: rawSource.pose, peek: () => smelter.enabled ? rawSource.peek() : null,
+          take: (itemId: string) => smelter.enabled && rawSource.take(itemId) };
+        const cell = cells.find((b) => cellTouchesMachine(b, building, this.buildings.cellSize, 'source'));
+        if (cell) {
+          const path = pathForBuilding(cell, this.buildings.cellSize)!, d = path.direction('input'), port = source.pose.direction;
+          const distance = d.x === port.x && d.z === port.z ? 0 : path.length / 2;
+          this.network.attachCellSource(cell.id, source, distance, { x: cell.transform.x - port.x * this.buildings.cellSize / 2,
+            y: source.pose.position.y, z: cell.transform.z - port.z * this.buildings.cellSize / 2 });
+        } else for (const segment of legacy) if (this.network.attachSource(segment.id, source)) break;
+        const storage = new InventoryReceiver(building.id, machinePort(building, this.buildings.cellSize, 'receiver'), smelter.input);
+        const receiver = { id: storage.id, pose: storage.pose,
+          canAccept: (itemId: string) => itemId === smelter.recipe.input.itemId && storage.canAccept(itemId),
+          accept: (itemId: string) => itemId === smelter.recipe.input.itemId && storage.accept(itemId) };
+        for (const cell of cells) if (cellTouchesMachine(cell, building, this.buildings.cellSize, 'receiver')) this.network.attachCellReceiver(cell.id, receiver);
+        for (const segment of legacy) if (this.network.attachReceiver(segment.id, receiver)) break;
       }
       const terminal = this.terminals.get(building.id);
       if (terminal) {

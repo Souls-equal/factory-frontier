@@ -2,12 +2,35 @@
 
 **Project:** Factory Frontier
 **Version:** 0.3.0
-**Current Phase:** Phase 5 — Conveyor foundation (in progress)
-**Phase Status:** 🟡 In progress — headless WebGL path verified; user acceptance pending
-**Next Recommended Task:** Validate the one-cell conveyor and dropped items in a real browser with the player; complete Phase 5 acceptance.
+**Current Phase:** Phase 6 — First production chain (first smelter slice in progress)
+**Phase Status:** 🟡 In progress — smelter slice implemented; player validation pending
+**Next Recommended Task:** Validate the smelter slice in game, then implement the constructor and iron plates. Complete remaining Phase 5 manual checks as appropriate.
 **Last Updated:** 2026-11-11
 
 ---
+
+## Phase 6 — iron smelter first slice (2026-11-11)
+
+- The user explicitly authorized the next step and reported in-game success for
+  miner → conveyors → terminal, turns/slopes without disappearing items, and
+  terminal blockage and recovery. This does **not** confirm every other scenario
+  in `docs/PHASE_5_MANUAL_ACCEPTANCE.md`; full Phase 5 acceptance remains open.
+  Starting the Phase 6 slice is an explicit user-directed exception to the
+  roadmap's full-acceptance gate, not a claim that the gate was satisfied.
+- The build menu now offers a Smelter (15 stone, 10 wood). It has a cyan rear
+  iron-ore input, yellow front ingot output and a status light. R rotates it.
+  One iron ore becomes one iron ingot in two simulation seconds, no power yet.
+  Connect the directional one-cell Conveyor on either side; inspection via E
+  shows progress/buffers and allows enable/disable, feeding and retrieval.
+- Full buffers block safely; input and output must be emptied before demolition.
+  Tests cover simulation, filter/backpressure, rotation, placement ordering,
+  conservation across miner → smelter → terminal, and mocked-render bootstrap/UI.
+- This is **not** the complete Phase 6 chain: constructor, iron plates, recipe
+  selection, power, and user play-testing of the smelter are still outstanding.
+  Legacy automatic two-cell conveyors are not supported by the new smelter; use
+  the one-cell conveyor offered in the construction menu.
+
+> The sections below are historical snapshots; their phase-status statements describe the time of each entry, not the current status above.
 
 ## Phase 5 — mouse construction placement (user validation pending)
 

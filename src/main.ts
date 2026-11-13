@@ -10,6 +10,7 @@ import { LogisticsInteractable } from './logistics/LogisticsInteractable';
 import { LogisticsUI } from './ui/LogisticsUI';
 import { MachineManager } from './machines/MachineManager';
 import { MinerInteractable } from './machines/MinerInteractable';
+import { SmelterInteractable } from './machines/SmelterInteractable';
 import { MachineUI } from './ui/MachineUI';
 import { ConstructionUI } from './ui/ConstructionUI';
 import { createGameConfig } from './core/Configuration';
@@ -241,7 +242,7 @@ async function boot(): Promise<void> {
   const machineInteractions = new Map<string, () => void>();
   const syncMachines = (): void => {
     machines.sync();
-    const active = new Set(machines.all().map((machine) => machine.id));
+    const active = new Set([...machines.all(), ...machines.allSmelters()].map((machine) => machine.id));
     for (const [id, unregister] of machineInteractions) {
       if (!active.has(id)) { unregister(); machineInteractions.delete(id); }
     }
@@ -253,6 +254,13 @@ async function boot(): Promise<void> {
         pendingConstruction = null; player.stopHorizontalMotion(); createdInput.suspendForModal(); machineUI?.open(selected);
       }));
       machineInteractions.set(miner.id, unregister);
+    }
+    for (const smelter of machines.allSmelters()) {
+      if (machineInteractions.has(smelter.id)) continue;
+      const building = buildings.get(smelter.id); if (!building) continue;
+      machineInteractions.set(smelter.id, interaction.register(new SmelterInteractable(smelter, building, config.interaction.range, (selected) => {
+        pendingConstruction = null; player.stopHorizontalMotion(); createdInput.suspendForModal(); machineUI?.open(selected);
+      })));
     }
   };
 
@@ -372,7 +380,7 @@ async function boot(): Promise<void> {
       const preview = construction.preview(player.view, playerFootprint());
       engine.syncBuildings?.(buildings.all());
       engine.syncConveyors?.(logistics.network.all(), machineUI?.isOpen || logisticsUI?.isOpen || constructionUI?.isOpen || inventoryUI?.isOpen ? 1 : createdGame.clock.alpha, groundItems.all());
-      engine.setMachineStates?.(machines.all().map((machine) => ({ id: machine.id, state: machine.state })));
+      engine.setMachineStates?.([...machines.all(), ...machines.allSmelters()].map((machine) => ({ id: machine.id, state: machine.state })));
       engine.setBuildingPreview?.(construction.selected, preview ?? undefined);
       constructionStatus.hidden = !construction.active;
       if (construction.active) constructionStatus.textContent = preview

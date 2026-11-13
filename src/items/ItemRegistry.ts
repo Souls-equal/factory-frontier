@@ -32,6 +32,7 @@ export class ItemRegistry {
 export function createDefaultItemRegistry(): ItemRegistry {
   const registry = new ItemRegistry();
   const definitions: ItemDefinition[] = [
+    { id: 'iron-ingot', name: 'Iron Ingot', description: 'Refined iron for manufacturing.', category: 'PROCESSED_RESOURCE', maxStackSize: 100, icon: 'Fe' },
     { id: 'iron-ore', name: 'Iron Ore', description: 'Iron-bearing raw mineral.', category: 'RAW_RESOURCE', maxStackSize: 100, icon: 'Fe' },
     { id: 'copper-ore', name: 'Copper Ore', description: 'Copper-bearing raw mineral.', category: 'RAW_RESOURCE', maxStackSize: 100, icon: 'Cu' },
     { id: 'limestone', name: 'Limestone', description: 'Pale mineral for future concrete production.', category: 'RAW_RESOURCE', maxStackSize: 100, icon: 'Ca' },

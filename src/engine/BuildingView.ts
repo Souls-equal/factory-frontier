@@ -97,14 +97,14 @@ export class BuildingView {
     const mesh = this.preview!; const definition = this.registry.get(typeId);
     mesh.position.set(placement.transform.x, placement.transform.y + definition.height / 2, placement.transform.z);
     mesh.rotation.y = (placement.autoConveyor?.rotation ?? placement.transform.rotation) * Math.PI / 2;
-    this.tintPreview(mesh, placement.reason === 'valid', (typeId === 'conveyor-auto' || typeId === 'conveyor-cell'));
+    this.tintPreview(mesh, placement.reason === 'valid', (typeId === 'conveyor-auto' || typeId === 'conveyor-cell' || typeId === 'smelter'));
   }
   private tintPreview(mesh: Mesh<BoxGeometry, MeshStandardMaterial>, valid: boolean, showPorts: boolean): void {
     const color = valid ? 0x55e8b2 : 0xff5363;
     mesh.material.color.setHex(color);
     for (const child of mesh.children) if (child instanceof Mesh && child.material instanceof MeshStandardMaterial) {
-      child.material.color.setHex(valid && showPorts && child.name === 'conveyor-input' ? 0x59dce1 :
-        valid && showPorts && child.name === 'conveyor-output' ? 0xf5d056 : color);
+      child.material.color.setHex(valid && showPorts && (child.name === 'conveyor-input' || child.name === 'machine-input-port') ? 0x59dce1 :
+        valid && showPorts && (child.name === 'conveyor-output' || child.name === 'machine-output-port') ? 0xf5d056 : color);
     }
   }
   dispose(): void {
@@ -139,6 +139,20 @@ export class BuildingView {
       part(new BoxGeometry(.25, .25, .12), 0x59656c, .48 * scale, 1.4, -.65 * scale, 'machine-indicator');
       part(new BoxGeometry(.45 * scale, .3, .16), 0xf5d056, 0, .5, -scale, 'machine-output-port');
       addMinerDetails(mesh, scale, def.height, preview);
+    }
+    if (typeId === 'smelter') {
+      const part = (color: number, x: number, y: number, z: number, w: number, h: number, d: number, name: string): void => {
+        const object = new Mesh(new BoxGeometry(w, h, d), new MeshStandardMaterial({ color, roughness: .75, transparent: preview, opacity: preview ? .5 : 1, depthWrite: !preview }));
+        object.position.set(x, y - def.height / 2, z); object.name = name; object.castShadow = !preview; mesh.add(object);
+      };
+      const scale = this.cellSize;
+      part(0x444e50, 0, .20, 0, 1.95 * scale, .4, 1.95 * scale, 'smelter-base');
+      part(0x303c40, 0, 1.1, -.503 * scale, .9 * scale, .9, .035 * scale, 'smelter-furnace');
+      part(0xf28638, 0, 1.06, -.53 * scale, .65 * scale, .55, .025 * scale, 'smelter-glow');
+      part(0x3c4a4d, .55 * scale, 2.38, .45 * scale, .32 * scale, .8, .32 * scale, 'smelter-stack');
+      part(0x59dce1, 0, .5, scale, .65 * scale, .24, .035 * scale, 'machine-input-port');
+      part(0xf5d056, 0, .5, -scale, .65 * scale, .24, .035 * scale, 'machine-output-port');
+      part(0x59656c, -.55 * scale, 1.65, -1.015 * scale, .24, .24, .04, 'machine-indicator');
     }
     const shape = typeId === 'conveyor-auto' ? (auto?.shape ?? 'straight') : typeId === 'conveyor-cell' && cell?.rise ? 'incline' : CONVEYOR_SHAPES[typeId];
     if (shape) {

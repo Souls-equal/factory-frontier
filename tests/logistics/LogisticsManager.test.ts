@@ -688,3 +688,73 @@ it('previews successive left and right bends and delivers every material through
   }
   expect(logistics.terminal(terminal.id)!.getItemCount('iron-ore')).toBe(9);
 });
+
+it('routes miner ore into a smelter and ingots into a terminal with directional cell belts', () => {
+  const { buildings, machines, logistics, playerInventory } = setup();
+  playerInventory.addItem('wood', 100);
+  const miner = place(buildings, 'miner-mk1', 0, 0);
+  place(buildings, 'conveyor-cell', -.5, -1.5);
+  const smelter = place(buildings, 'smelter', 0, -3);
+  place(buildings, 'conveyor-cell', -.5, -4.5);
+  const terminal = place(buildings, 'receiving-terminal', 0, -6);
+  logistics.sync();
+  const s = machines.smelter(smelter.id)!;
+  for (let i = 0; i < 1600; i++) { machines.fixedUpdate(50); logistics.fixedUpdate(50); }
+  expect(logistics.terminal(terminal.id)!.getItemCount('iron-ingot')).toBeGreaterThan(0);
+  const produced = 40;
+  const total = machines.get(miner.id)!.output.getItemCount('iron-ore') + s.input.getItemCount('iron-ore') +
+    s.output.getItemCount('iron-ingot') + logistics.terminal(terminal.id)!.getItemCount('iron-ingot') +
+    logistics.network.all().reduce((sum, segment) => sum + segment.items.length, 0);
+  expect(total).toBe(produced);
+  expect(buildings.demolish(smelter.id)).toBe('output not empty');
+});
+
+it.each([0, 1, 2, 3])('connects a smelter placed between existing input and output belts, rotation %i', (r) => {
+  const { buildings, machines, logistics, playerInventory } = setup(); playerInventory.addItem('wood', 100);
+  const rotate = (x: number, z: number) => {
+    const angle = r * Math.PI / 2;
+    return { x: Math.round(x * Math.cos(angle) + z * Math.sin(angle)), z: Math.round(-x * Math.sin(angle) + z * Math.cos(angle)) };
+  };
+  const a = rotate(-.5 * 2, 1.5 * 2), b = rotate(-.5 * 2, -1.5 * 2);
+  const input = place(buildings, 'conveyor-cell', a.x / 2, a.z / 2, r);
+  const output = place(buildings, 'conveyor-cell', b.x / 2, b.z / 2, r);
+  const result = buildings.place('smelter', 0, 0, r, player); expect(result.reason).toBe('valid'); expect(result.connection).toBe('connected');
+  logistics.sync(); const s = machines.smelter(result.building!.id)!;
+  expect(logistics.network.get(input.id)!.receiver?.id).toBe(s.id);
+  expect(logistics.network.get(output.id)!.source?.id).toBe(s.id);
+});
+
+it('filters non-iron input and conserves blocked stock until space is freed', () => {
+  const { buildings, machines, logistics, playerInventory } = setup(); playerInventory.addItem('wood', 100);
+  const belt = place(buildings, 'conveyor-cell', -.5, 1.5);
+  const building = place(buildings, 'smelter', 0, 0); logistics.sync();
+  const s = machines.smelter(building.id)!, receiver = logistics.network.get(belt.id)!.receiver!;
+  expect(receiver.canAccept('copper-ore')).toBe(false); expect(receiver.accept('copper-ore')).toBe(false);
+  s.input.addItem('iron-ore', 100); s.output.addItem('iron-ingot', 100);
+  expect(receiver.canAccept('iron-ore')).toBe(false);
+  machines.fixedUpdate(30000); expect(s.input.getItemCount('iron-ore')).toBe(100);
+  expect(buildings.demolish(building.id)).toBe('output not empty');
+  s.output.removeItem('iron-ingot', 1); machines.fixedUpdate(2000);
+  expect(s.input.getItemCount('iron-ore')).toBe(99); expect(s.output.getItemCount('iron-ingot')).toBe(100);
+  expect(receiver.canAccept('iron-ore')).toBe(true);
+});
+
+it('backs up a full smelter-to-terminal line and resumes without losing material', () => {
+  const { buildings, machines, logistics, playerInventory, items } = setup(); playerInventory.addItem('wood', 100);
+  const miner = place(buildings, 'miner-mk1', 0, 0);
+  place(buildings, 'conveyor-cell', -.5, -1.5); const building = place(buildings, 'smelter', 0, -3);
+  place(buildings, 'conveyor-cell', -.5, -4.5); const terminalBuilding = place(buildings, 'receiving-terminal', 0, -6);
+  logistics.sync(); const terminal = logistics.terminal(terminalBuilding.id)!, smelter = machines.smelter(building.id)!;
+  terminal.addItem('iron-ingot', terminal.capacity * 100);
+  for (let i = 0; i < 11000; i++) { machines.fixedUpdate(50); logistics.fixedUpdate(50); }
+  expect(smelter.state).toBe('OUTPUT_FULL'); expect(smelter.input.getItemCount('iron-ore')).toBe(100);
+  const total = () => machines.get(miner.id)!.output.getItemCount('iron-ore') + smelter.input.getItemCount('iron-ore') +
+    smelter.output.getItemCount('iron-ingot') + terminal.getItemCount('iron-ingot') + logistics.network.all().reduce((n, belt) => n + belt.items.length, 0);
+  machines.get(miner.id)!.setEnabled(false);
+  const before = total(), recovered = new Inventory(items, 10);
+  expect(logistics.retrieve(terminalBuilding.id, recovered).moved).toBeGreaterThan(0);
+  for (let i = 0; i < 800; i++) { machines.fixedUpdate(50); logistics.fixedUpdate(50); }
+  expect(terminal.getItemCount('iron-ingot')).toBeGreaterThan(0);
+  expect(total() + recovered.getItemCount('iron-ingot')).toBe(before);
+  expect(smelter.input.getItemCount('iron-ore')).toBeLessThan(100);
+});
