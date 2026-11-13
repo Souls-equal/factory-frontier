@@ -1254,11 +1254,16 @@ not reject escape before the wall solver when already overlapping a column.
 
 `production/Recipes.ts` owns validated immutable recipe data, while
 `machines/Smelter.ts` simulates one fixed iron recipe on the fixed clock with
-separate bounded input and output inventories. `MachineManager` owns the
+separate bounded ore, coal-fuel and output inventories. `MachineManager` owns the
 smelter lifecycle and protects nonempty buffers from demolition. `LogisticsManager`
 connects filtered receiver and conditional source ports to the existing directed
 one-cell network; UI and rendering consume this state without driving simulation.
-The smelter supports manual input and recovery, pausing, and backpressure. It
-does not yet implement recipe selection, power, constructors or plates. Legacy
+The smelter supports manual input and recovery, pausing, and backpressure. A
+user-requested direct-fuel exception consumes 1 coal per completed recipe cycle;
+`NO_POWER` indicates missing coal when the other conditions are satisfied.
+Fuel and ore are committed only on completion, and partial progress is retained
+across interruptions. The receiver routes ore and coal into independent bounded
+buffers, and demolition protects each buffer. This does not implement electrical
+power networks (Phase 8), recipe selection, constructors or plates. Legacy
 two-cell automatic conveyors do not route through the smelter; the currently
 selectable one-cell conveyor is supported.

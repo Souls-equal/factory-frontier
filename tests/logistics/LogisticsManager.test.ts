@@ -698,7 +698,7 @@ it('routes miner ore into a smelter and ingots into a terminal with directional 
   place(buildings, 'conveyor-cell', -.5, -4.5);
   const terminal = place(buildings, 'receiving-terminal', 0, -6);
   logistics.sync();
-  const s = machines.smelter(smelter.id)!;
+  const s = machines.smelter(smelter.id)!; s.fuel.addItem('coal', 100);
   for (let i = 0; i < 1600; i++) { machines.fixedUpdate(50); logistics.fixedUpdate(50); }
   expect(logistics.terminal(terminal.id)!.getItemCount('iron-ingot')).toBeGreaterThan(0);
   const produced = 40;
@@ -730,7 +730,7 @@ it('filters non-iron input and conserves blocked stock until space is freed', ()
   const building = place(buildings, 'smelter', 0, 0); logistics.sync();
   const s = machines.smelter(building.id)!, receiver = logistics.network.get(belt.id)!.receiver!;
   expect(receiver.canAccept('copper-ore')).toBe(false); expect(receiver.accept('copper-ore')).toBe(false);
-  s.input.addItem('iron-ore', 100); s.output.addItem('iron-ingot', 100);
+  s.input.addItem('iron-ore', 100); s.fuel.addItem('coal', 100); s.output.addItem('iron-ingot', 100);
   expect(receiver.canAccept('iron-ore')).toBe(false);
   machines.fixedUpdate(30000); expect(s.input.getItemCount('iron-ore')).toBe(100);
   expect(buildings.demolish(building.id)).toBe('output not empty');
@@ -745,8 +745,10 @@ it('backs up a full smelter-to-terminal line and resumes without losing material
   place(buildings, 'conveyor-cell', -.5, -1.5); const building = place(buildings, 'smelter', 0, -3);
   place(buildings, 'conveyor-cell', -.5, -4.5); const terminalBuilding = place(buildings, 'receiving-terminal', 0, -6);
   logistics.sync(); const terminal = logistics.terminal(terminalBuilding.id)!, smelter = machines.smelter(building.id)!;
-  terminal.addItem('iron-ingot', terminal.capacity * 100);
+  terminal.addItem('iron-ingot', terminal.capacity * 100); smelter.fuel.addItem('coal', 100);
   for (let i = 0; i < 11000; i++) { machines.fixedUpdate(50); logistics.fixedUpdate(50); }
+  smelter.fuel.addItem('coal', 10);
+  for (let i = 0; i < 400; i++) { machines.fixedUpdate(50); logistics.fixedUpdate(50); }
   expect(smelter.state).toBe('OUTPUT_FULL'); expect(smelter.input.getItemCount('iron-ore')).toBe(100);
   const total = () => machines.get(miner.id)!.output.getItemCount('iron-ore') + smelter.input.getItemCount('iron-ore') +
     smelter.output.getItemCount('iron-ingot') + terminal.getItemCount('iron-ingot') + logistics.network.all().reduce((n, belt) => n + belt.items.length, 0);
@@ -757,4 +759,78 @@ it('backs up a full smelter-to-terminal line and resumes without losing material
   expect(terminal.getItemCount('iron-ingot')).toBeGreaterThan(0);
   expect(total() + recovered.getItemCount('iron-ingot')).toBe(before);
   expect(smelter.input.getItemCount('iron-ore')).toBeLessThan(100);
+});
+
+it('receives ore and coal from two miners on separate lanes and stops when coal runs out', () => {
+  const items = createDefaultItemRegistry(), inventory = new Inventory(items, 10);
+  inventory.addItem('stone', 300); inventory.addItem('wood', 200);
+  const coal: ResourceDeposit = { ...deposit, id: 'coal', itemId: 'coal', x: 3, z: -3 };
+  const buildings = new BuildingSystem(createDefaultBuildingRegistry(items), inventory, terrain, [], 1, 29, [deposit, coal]);
+  const machines = new MachineManager(buildings, items, () => [deposit, coal]);
+  const logistics = new LogisticsManager(buildings, machines, items);
+  const ironMiner = place(buildings, 'miner-mk1', 0, 0);
+  const coalMiner = place(buildings, 'miner-mk1', 3, -3, 1);
+  const smelterBuilding = place(buildings, 'smelter', 0, -3);
+  const oreBelt = place(buildings, 'conveyor-cell', -.5, -1.5);
+  place(buildings, 'conveyor-cell', 1.5, -2.5, 2);
+  place(buildings, 'conveyor-cell', 1.5, -1.5, 1);
+  const coalBelt = place(buildings, 'conveyor-cell', .5, -1.5);
+  place(buildings, 'conveyor-cell', -.5, -4.5);
+  const terminal = place(buildings, 'receiving-terminal', 0, -6);
+  logistics.sync(); const s = machines.smelter(smelterBuilding.id)!;
+  expect(logistics.network.get(oreBelt.id)!.receiver?.id).toBe(s.id);
+  expect(logistics.network.get(coalBelt.id)!.receiver?.id).toBe(s.id);
+  for (let i = 0; i < 2000; i++) { machines.fixedUpdate(50); logistics.fixedUpdate(50); }
+  const ingots = logistics.terminal(terminal.id)!.getItemCount('iron-ingot'); expect(ingots).toBeGreaterThan(0);
+  const inTransit = (item: string) => logistics.network.all().reduce((n, b) => n + b.items.filter((entry) => entry.itemId === item).length, 0);
+  const producedIngots = ingots + s.output.getItemCount('iron-ingot') + inTransit('iron-ingot');
+  expect(producedIngots + s.fuel.getItemCount('coal') + machines.get(coalMiner.id)!.output.getItemCount('coal') + inTransit('coal')).toBe(50);
+  expect(producedIngots + s.input.getItemCount('iron-ore') + machines.get(ironMiner.id)!.output.getItemCount('iron-ore') + inTransit('iron-ore')).toBe(50);
+  // Stop all input and let in-flight coal drain, then ensure production stops at NO_POWER.
+  machines.get(ironMiner.id)!.setEnabled(false); machines.get(coalMiner.id)!.setEnabled(false);
+  for (let i = 0; i < 2000; i++) { machines.fixedUpdate(50); logistics.fixedUpdate(50); }
+  s.input.addItem('iron-ore', 5); s.fuel.removeItem('coal', s.fuel.getItemCount('coal') || 1);
+  const before = s.output.getItemCount('iron-ingot') + logistics.terminal(terminal.id)!.getItemCount('iron-ingot') +
+    logistics.network.all().reduce((n, b) => n + b.items.filter((item) => item.itemId === 'iron-ingot').length, 0);
+  for (let i = 0; i < 200; i++) { machines.fixedUpdate(50); logistics.fixedUpdate(50); }
+  const after = s.output.getItemCount('iron-ingot') + logistics.terminal(terminal.id)!.getItemCount('iron-ingot') +
+    logistics.network.all().reduce((n, b) => n + b.items.filter((item) => item.itemId === 'iron-ingot').length, 0);
+  expect(after).toBe(before); expect(s.state).toBe('NO_POWER');
+});
+
+it('protects remaining coal from demolition and rejects unrelated conveyor items', () => {
+  const { buildings, machines, logistics, playerInventory, items } = setup(); playerInventory.addItem('wood', 100);
+  const belt = place(buildings, 'conveyor-cell', -.5, 1.5);
+  const building = place(buildings, 'smelter', 0, 0); logistics.sync();
+  const s = machines.smelter(building.id)!, receiver = logistics.network.get(belt.id)!.receiver!;
+  expect(receiver.accept('coal')).toBe(true); expect(receiver.accept('copper-ore')).toBe(false);
+  expect(s.fuel.getItemCount('coal')).toBe(1); expect(buildings.demolish(building.id)).toBe('output not empty');
+  const player = new Inventory(items, 1); expect(s.retrieveFuel(player).moved).toBe(1);
+  expect(buildings.demolish(building.id)).toBe('removed');
+});
+
+it('extracts coal from a generated deposit using the standard miner', async () => {
+  const { createGameConfig } = await import('../../src/core/Configuration');
+  const { createWorld } = await import('../../src/world/World');
+  const items = createDefaultItemRegistry(), inventory = new Inventory(items, 24);
+  inventory.addItem('stone', 100); inventory.addItem('wood', 100);
+  const config = createGameConfig(), world = createWorld(config, inventory);
+  const coal = world.deposits.find((d) => d.itemId === 'coal'); expect(coal).toBeDefined();
+  const result = world.buildings.place('miner-mk1', coal!.x, coal!.z, 0, { x: 80, z: 80, radius: .4 });
+  expect(result.reason).toBe('valid');
+  const machines = new MachineManager(world.buildings, items, () => world.deposits);
+  machines.fixedUpdate(10000); const miner = machines.get(result.building!.id)!;
+  expect(miner.output.getItemCount('coal')).toBeGreaterThan(0);
+  expect(miner.retrieve(inventory).moved).toBeGreaterThan(0); expect(inventory.getItemCount('coal')).toBeGreaterThan(0);
+});
+
+it('independently backpressures coal and ore at the same inlet', () => {
+  const { buildings, machines, logistics, playerInventory } = setup(); playerInventory.addItem('wood', 100);
+  const a = place(buildings, 'conveyor-cell', -.5, 1.5), b = place(buildings, 'conveyor-cell', .5, 1.5);
+  const machine = place(buildings, 'smelter', 0, 0); logistics.sync();
+  const s = machines.smelter(machine.id)!, first = logistics.network.get(a.id)!.receiver!, second = logistics.network.get(b.id)!.receiver!;
+  expect(first.accept('coal')).toBe(true); expect(second.accept('iron-ore')).toBe(true);
+  s.fuel.addItem('coal', 99); expect(first.canAccept('coal')).toBe(false); expect(first.canAccept('iron-ore')).toBe(true);
+  s.input.addItem('iron-ore', 99); s.fuel.removeItem('coal', 1);
+  expect(second.canAccept('iron-ore')).toBe(false); expect(second.canAccept('coal')).toBe(true);
 });

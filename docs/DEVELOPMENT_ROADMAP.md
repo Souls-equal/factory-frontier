@@ -22,6 +22,8 @@ Other Phase 5 checklist scenarios were not explicitly confirmed. Starting the
 smelter slice before full Phase 5 acceptance is a user-directed exception to the
 existing Phase 5 gate below; it does not mark that phase accepted or complete.
 Phase 6 is not complete: constructor and iron plates remain to be implemented.
+At the user's request the smelter now directly consumes coal (1 per iron ingot);
+this is an early fuel exception, not the Phase 8 electrical power network.
 
 The voxel transition is underway within Phase 5: finite starter resources and a
 no-iron first Miner and block-style models for current world objects are implemented;
@@ -39,7 +41,7 @@ detailed evidence and verification results live in `PROJECT_STATUS.md`.
 | 3 — Building and placement | 🟡 Acceptance pending | Construction menu, preview, validation, grid, rotation, registration and demolition implemented; real-browser acceptance pending |
 | 4 — First automated extractor | 🟡 User accepted | Browser verification remains pending |
 | 5 — Conveyor foundation | 🟡 Partially user-validated | User confirmed miner → terminal, turns/slopes, blockage and recovery; remaining checklist not confirmed |
-| 6 — First production chain | 🟡 First slice | Smelter and iron ingots implemented; constructor, plates and full acceptance pending |
+| 6 — First production chain | 🟡 First slice | Coal-fueled smelter and iron ingots implemented; constructor, plates and full acceptance pending |
 | 7 — Advanced logistics | ◻ Planned | — |
 | 8 — Electricity | ◻ Planned | — |
 | 9 — Advanced manufacturing | ◻ Planned | — |

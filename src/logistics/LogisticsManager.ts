@@ -4,6 +4,7 @@ import type { SimulationSystem } from '../core/Game';
 import { Inventory, type QuantityResult } from '../items/Inventory';
 import type { ItemRegistry } from '../items/ItemRegistry';
 import type { MachineManager } from '../machines/MachineManager';
+import { SMELTER_FUEL } from '../machines/Smelter';
 import { ConveyorNetwork, type ConveyorSettings, DEFAULT_CONVEYOR_SETTINGS } from './ConveyorNetwork';
 import type { GroundItems } from './GroundItems';
 import { InventoryReceiver, InventorySource } from './Ports';
@@ -119,10 +120,13 @@ export class LogisticsManager implements SimulationSystem {
           this.network.attachCellSource(cell.id, source, distance, { x: cell.transform.x - port.x * this.buildings.cellSize / 2,
             y: source.pose.position.y, z: cell.transform.z - port.z * this.buildings.cellSize / 2 });
         } else for (const segment of legacy) if (this.network.attachSource(segment.id, source)) break;
-        const storage = new InventoryReceiver(building.id, machinePort(building, this.buildings.cellSize, 'receiver'), smelter.input);
-        const receiver = { id: storage.id, pose: storage.pose,
-          canAccept: (itemId: string) => itemId === smelter.recipe.input.itemId && storage.canAccept(itemId),
-          accept: (itemId: string) => itemId === smelter.recipe.input.itemId && storage.accept(itemId) };
+        const pose = machinePort(building, this.buildings.cellSize, 'receiver');
+        const ore = new InventoryReceiver(building.id, pose, smelter.input);
+        const fuel = new InventoryReceiver(building.id, pose, smelter.fuel);
+        const destination = (itemId: string) => itemId === smelter.recipe.input.itemId ? ore : itemId === SMELTER_FUEL.itemId ? fuel : null;
+        const receiver = { id: building.id, pose,
+          canAccept: (itemId: string) => destination(itemId)?.canAccept(itemId) ?? false,
+          accept: (itemId: string) => destination(itemId)?.accept(itemId) ?? false };
         for (const cell of cells) if (cellTouchesMachine(cell, building, this.buildings.cellSize, 'receiver')) this.network.attachCellReceiver(cell.id, receiver);
         for (const segment of legacy) if (this.network.attachReceiver(segment.id, receiver)) break;
       }

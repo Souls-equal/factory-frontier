@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — coal-fueled smelter
+
+- Require one coal and one iron ore per ingot. Fuel is consumed only when a
+  cycle completes, and missing coal pauses the machine until replenished.
+- Accept coal through the existing input conveyor lanes or the inspection panel;
+  show and recover fuel separately, and protect it during demolition.
+- Give coal and iron ingots distinct conveyor and ground-item colors.
+
 ## Unreleased — first smelter slice
 
 - Add an iron smelter, iron-ingot recipe and item, with fixed-tick production,

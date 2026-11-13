@@ -450,6 +450,7 @@ body {
   background: linear-gradient(145deg, #102832, #07121b); border: 1px solid #5ad6e866;
   border-radius: 14px; box-shadow: 0 25px 80px #000b; }
 .inventory__header, .inventory__footer { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.machine__actions { flex-wrap: wrap; justify-content: flex-start; }
 .inventory__header h2 { margin: 6px 0; font-size: 27px; }
 .inventory__eyebrow { color: var(--ff-accent); font: 10px var(--ff-mono); letter-spacing: .2em; }
 .inventory__intro, .inventory__detail, .inventory__footer { color: var(--ff-muted); font-size: 12px; line-height: 1.5; }

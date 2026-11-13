@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { Group, InstancedMesh, Vector3 } from 'three';
+import { Color, Group, InstancedMesh, Vector3 } from 'three';
 import { BuildingView } from '../../src/engine/BuildingView';
 import { ConveyorItemsView } from '../../src/engine/ConveyorItemsView';
 import { createDefaultBuildingRegistry } from '../../src/buildings/BuildingRegistry';
@@ -75,4 +75,17 @@ it('grows the shared instanced mesh without duplicating or disposing shared reso
   expect(oldDispose).toHaveBeenCalledOnce(); expect(geometryDispose).not.toHaveBeenCalled();
   view.sync([], .5); expect(current.count).toBe(0); view.dispose();
   expect(group.children).toHaveLength(0); expect(geometryDispose).toHaveBeenCalledOnce();
+});
+
+
+it('renders coal distinctly from iron ingots on belts and on the ground', () => {
+  const group = new Group(), view = new ConveyorItemsView((mesh) => group.add(mesh), (mesh) => group.remove(mesh));
+  const net = new ConveyorNetwork(), path = new ConveyorPath({ shape: 'straight', x: 0, y: .5, z: 0, rotation: 0, size: 1 });
+  net.addCell('belt', path, { speed: 1, throughputPerMinute: 60, spacing: .5 });
+  expect(net.insertDropped('coal', 'coal', 'belt')).toBe(true);
+  const point = { x: 2, y: 0, z: 0 };
+  view.sync(net.all(), 1, [{ id: 'drop', itemId: 'iron-ingot', position: point, previousPosition: point, velocityY: 0 }]);
+  const mesh = group.children[0] as InstancedMesh, coal = new Color(), ingot = new Color();
+  mesh.getColorAt(0, coal); mesh.getColorAt(1, ingot);
+  expect(coal.getHex()).toBe(0x303a3c); expect(ingot.getHex()).toBe(0xaac5ce); view.dispose();
 });

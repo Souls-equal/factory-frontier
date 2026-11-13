@@ -2,6 +2,9 @@ import { BoxGeometry, Color, InstancedMesh, Matrix4, MeshStandardMaterial, Objec
 import type { GroundItem } from '../logistics/GroundItems';
 import { transportPosition, type ConveyorSegment } from '../logistics/ConveyorNetwork';
 
+const itemColor = (itemId: string): number => itemId === 'coal' ? 0x303a3c : itemId === 'iron-ingot' ? 0xaac5ce :
+  itemId === 'iron-ore' ? 0xb6a098 : itemId === 'copper-ore' ? 0xd18a56 : 0xc0b99d;
+
 /** One shared instanced mesh; instance transforms are derived solely from simulation. */
 export class ConveyorItemsView {
   readonly geometry = new BoxGeometry(.3, .3, .3);
@@ -26,14 +29,14 @@ export class ConveyorItemsView {
       this.object.position.set(previous.x + (p.x - previous.x) * t, previous.y + (p.y - previous.y) * t + .22,
         previous.z + (p.z - previous.z) * t);
       this.object.rotation.set(0, 0, 0); this.object.updateMatrix(); this.mesh.setMatrixAt(index, this.object.matrix);
-      this.color.setHex(item.itemId === 'iron-ore' ? 0xb6a098 : item.itemId === 'copper-ore' ? 0xd18a56 : 0xc0b99d);
+      this.color.setHex(itemColor(item.itemId));
       this.mesh.setColorAt(index, this.color); index++;
     }
     for (const item of ground) {
       const p = item.position, prev = item.previousPosition;
       this.object.position.set(prev.x + (p.x - prev.x) * t, prev.y + (p.y - prev.y) * t, prev.z + (p.z - prev.z) * t);
       this.object.rotation.set(0, 0, 0); this.object.updateMatrix(); this.mesh.setMatrixAt(index, this.object.matrix);
-      this.color.setHex(item.itemId === 'iron-ore' ? 0xb6a098 : item.itemId === 'copper-ore' ? 0xd18a56 : 0xc0b99d);
+      this.color.setHex(itemColor(item.itemId));
       this.mesh.setColorAt(index++, this.color);
     }
     this.mesh.count = count; this.mesh.instanceMatrix.needsUpdate = true; if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true;
