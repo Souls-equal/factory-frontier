@@ -1316,5 +1316,25 @@ shared `SourceArbiter` to choose one among the ready sources. This maintains
 round-robin fairness, skips blocked/absent branches and transfers at most one
 buffered item in the tick. Normal non-grouped sources retain their existing
 behavior. A belt may fill before a downstream blockage makes it unavailable.
-Only balanced routing is implemented: no configurable overflow/priority, no
-legacy two-cell support or ground-drop intake. Splitter buffering is session-only.
+At that point only balanced routing was implemented; the later note below
+describes overflow and priority. No legacy two-cell support or ground-drop intake;
+splitter buffering is session-only.
+
+## Implementation note — Phase 7 merger, modes and bounded lifts
+
+`Merger` owns three bounded single-item input slots. A round-robin cursor advances
+only when its output takes an item. Each input independently backpressures while
+its slot is occupied; inspection can recover the contents and demolition protects
+them. `LogisticsManager` wires the three oriented one-cell inputs and one output.
+Splitter arbitration additionally supports strict selected-port priority and
+overflow to the next ready output, configured through the inspection UI.
+
+Four buildable lift definitions provide up/down, 1/2-cell vertical differences.
+`ConveyorPath` defines a continuous horizontal–vertical–horizontal path; the
+existing cell simulation moves, spaces, renders and protects its real item
+entities. The manager connects exactly one matching one-cell belt at either end;
+an unconnected lift output holds items, never drops them. Placement uses port
+height offsets to anchor neighbouring belts, while the existing terrain and
+foundation support limits remain in effect. Lift height/direction are fixed at
+placement; higher travel, route control-point editing, direct machine ports and
+legacy two-cell conveyor attachment are not provided. All state is session-only.

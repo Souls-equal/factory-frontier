@@ -1084,3 +1084,142 @@ it('holds items safely when every splitter output is blocked and resumes after o
     logistics.network.all().reduce((n,b) => n + b.items.length, 0) + stores.reduce((n,s) => n + s.getItemCount('iron-ore'), 0);
   expect(total).toBe(30);
 });
+
+it.each([0,1,2,3])('connects merger inputs and output at rotation %i, regardless of placement order', (r) => {
+  for (const first of [true, false]) {
+    const { buildings, logistics } = setup(); buildings.setCreativeMode(true);
+    const rotate = (x: number, z: number) => { const a = r * Math.PI / 2; return { x: Math.round(x * Math.cos(a) + z * Math.sin(a)) / 2, z: Math.round(-x * Math.sin(a) + z * Math.cos(a)) / 2 }; };
+    const specs = [[-1,3,0],[3,1,1],[-3,-1,3],[-1,-3,0]] as const;
+    const make = () => specs.map(([x,z,turn]) => { const p = rotate(x,z); return place(buildings, 'conveyor-cell', p.x, p.z, (turn+r)%4); });
+    let merger: ReturnType<typeof place>, belts: ReturnType<typeof make>;
+    if (first) { merger = place(buildings, 'merger', 0, 0, r); belts = make(); }
+    else { belts = make(); merger = place(buildings, 'merger', 0, 0, r); }
+    logistics.sync();
+    for (let i=0; i<3; i++) expect(logistics.network.get(belts[i]!.id)!.receiver?.id).toBe(`${merger.id}:input:${i}`);
+    expect(logistics.network.get(belts[3]!.id)!.source?.id).toBe(merger.id);
+  }
+});
+
+it('fairly combines three real input lines, blocks safely and recovers with conservation', () => {
+  const { buildings, logistics } = setup(); buildings.setCreativeMode(true);
+  const sources = [place(buildings, 'storage-container', 0, 3), place(buildings, 'storage-container', 3, 0, 1), place(buildings, 'storage-container', -3, 0, 3)];
+  place(buildings, 'conveyor-cell', -.5, 1.5); place(buildings, 'conveyor-cell', 1.5, .5, 1); place(buildings, 'conveyor-cell', -1.5, -.5, 3);
+  const merger = place(buildings, 'merger', 0, 0); place(buildings, 'conveyor-cell', -.5, -1.5);
+  const sink = place(buildings, 'storage-container', 0, -3); logistics.sync();
+  const ids = ['iron-ore','coal','wood'];
+  sources.forEach((s,i) => logistics.terminal(s.id)!.addItem(ids[i]!, 30));
+  const dest = logistics.terminal(sink.id)!; dest.addItem('stone', 800);
+  for (let i=0; i<500; i++) logistics.fixedUpdate(50);
+  expect(logistics.merger(merger.id)!.pending.filter(Boolean)).toHaveLength(3);
+  expect(buildings.demolish(merger.id)).toBe('output not empty');
+  const total = (id: string) => sources.reduce((n,s) => n + logistics.terminal(s.id)!.getItemCount(id), 0) + dest.getItemCount(id) +
+    logistics.merger(merger.id)!.pending.filter((v) => v === id).length + logistics.network.all().reduce((n,b) => n + b.items.filter((v) => v.itemId === id).length, 0);
+  ids.forEach((id) => expect(total(id)).toBe(30));
+  dest.removeItem('stone', 800);
+  for (let i=0; i<650; i++) logistics.fixedUpdate(50);
+  const partial = ids.map((id) => dest.getItemCount(id));
+  expect(Math.min(...partial)).toBeGreaterThan(5); expect(Math.max(...partial) - Math.min(...partial)).toBeLessThanOrEqual(3);
+  for (let i=0; i<1800; i++) logistics.fixedUpdate(50);
+  ids.forEach((id) => { expect(total(id)).toBe(30); expect(dest.getItemCount(id)).toBe(30); });
+});
+
+it.each([1, 2])('moves items up and down %i metres through actual lifts without losses', (height) => {
+  const { buildings, logistics } = setup(); buildings.setCreativeMode(true);
+  const source = place(buildings, 'storage-container', 0, 3), first = place(buildings, 'conveyor-cell', -.5, 1.5);
+  const up = place(buildings, `lift-up-${height}`, 0, 0), middle = place(buildings, 'conveyor-cell', -.5, -1.5);
+  expect(middle.transform.y).toBe(height);
+  const down = place(buildings, `lift-down-${height}`, 0, -3), last = place(buildings, 'conveyor-cell', -.5, -4.5);
+  expect(down.transform.y).toBe(0); expect(last.transform.y).toBe(0);
+  const sink = place(buildings, 'receiving-terminal', 0, -6); logistics.sync();
+  expect(logistics.network.get(first.id)!.output).toBe(up.id); expect(logistics.network.get(up.id)!.output).toBe(middle.id);
+  expect(logistics.network.get(middle.id)!.output).toBe(down.id); expect(logistics.network.get(down.id)!.output).toBe(last.id);
+  logistics.terminal(source.id)!.addItem('iron-ore', 15); let sawVertical = false;
+  for (let i=0; i<800; i++) {
+    logistics.fixedUpdate(50);
+    const upSeg = logistics.network.get(up.id)!;
+    if (upSeg.items.some((item) => { const p = upSeg.path.point(item.distance); return p.y > .6 && p.y < height + .4; })) sawVertical = true;
+    const total = logistics.terminal(source.id)!.getItemCount('iron-ore') + logistics.terminal(sink.id)!.getItemCount('iron-ore') + logistics.network.all().reduce((n,b) => n + b.items.length, 0);
+    expect(total).toBe(15);
+  }
+  expect(sawVertical).toBe(true); expect(logistics.terminal(sink.id)!.getItemCount('iron-ore')).toBe(15);
+});
+
+it.each([0,1,2,3])('joins ascending and descending lifts at rotation %i', (r) => {
+  const { buildings, logistics } = setup(); buildings.setCreativeMode(true);
+  const rotate = (x: number, z: number) => { const a = r * Math.PI / 2; return { x: Math.round(x * Math.cos(a) + z * Math.sin(a)) / 2, z: Math.round(-x * Math.sin(a) + z * Math.cos(a)) / 2 }; };
+  const at = (type: string, x: number, z: number) => { const p = rotate(x,z); return place(buildings, type, p.x, p.z, r); };
+  at('storage-container',0,6); const first = at('conveyor-cell',-1,3);
+  const up = at('lift-up-2',0,0), middle = at('conveyor-cell',-1,-3);
+  const down = at('lift-down-2',0,-6), last = at('conveyor-cell',-1,-9); at('receiving-terminal',0,-12);
+  logistics.sync(); expect(middle.transform.y).toBe(2); expect(down.transform.y).toBe(0); expect(last.transform.y).toBe(0);
+  expect(logistics.network.get(first.id)!.output).toBe(up.id); expect(logistics.network.get(up.id)!.output).toBe(middle.id);
+  expect(logistics.network.get(middle.id)!.output).toBe(down.id); expect(logistics.network.get(down.id)!.output).toBe(last.id);
+});
+
+it('holds lift contents when disconnected or blocked and resumes after connecting a receiver', () => {
+  const { buildings, logistics } = setup(); buildings.setCreativeMode(true);
+  const supply = place(buildings, 'storage-container', 0, 3); place(buildings, 'conveyor-cell', -.5, 1.5);
+  const lift = place(buildings, 'lift-up-1', 0, 0); logistics.sync(); logistics.terminal(supply.id)!.addItem('iron-ore', 12);
+  for (let i=0; i<500; i++) logistics.fixedUpdate(50);
+  const segment = logistics.network.get(lift.id)!; expect(segment.state).toBe('BLOCKED');
+  expect(segment.items.length).toBeGreaterThan(0); expect(buildings.demolish(lift.id)).toBe('output not empty');
+  const output = place(buildings, 'conveyor-cell', -.5, -1.5), sink = place(buildings, 'receiving-terminal', 0, -3); logistics.sync();
+  expect(output.transform.y).toBe(1);
+  logistics.terminal(sink.id)!.addItem('stone', 100);
+  for (let i=0; i<500; i++) logistics.fixedUpdate(50);
+  expect(logistics.terminal(sink.id)!.getItemCount('iron-ore')).toBe(0);
+  logistics.terminal(sink.id)!.removeItem('stone', 100);
+  for (let i=0; i<1000; i++) logistics.fixedUpdate(50);
+  expect(logistics.terminal(sink.id)!.getItemCount('iron-ore')).toBe(12);
+  expect(logistics.network.all().reduce((n,s) => n + s.items.length, 0)).toBe(0);
+  expect(buildings.demolish(lift.id)).toBe('removed');
+});
+
+it('applies strict priority and overflow configuration to a live splitter', () => {
+  const { buildings, logistics } = setup(); buildings.setCreativeMode(true);
+  const supply = place(buildings, 'storage-container', 0, 3); place(buildings, 'conveyor-cell', -.5, 1.5);
+  const splitterBuilding = place(buildings, 'splitter', 0, 0);
+  place(buildings, 'conveyor-cell', -.5, -1.5); place(buildings, 'conveyor-cell', -1.5, -.5, 1); place(buildings, 'conveyor-cell', 1.5, .5, 3);
+  const ends = [place(buildings, 'receiving-terminal', 0, -3), place(buildings, 'receiving-terminal', -3, 0), place(buildings, 'receiving-terminal', 3, 0)];
+  logistics.sync(); const splitter = logistics.splitter(splitterBuilding.id)!, sink = ends.map((b) => logistics.terminal(b.id)!);
+  sink[0]!.addItem('stone', 100); splitter.configure('priority', 0); logistics.terminal(supply.id)!.addItem('iron-ore', 20);
+  for (let i=0; i<500; i++) logistics.fixedUpdate(50);
+  expect(splitter.pending).toBe('iron-ore'); expect(sink[1]!.getItemCount('iron-ore')).toBe(0); expect(sink[2]!.getItemCount('iron-ore')).toBe(0);
+  splitter.configure('overflow', 0); for (let i=0; i<500; i++) logistics.fixedUpdate(50);
+  expect(sink[1]!.getItemCount('iron-ore')).toBeGreaterThan(0); expect(sink[2]!.getItemCount('iron-ore')).toBeGreaterThan(0);
+  sink[0]!.removeItem('stone',100); for (let i=0; i<500; i++) logistics.fixedUpdate(50);
+  expect(sink[0]!.getItemCount('iron-ore')).toBeGreaterThan(0);
+  const total = logistics.terminal(supply.id)!.getItemCount('iron-ore') + (splitter.pending ? 1 : 0) + logistics.network.all().reduce((n,s) => n + s.items.length, 0) + sink.reduce((n,s) => n + s.getItemCount('iron-ore'),0);
+  expect(total).toBe(20);
+});
+
+it('connects two real miners via a merger into the smelter and constructor production chain', () => {
+  const items = createDefaultItemRegistry(), inventory = new Inventory(items, 10);
+  const iron: ResourceDeposit = { ...deposit, x: 0, z: 3 }, coal: ResourceDeposit = { ...deposit, id: 'coal', itemId: 'coal', x: 3, z: 0 };
+  const buildings = new BuildingSystem(createDefaultBuildingRegistry(items), inventory, terrain, [], 1, 29, [iron, coal]); buildings.setCreativeMode(true);
+  const machines = new MachineManager(buildings, items, () => [iron, coal]), logistics = new LogisticsManager(buildings, machines, items);
+  const ironMiner = place(buildings, 'miner-mk1', 0, 3), coalMiner = place(buildings, 'miner-mk1', 3, 0, 1);
+  place(buildings, 'conveyor-cell', -.5, 1.5); place(buildings, 'conveyor-cell', 1.5, .5, 1);
+  const merger = place(buildings, 'merger', 0, 0); place(buildings, 'conveyor-cell', -.5, -1.5);
+  const smelter = place(buildings, 'smelter', 0, -3); place(buildings, 'conveyor-cell', -.5, -4.5);
+  const constructor = place(buildings, 'constructor', 0, -6); place(buildings, 'conveyor-cell', -.5, -7.5);
+  const terminal = place(buildings, 'receiving-terminal', 0, -9); logistics.sync();
+  for (let i=0; i<2400; i++) { machines.fixedUpdate(50); logistics.fixedUpdate(50); }
+  const s = machines.smelter(smelter.id)!, c = machines.constructorMachine(constructor.id)!;
+  const transit = (id: string) => logistics.network.all().reduce((n,b) => n + b.items.filter((entry) => entry.itemId === id).length, 0);
+  const held = (id: string) => logistics.merger(merger.id)!.pending.filter((entry) => entry === id).length;
+  const plates = logistics.terminal(terminal.id)!.getItemCount('iron-plate'); expect(plates).toBeGreaterThan(10);
+  const processed = s.output.getItemCount('iron-ingot') + c.input.getItemCount('iron-ingot') + transit('iron-ingot') + c.output.getItemCount('iron-plate') + transit('iron-plate') + plates;
+  expect(machines.get(ironMiner.id)!.output.getItemCount('iron-ore') + s.input.getItemCount('iron-ore') + transit('iron-ore') + held('iron-ore') + processed).toBe(60);
+  expect(machines.get(coalMiner.id)!.output.getItemCount('coal') + s.fuel.getItemCount('coal') + transit('coal') + held('coal') + processed).toBe(60);
+});
+
+it('refuses competing merger and lift port lanes without spending materials', () => {
+  const { buildings, playerInventory } = setup(); buildings.setCreativeMode(true);
+  place(buildings, 'merger', 0, 0); place(buildings, 'conveyor-cell', -.5, 1.5);
+  const before = playerInventory.snapshot();
+  expect(buildings.place('conveyor-cell', .5, 1.5, 0, player).reason).toBe('incompatible connection');
+  place(buildings, 'lift-up-1', 5, 0); place(buildings, 'conveyor-cell', 4.5, 1.5);
+  expect(buildings.place('conveyor-cell', 5.5, 1.5, 0, player).reason).toBe('incompatible connection');
+  expect(playerInventory.snapshot()).toEqual(before);
+});

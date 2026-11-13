@@ -1,6 +1,6 @@
-import { cellAhead, cellTouchesMachine, cellTouchesSource, splitterOutputTouches, resolveCellConveyors, type CellConveyorShape } from '../logistics/CellConveyor';
+import { cellAhead, cellTouchesMachine, cellTouchesSource, cellTouchesReceiver, mergerInputTouches, splitterOutputTouches, resolveCellConveyors, type CellConveyorShape } from '../logistics/CellConveyor';
 import { resolveAutoConveyors, type AutoConveyorShape } from '../logistics/AutoConveyor';
-import { BELT_HEIGHT, machinePort, pathForBuilding, isDirectionalMachine } from '../logistics/ConveyorDefinitions';
+import { BELT_HEIGHT, machinePort, pathForBuilding, isDirectionalMachine, isLiftBuilding, liftInputOffset, liftOutputOffset } from '../logistics/ConveyorDefinitions';
 import { matchesPort } from '../logistics/Ports';
 import { connectedHeight, connectionStatus } from '../logistics/ConveyorPlacement';
 import type { ResourceDeposit } from '../resources/ResourceDeposit';
@@ -154,13 +154,15 @@ export class BuildingSystem {
         const b = building.transform.footprint;
         return building.typeId === 'foundation' && b.minX <= f.minX && b.maxX >= f.maxX && b.minZ <= f.minZ && b.maxZ >= f.maxZ;
       });
-      let anchored = typeId === 'conveyor-auto' || typeId === 'conveyor-cell' ? null : connectedHeight(typeId, transform, this.all().filter((b) => b.typeId !== 'conveyor-auto' && b.typeId !== 'conveyor-cell'), this.cellSize);
+      let anchored = typeId === 'conveyor-auto' || typeId === 'conveyor-cell' ? null : connectedHeight(typeId, transform, this.all().filter((b) => b.typeId !== 'conveyor-auto' && b.typeId !== 'conveyor-cell' && !isLiftBuilding(b.typeId)), this.cellSize);
       if (typeId === 'conveyor-cell') {
         const candidate = { id: '__preview__', typeId, transform };
         const source = this.all().find((b) => (b.typeId === 'miner-mk1' || isDirectionalMachine(b.typeId)) && cellTouchesSource(candidate, b, this.cellSize, true));
-        const sink = this.all().find((b) => (b.typeId === 'receiving-terminal' || isDirectionalMachine(b.typeId)) && cellTouchesMachine(candidate, b, this.cellSize, 'receiver', true));
-        if (source && sink && Math.abs(source.transform.y - sink.transform.y) > 1e-7) anchored = 'conflict';
-        else if (source || sink) anchored = (source ?? sink)!.transform.y;
+        const sink = this.all().find((b) => (b.typeId === 'receiving-terminal' || isDirectionalMachine(b.typeId)) && cellTouchesReceiver(candidate, b, this.cellSize, true));
+        const sourceHeight = source ? source.transform.y + liftOutputOffset(source.typeId, this.cellSize) : null;
+        const sinkHeight = sink ? sink.transform.y + liftInputOffset(sink.typeId, this.cellSize) : null;
+        if (sourceHeight !== null && sinkHeight !== null && Math.abs(sourceHeight - sinkHeight) > 1e-7) anchored = 'conflict';
+        else anchored = sourceHeight ?? sinkHeight;
       } else if (typeId === 'conveyor-auto') {
         const source = this.all().find((b) => {
           if (b.typeId !== 'miner-mk1') return false;
@@ -169,12 +171,15 @@ export class BuildingSystem {
         });
         if (source) anchored = source.transform.y;
       } else if (isDirectionalMachine(typeId)) {
+        if (isLiftBuilding(typeId)) anchored = null;
         const candidate = { id: '__preview__', typeId, transform };
         const neighbours = this.all().filter((b) => b.typeId === 'conveyor-cell' &&
-          (cellTouchesMachine(b, candidate, this.cellSize, 'receiver', true) || cellTouchesSource(b, candidate, this.cellSize, true)));
+          (cellTouchesReceiver(b, candidate, this.cellSize, true) || cellTouchesSource(b, candidate, this.cellSize, true)));
         const heights = neighbours.map((b) => {
           const path = pathForBuilding(b, this.cellSize)!;
-          return (cellTouchesMachine(b, candidate, this.cellSize, 'receiver', true) ? path.point(path.length).y : path.point(0).y) - BELT_HEIGHT;
+          return cellTouchesReceiver(b, candidate, this.cellSize, true) ?
+            path.point(path.length).y - BELT_HEIGHT - liftInputOffset(typeId, this.cellSize) :
+            path.point(0).y - BELT_HEIGHT - liftOutputOffset(typeId, this.cellSize);
         });
         if (anchored !== null && anchored !== 'conflict') heights.push(anchored);
         if (anchored !== 'conflict') anchored = heights.some((y) => Math.abs(y - heights[0]!) > 1e-7) ? 'conflict' : heights[0] ?? anchored;
@@ -212,7 +217,7 @@ export class BuildingSystem {
         [...this.obstacles, ...this.dynamicObstacles()].some((obstacle) => (!deposit || obstacle.id !== `${deposit.id}-collider`) && circleIntersects(f, obstacle.x, obstacle.z, obstacle.radius))) return fail('occupied space', transform);
     let connection: 'connected' | 'disconnected' | undefined;
     if (definition.placement === 'logistics' || typeId === 'miner-mk1') {
-      const result = typeId === 'conveyor-auto' || typeId === 'conveyor-cell' ? 'disconnected' : connectionStatus(typeId, transform, this.all().filter((b) => b.typeId !== 'conveyor-auto' && b.typeId !== 'conveyor-cell'), this.cellSize);
+      const result = typeId === 'conveyor-auto' || typeId === 'conveyor-cell' || isLiftBuilding(typeId) ? 'disconnected' : connectionStatus(typeId, transform, this.all().filter((b) => b.typeId !== 'conveyor-auto' && b.typeId !== 'conveyor-cell' && !isLiftBuilding(b.typeId)), this.cellSize);
       if (result === 'incompatible') return fail('incompatible connection', transform);
       connection = result;
     }
@@ -225,6 +230,18 @@ export class BuildingSystem {
     for (const junction of planned.filter((b) => b.typeId === 'splitter')) {
       if (cells.filter((b) => cellTouchesMachine(b, junction, this.cellSize, 'receiver')).length > 1 ||
           [0, 1, 2].some((i) => cells.filter((b) => splitterOutputTouches(b, junction, this.cellSize, i)).length > 1))
+        return fail('incompatible connection', transform);
+    }
+
+    for (const junction of planned.filter((b) => b.typeId === 'merger')) {
+      if ([0, 1, 2].some((i) => cells.filter((b) => mergerInputTouches(b, junction, this.cellSize, i)).length > 1) ||
+          cells.filter((b) => cellTouchesSource(b, junction, this.cellSize)).length > 1)
+        return fail('incompatible connection', transform);
+    }
+
+    for (const lift of planned.filter((b) => isLiftBuilding(b.typeId))) {
+      if (cells.filter((b) => cellTouchesReceiver(b, lift, this.cellSize)).length > 1 ||
+          cells.filter((b) => cellTouchesSource(b, lift, this.cellSize)).length > 1)
         return fail('incompatible connection', transform);
     }
 
@@ -242,8 +259,8 @@ export class BuildingSystem {
       connection = planned.some((b) => b.id !== proposed.id && (
         b.typeId === 'conveyor-cell' ? cellAhead(proposed, b, this.cellSize) || cellAhead(b, proposed, this.cellSize) :
         b.typeId === 'miner-mk1' ? cellTouchesSource(proposed, b, this.cellSize) :
-        isDirectionalMachine(b.typeId) ? cellTouchesSource(proposed, b, this.cellSize) || cellTouchesMachine(proposed, b, this.cellSize, 'receiver') :
-        b.typeId === 'receiving-terminal' ? cellTouchesMachine(proposed, b, this.cellSize, 'receiver') : false)) ? 'connected' : 'disconnected';
+        isDirectionalMachine(b.typeId) ? cellTouchesSource(proposed, b, this.cellSize) || cellTouchesReceiver(proposed, b, this.cellSize) :
+        b.typeId === 'receiving-terminal' ? cellTouchesReceiver(proposed, b, this.cellSize) : false)) ? 'connected' : 'disconnected';
     }
     if (typeId === 'conveyor-auto' && autoConveyor) {
       const path = pathForBuilding({ ...proposed, autoConveyor }, this.cellSize)!;
@@ -255,7 +272,7 @@ export class BuildingSystem {
           b.typeId === 'receiving-terminal' ? matchesPort(machinePort(b, this.cellSize, 'receiver'), path.point(path.length), path.direction('output')) : false;
       }) ? 'connected' : 'disconnected';
     }
-    if (isDirectionalMachine(typeId) && connection === 'disconnected' && planned.some((b) => b.typeId === 'conveyor-cell' && (cellTouchesSource(b, proposed, this.cellSize) || cellTouchesMachine(b, proposed, this.cellSize, 'receiver')))) connection = 'connected';
+    if (isDirectionalMachine(typeId) && connection === 'disconnected' && planned.some((b) => b.typeId === 'conveyor-cell' && (cellTouchesSource(b, proposed, this.cellSize) || cellTouchesReceiver(b, proposed, this.cellSize)))) connection = 'connected';
     if ((typeId === 'miner-mk1' || typeId === 'receiving-terminal') && connection === 'disconnected') {
       const port = machinePort(proposed, this.cellSize, typeId === 'miner-mk1' ? 'source' : 'receiver');
       if (planned.some((b) => {

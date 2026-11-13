@@ -6,12 +6,23 @@ export const CONVEYOR_SHAPES: Readonly<Record<string, ConveyorShape>> = Object.f
   'conveyor-cell': 'straight', 'conveyor-straight': 'straight', 'conveyor-curve': 'curve-right', 'conveyor-incline': 'incline',
 });
 export const isProcessorBuilding = (typeId: string): boolean => typeId === 'smelter' || typeId === 'constructor';
-export const isDirectionalMachine = (typeId: string): boolean => isProcessorBuilding(typeId) || typeId === 'storage-container' || typeId === 'splitter';
+const LIFT_RISES: Readonly<Record<string, number>> = Object.freeze({ 'lift-up-1': 1, 'lift-up-2': 2, 'lift-down-1': -1, 'lift-down-2': -2 });
+export function liftRise(typeId: string): number | null {
+  return Object.hasOwn(LIFT_RISES, typeId) ? LIFT_RISES[typeId]! : null;
+}
+export const isLiftBuilding = (typeId: string): boolean => liftRise(typeId) !== null;
+export const liftInputOffset = (typeId: string, cellSize: number): number => Math.max(0, -(liftRise(typeId) ?? 0)) * cellSize;
+export const liftOutputOffset = (typeId: string, cellSize: number): number => Math.max(0, liftRise(typeId) ?? 0) * cellSize;
+export const isDirectionalMachine = (typeId: string): boolean => isProcessorBuilding(typeId) || typeId === 'storage-container' || typeId === 'splitter' || typeId === 'merger' || isLiftBuilding(typeId);
 export const RECEIVER_TYPE = 'receiving-terminal';
 export const BELT_HEIGHT = .5;
 export const DEFAULT_INCLINE_RISE = 1;
 
 export function pathForBuilding(building: BuildingInstance, cellSize: number): ConveyorPath | undefined {
+  const rise = liftRise(building.typeId);
+  if (rise !== null) return new ConveyorPath({ shape: 'lift', x: building.transform.x,
+    y: building.transform.y + BELT_HEIGHT + liftInputOffset(building.typeId, cellSize), z: building.transform.z,
+    rotation: building.transform.rotation, size: 2 * cellSize, rise: rise * cellSize });
   const shape = building.typeId === 'conveyor-auto' ? (building.autoConveyor?.shape ?? 'straight') : building.typeId === 'conveyor-cell' && building.cellConveyor?.rise ? 'incline' : Object.hasOwn(CONVEYOR_SHAPES, building.typeId) ? CONVEYOR_SHAPES[building.typeId] : undefined;
   if (!shape) return undefined;
   return new ConveyorPath({ shape, x: building.transform.x, y: building.transform.y + BELT_HEIGHT + (building.typeId === 'conveyor-cell' ? building.cellConveyor?.offset ?? 0 : building.autoConveyor?.offset ?? 0),
@@ -22,11 +33,18 @@ export function pathForBuilding(building: BuildingInstance, cellSize: number): C
 export function machinePort(building: BuildingInstance, cellSize: number, type: 'source' | 'receiver'): PortPose {
   const { x, y, z, rotation } = building.transform;
   const direction = new ConveyorPath({ shape: 'straight', x, y: y + BELT_HEIGHT, z, rotation, size: 2 * cellSize });
-  return { position: direction.point(type === 'source' ? direction.length : 0), direction: direction.direction('input') };
+  const point = direction.point(type === 'source' ? direction.length : 0);
+  return { position: { ...point, y: point.y + (type === 'source' ? liftOutputOffset(building.typeId, cellSize) : liftInputOffset(building.typeId, cellSize)) }, direction: direction.direction('input') };
 }
 
 /** Splitter outputs are front, left and right relative to its cyan rear input. */
 export function splitterPort(building: BuildingInstance, cellSize: number, index: number): PortPose {
   const rotation = building.transform.rotation + [0, 1, 3][index]!;
   return machinePort({ ...building, transform: { ...building.transform, rotation } }, cellSize, 'source');
+}
+
+/** Merger inputs are rear and the two side faces, pointing inward. */
+export function mergerPort(building: BuildingInstance, cellSize: number, index: number): PortPose {
+  const rotation = building.transform.rotation + [0, 1, 3][index]!;
+  return machinePort({ ...building, transform: { ...building.transform, rotation } }, cellSize, 'receiver');
 }
