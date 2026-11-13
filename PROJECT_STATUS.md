@@ -3,11 +3,29 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 7 — Advanced logistics (integration and acceptance)
-**Phase Status:** 🟡 In progress — fine lift-height control and remaining logistics acceptance
-**Next Recommended Task:** Play-test fine lift-height control and remaining logistics scenarios; Phase 7 acceptance remains open.
+**Phase Status:** 🟡 In progress — filtered splitter routing and remaining logistics acceptance
+**Next Recommended Task:** Play-test filtered splitter routing and fine lift-height control alongside remaining logistics scenarios; Phase 7 acceptance remains open.
 **Last Updated:** 2026-11-11
 
 ---
+
+## Filtered splitter routing
+
+- Splitters now offer an optional **Filter by item** mode, configured per front,
+  left and right output in the existing E panel. A specifically assigned item
+  uses only outputs assigned that item; other items use only outputs marked
+  **Unmatched items**. Duplicate assignments share available eligible outputs
+  round-robin. Existing balanced, overflow and priority modes remain unchanged.
+- A missing/full eligible output makes the buffered item wait, which can hold up
+  later items. Filters never silently redirect an assigned item to an unmatched
+  output. A belt may fill before its destination's blockage propagates; an open
+  belt may still drop items. In-flight items are not rerouted when settings change.
+  Configuration belongs to the individual splitter, survives topology changes
+  and mode changes, and resets on demolition or reload.
+- Tests cover exact/unmatched/duplicate assignments, blocked or absent outputs,
+  fair delivery, reconfiguration, conservation, UI, all rotated direct lift
+  outputs and a merger feeding multiple sorted lines. No foundation placement
+  behavior was changed. Player validation remains pending; Phase 7 remains open.
 
 ## Fine lift-height control
 

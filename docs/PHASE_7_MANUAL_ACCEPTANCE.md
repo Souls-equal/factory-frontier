@@ -140,3 +140,22 @@ manual scenarios separately; report layout, rotation and any problems found.
 3. Block and clear the receiving container, verify recovery, and check the lift
    cannot be demolished while it contains items. Adjusting a new preview must
    not resize the lift already placed.
+
+
+### Splitter item filters
+
+1. Connect a splitter to three outputs and receivers. Open it with E and choose
+   **Filter by item**. Set Front to Iron Ore, Left to Coal and Right to
+   **Unmatched items**. Send a mixed stream and verify each type follows its
+   intended output; other items use Right. Connect belts or lifts as desired.
+2. Fill or disconnect the iron output. Once its belt fills, the buffered ore
+   must wait rather than escape through Right; later input may also back up.
+   Clear or reconnect the output and verify recovery and conservation. Open
+   belt ends can still drop items, so connect receivers before feeding.
+3. Assign Coal to two outputs and verify they share delivery when both are
+   available. Assign all three to items and send an unassigned type: it waits
+   until an unmatched output becomes available or the configuration changes.
+4. Change filters while an item is already on an output belt; it must continue
+   on that belt. Switch to a different mode and back, then reopen the panel: the
+   filters remain. Demolition/rebuilding or reloading resets them. Test mixed
+   merger inputs feeding a filtered splitter and check separate outputs.

@@ -26,6 +26,8 @@ export class LogisticsUI {
   private readonly splitterSettings: HTMLElement | null;
   private readonly splitterMode: HTMLSelectElement | null;
   private readonly splitterPriority: HTMLSelectElement | null;
+  private readonly splitterFilters: HTMLElement | null;
+  private readonly splitterFilterSelects: readonly HTMLSelectElement[];
   constructor(private readonly root: HTMLElement, private readonly logistics: LogisticsManager,
     private readonly player: Inventory, private readonly onClose: () => void) {
     const find = <T extends HTMLElement>(selector: string): T => {
@@ -52,6 +54,16 @@ export class LogisticsUI {
     this.splitterSettings = root.querySelector<HTMLElement>('[data-splitter-settings]');
     this.splitterMode = root.querySelector<HTMLSelectElement>('[data-splitter-mode]');
     this.splitterPriority = root.querySelector<HTMLSelectElement>('[data-splitter-priority]');
+    this.splitterFilters = root.querySelector<HTMLElement>('[data-splitter-filters]');
+    this.splitterFilterSelects = [...root.querySelectorAll<HTMLSelectElement>('[data-splitter-filter]')];
+    for (const select of this.splitterFilterSelects) {
+      const any = root.ownerDocument.createElement('option'); any.value = ''; any.textContent = 'Unmatched items';
+      select.replaceChildren(any);
+      for (const item of this.player.registry.all()) {
+        const option = root.ownerDocument.createElement('option'); option.value = item.id; option.textContent = item.name; select.append(option);
+      }
+      select.addEventListener('change', this.handleSplitterFilter);
+    }
     this.splitterMode?.addEventListener('change', this.handleSplitterConfig);
     this.splitterPriority?.addEventListener('change', this.handleSplitterConfig);
     this.deposit = root.querySelector<HTMLButtonElement>('[data-logistics-deposit]');
@@ -65,6 +77,7 @@ export class LogisticsUI {
     if (!this.active || !this.isOpen) return;
     const segment = this.logistics.network.get(this.active), receiver = this.logistics.terminal(this.active), splitter = this.logistics.splitter(this.active), merger = this.logistics.merger(this.active);
     if (this.splitterSettings) this.splitterSettings.hidden = !splitter;
+    if (this.splitterFilters) this.splitterFilters.hidden = !splitter || splitter.mode !== 'filtered';
     const isStorage = !!receiver && this.logistics.isStorage(this.active);
     if (this.storageSettings) this.storageSettings.hidden = !isStorage;
     if (this.storageFilter && isStorage) this.storageFilter.value = this.logistics.storageOutputFilter(this.active) ?? '';
@@ -86,8 +99,9 @@ export class LogisticsUI {
       if (heading) heading.textContent = 'Splitter';
       if (badge) badge.textContent = splitter.mode.toUpperCase();
       if (this.splitterMode) this.splitterMode.value = splitter.mode;
-      if (this.splitterPriority) { this.splitterPriority.value = String(splitter.priority); this.splitterPriority.disabled = splitter.mode === 'balanced'; }
-      this.details.textContent = splitter.pending ? `Buffered: ${this.player.registry.get(splitter.pending).name}. Connect an output or retrieve it.` : `${splitter.mode === 'balanced' ? 'Balanced distribution' : splitter.mode === 'overflow' ? 'Overflow distribution' : 'Strict priority'} · buffer empty.`;
+      if (this.splitterPriority) { this.splitterPriority.value = String(splitter.priority); this.splitterPriority.disabled = splitter.mode === 'balanced' || splitter.mode === 'filtered'; }
+      for (const select of this.splitterFilterSelects) select.value = splitter.filters[Number(select.dataset.splitterFilter)] ?? '';
+      this.details.textContent = splitter.pending ? `Buffered: ${this.player.registry.get(splitter.pending).name}. ${splitter.mode === 'filtered' ? 'Waiting for an eligible output; check filters and connections or retrieve it.' : 'Connect an output or retrieve it.'}` : `${splitter.mode === 'balanced' ? 'Balanced distribution' : splitter.mode === 'overflow' ? 'Overflow distribution' : splitter.mode === 'priority' ? 'Strict priority' : 'Filtered distribution'} · buffer empty.`;
       this.grid.hidden = true; this.playerPane.hidden = true; this.slotDetail.textContent = '';
       if (this.deposit) this.deposit.hidden = true;
       this.retrieve.hidden = false; this.retrieve.disabled = !splitter.pending;
@@ -113,7 +127,7 @@ export class LogisticsUI {
       this.retrieve.hidden = false; this.retrieve.disabled = receiver.usedSlots === 0;
     }
   }
-  dispose(): void { this.storageFilter?.removeEventListener('change', this.handleStorageFilter); this.splitterMode?.removeEventListener('change', this.handleSplitterConfig); this.splitterPriority?.removeEventListener('change', this.handleSplitterConfig); this.deposit?.removeEventListener('click', this.handleDeposit); this.playerGrid.removeEventListener('click', this.handlePlayerGrid); this.grid.removeEventListener('click', this.handleGrid); this.close.removeEventListener('click', this.onClose); this.retrieve.removeEventListener('click', this.handleRetrieve); }
+  dispose(): void { for (const select of this.splitterFilterSelects) select.removeEventListener('change', this.handleSplitterFilter); this.storageFilter?.removeEventListener('change', this.handleStorageFilter); this.splitterMode?.removeEventListener('change', this.handleSplitterConfig); this.splitterPriority?.removeEventListener('change', this.handleSplitterConfig); this.deposit?.removeEventListener('click', this.handleDeposit); this.playerGrid.removeEventListener('click', this.handlePlayerGrid); this.grid.removeEventListener('click', this.handleGrid); this.close.removeEventListener('click', this.onClose); this.retrieve.removeEventListener('click', this.handleRetrieve); }
   private renderPlayer(): void {
     const slots = this.player.snapshot();
     this.playerGrid.replaceChildren();
@@ -173,6 +187,11 @@ export class LogisticsUI {
     if (!this.active || !this.splitterMode || !this.splitterPriority) return;
     const splitter = this.logistics.splitter(this.active); if (!splitter) return;
     splitter.configure(this.splitterMode.value as SplitterMode, Number(this.splitterPriority.value)); this.update();
+  };
+  private readonly handleSplitterFilter = (event: Event): void => {
+    if (!this.active || !this.isOpen || !(event.currentTarget instanceof HTMLSelectElement)) return;
+    const splitter = this.logistics.splitter(this.active); if (!splitter) return;
+    splitter.setOutputFilter(Number(event.currentTarget.dataset.splitterFilter), event.currentTarget.value || null); this.update();
   };
   private readonly handleDeposit = (): void => {
     if (!this.active || !this.logistics.isStorage(this.active) || this.playerSelected === null) return;

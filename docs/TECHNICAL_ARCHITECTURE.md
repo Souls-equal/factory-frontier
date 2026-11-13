@@ -1569,3 +1569,25 @@ itself is unchanged. Tests exercise every canonical height, real keyboard wiring
 preview, rendering, costs, platform alignment and live connections to machines,
 junctions, belts and other lifts. Heights beyond 1–8 m, sub-tenth increments and
 editing placed lifts remain unsupported. Player acceptance of this slice is pending.
+
+
+## Implementation note — filtered splitter routing
+
+`Splitter` owns three optional per-output item IDs and an additional `filtered`
+mode. For a buffered item, exact matching outputs are eligible; when no output
+is assigned that item, only null (unmatched-item) outputs are eligible. An
+assignment remains authoritative even if its port is absent or blocked, so
+items never leak to unmatched routes. Multiple eligible ready outputs share the
+existing persistent round-robin cursor, which advances only on successful take.
+No eligible ready output leaves the single-item buffer intact, backpressuring
+the input and potentially delaying later items. Previously sent items keep their
+paths. Existing modes ignore but retain the filter configuration.
+
+The E logistics panel lists registry items per port and clearly describes strict
+matching and the unmatched fallback. Configuration is per splitter, retained
+through topology rebuilds and mode switches, lost on demolition or session reload.
+The same arbiter works for belt and direct-lift outputs without changing ports,
+foundations, inventory or transport. Tests exercise invalid configuration,
+fairness, late connections, blockage/recovery, live reconfiguration, mixed-item
+conservation, real merger/splitter networks, rotations and actual UI markup.
+Real-player acceptance remains pending; this does not complete Phase 7.

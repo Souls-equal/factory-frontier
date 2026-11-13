@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — filtered splitter routing
+
+- Add an optional per-output item-filtering mode with strict assigned routes,
+  unmatched-item outputs and fair sharing between duplicate assignments.
+- Preserve existing modes, buffered-item safety, foundation behavior and session
+  lifecycle; document mixed-line operation and blockage/recovery.
+
 ## Unreleased — fine lift-height control
 
 - Add 0.1 m lift height steps with Shift + Page Up/Down, retaining the existing

@@ -510,6 +510,7 @@ body {
 :is([data-splitter-settings], [data-storage-settings]) select:focus-visible { outline: 2px solid #80d5de; outline-offset: 2px; }
 :is([data-splitter-settings], [data-storage-settings]) select:disabled { opacity: .5; }
 :is([data-splitter-settings], [data-storage-settings]) p { margin: 0; }
+[data-splitter-filters] { display: grid; gap: 10px; }
 .terminal__detail { min-height: 2.7em; }
 .terminal__actions { display: flex; }
 .inventory .terminal__retrieve { flex: 1; display: flex; justify-content: space-between; font-weight: 700; background: #1a5963; border-color: #58b8c2; }
