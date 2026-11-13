@@ -10,6 +10,8 @@ import type { GroundItems } from './GroundItems';
 import { InventoryReceiver, InventorySource } from './Ports';
 import { Splitter } from './Splitter';
 import { Merger } from './Merger';
+import { directLiftInput, directLiftOutput } from './DirectLiftConnections';
+import type { ItemSource, ItemReceiver } from './Ports';
 
 import { pathForBuilding, machinePort, splitterPort, mergerPort, isLiftBuilding, RECEIVER_TYPE } from './ConveyorDefinitions';
 
@@ -117,6 +119,14 @@ export class LogisticsManager implements SimulationSystem {
     this.network.resetConnections();
     const segments = this.network.all();
     const cells = buildings.filter((b) => b.typeId === 'conveyor-cell');
+    const lifts = buildings.filter((b) => isLiftBuilding(b.typeId));
+    const attachLiftSource = (building: BuildingInstance, source: ItemSource): boolean => {
+      const lift = lifts.find((entry) => directLiftInput(entry, building, this.buildings.cellSize));
+      return !!lift && !this.network.get(lift.id)!.input && this.network.attachCellSource(lift.id, source, 0);
+    };
+    const attachLiftReceivers = (building: BuildingInstance, receiver: ItemReceiver): void => {
+      for (const lift of lifts) if (directLiftOutput(lift, building, this.buildings.cellSize)) this.network.attachCellReceiver(lift.id, receiver);
+    };
     const legacy = segments.filter((s) => !this.network.isCell(s.id));
     for (const from of legacy) for (const to of legacy) if (from.id !== to.id && from.path.compatible(to.path)) this.network.connect(from.id, to.id);
     for (const from of cells) {
@@ -126,12 +136,11 @@ export class LogisticsManager implements SimulationSystem {
         this.network.connectCell(from.id, next.id, b.length * cellEntryFraction(from, next, this.buildings.cellSize));
       }
     }
-    for (const lift of buildings.filter((b) => isLiftBuilding(b.typeId))) {
+    for (const lift of lifts) {
       const input = cells.find((b) => cellTouchesReceiver(b, lift, this.buildings.cellSize));
       const output = cells.find((b) => cellTouchesSource(b, lift, this.buildings.cellSize));
       if (input) this.network.connectCell(input.id, lift.id, 0);
       if (output) this.network.connectCell(lift.id, output.id, 0);
-      else this.network.blockCellOutput(lift.id);
     }
     for (const building of buildings) {
       const miner = this.machines.get(building.id);
@@ -147,7 +156,7 @@ export class LogisticsManager implements SimulationSystem {
           const start = { x: cell.transform.x - port.x * this.buildings.cellSize / 2, y: conditional.pose.position.y,
             z: cell.transform.z - port.z * this.buildings.cellSize / 2 };
           this.network.attachCellSource(cell.id, conditional, distance, start);
-        } else for (const segment of legacy) if (this.network.attachSource(segment.id, conditional)) break;
+        } else if (!attachLiftSource(building, conditional)) for (const segment of legacy) if (this.network.attachSource(segment.id, conditional)) break;
       }
       const processor = this.machines.smelter(building.id) ?? this.machines.constructorMachine(building.id);
       if (processor) {
@@ -160,7 +169,7 @@ export class LogisticsManager implements SimulationSystem {
           const distance = d.x === port.x && d.z === port.z ? 0 : path.length / 2;
           this.network.attachCellSource(cell.id, source, distance, { x: cell.transform.x - port.x * this.buildings.cellSize / 2,
             y: source.pose.position.y, z: cell.transform.z - port.z * this.buildings.cellSize / 2 });
-        } else for (const segment of legacy) if (this.network.attachSource(segment.id, source)) break;
+        } else if (!attachLiftSource(building, source)) for (const segment of legacy) if (this.network.attachSource(segment.id, source)) break;
         const pose = machinePort(building, this.buildings.cellSize, 'receiver');
         const ore = new InventoryReceiver(building.id, pose, processor.input);
         const fuel = processor instanceof Smelter ? new InventoryReceiver(building.id, pose, processor.fuel) : null;
@@ -169,6 +178,7 @@ export class LogisticsManager implements SimulationSystem {
           canAccept: (itemId: string) => destination(itemId)?.canAccept(itemId) ?? false,
           accept: (itemId: string) => destination(itemId)?.accept(itemId) ?? false };
         for (const cell of cells) if (cellTouchesMachine(cell, building, this.buildings.cellSize, 'receiver')) this.network.attachCellReceiver(cell.id, receiver);
+        attachLiftReceivers(building, receiver);
         for (const segment of legacy) if (this.network.attachReceiver(segment.id, receiver)) break;
       }
       const merger = this.mergers.get(building.id);
@@ -213,12 +223,18 @@ export class LogisticsManager implements SimulationSystem {
             const distance = d.x === port.x && d.z === port.z ? 0 : path.length / 2;
             this.network.attachCellSource(cell.id, source, distance, { x: cell.transform.x - port.x * this.buildings.cellSize / 2,
               y: pose.position.y, z: cell.transform.z - port.z * this.buildings.cellSize / 2 });
-          }
+          } else attachLiftSource(building, source);
         }
         const receiver = new InventoryReceiver(building.id, machinePort(building, this.buildings.cellSize, 'receiver'), terminal);
         for (const cell of cells) if (cellTouchesMachine(cell, building, this.buildings.cellSize, 'receiver')) this.network.attachCellReceiver(cell.id, receiver);
+        attachLiftReceivers(building, receiver);
         if (building.typeId === RECEIVER_TYPE) for (const segment of legacy) if (this.network.attachReceiver(segment.id, receiver)) break;
       }
+    }
+    // Lifts never spill from an unconnected output, even if ordinary cells drop.
+    for (const lift of lifts) {
+      const segment = this.network.get(lift.id)!;
+      if (!segment.output && !segment.receiver) this.network.blockCellOutput(lift.id);
     }
     // A non-accepting building directly ahead is not empty space.
     for (const cell of cells) {

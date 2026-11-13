@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — direct lift connections
+
+- Allow exact aligned direct connections between lifts and compatible miners,
+  processors, storage containers and receiving terminals.
+- Preserve support rules, conveyor safety, filtering and backpressure; direct
+  splitter/merger and legacy connections remain out of scope.
+
 ## Unreleased — storage output filter
 
 - Let each storage container optionally send only one chosen item type to its

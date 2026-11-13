@@ -1350,8 +1350,8 @@ entities. The manager connects exactly one matching one-cell belt at either end;
 an unconnected lift output holds items, never drops them. Placement uses port
 height offsets to anchor neighbouring belts, while the existing terrain and
 foundation support limits remain in effect. Height/direction are fixed after
-placement. See the later notes for height adjustment and route editing; direct
-machine ports and legacy two-cell conveyor attachment are not provided. All state is session-only.
+placement. See the later notes for height adjustment, route editing and direct
+compatible machine ports; legacy two-cell conveyor attachment is not provided. All state is session-only.
 
 
 ## Implementation note — Phase 7 route-planning foundation
@@ -1438,8 +1438,8 @@ elevated foundation when the ray intersects its actual footprint; a closer
 terrain hit still wins. The same aim serves the route editor. Terrain bounds,
 reach, collision and support validation are unchanged. Above the existing
 unsupported-height allowance, a belt needs a suitable supporting foundation;
-the lift endpoints still accept only one-cell belts, not direct machine or
-legacy belt ports. Tests cover geometry, all heights and rotations, UI, high
+at that stage lift endpoints accepted only one-cell belts; the later direct-lift
+note adds compatible machine ports but not legacy belts. Tests cover geometry, all heights and rotations, UI, high
 supported paths, live backpressure, recovery and material conservation. No
 player acceptance is claimed for the new height controls.
 
@@ -1497,3 +1497,21 @@ per storage, survives `sync` topology rebuilds, is removed on demolition, and is
 not persisted between sessions. The existing E logistics panel selects from the
 item registry; terminals and other devices do not expose the setting. This is an
 output selector, not a splitter or an input/slot filter.
+
+
+## Implementation note — direct lift connections
+
+`DirectLiftConnections` matches exact world-space lift endpoints and oriented
+machine ports. Miner, processor and storage outputs can feed the lift input;
+processor, storage and terminal inputs can receive the lift output. The terminal
+accepts any face. Heights, positions and directions must coincide. Existing
+placement and support rules remain unchanged; matching does not snap heights.
+`BuildingSystem` uses the same matcher for its advisory connected preview.
+
+`LogisticsManager` attaches the existing source/receiver ports directly to lift
+segments after wiring one-cell belts, preserving machine enabled state, item
+acceptance, storage filters, transport clocks, flow counters and backpressure.
+Unconnected lifts remain blocked rather than dropping items. No new ownership or
+inventory transfer path is introduced. Direct splitter/merger, lift-to-lift and
+legacy-belt links remain unsupported. Tests exercise both placement orders, all
+rotations, high supported endpoints, live reconnection and conservation.
