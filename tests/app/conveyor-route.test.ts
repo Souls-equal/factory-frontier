@@ -68,3 +68,21 @@ it('wires click, waypoint preview, undo and Enter to an atomic route through the
   expect(state.extra).toHaveLength(0); key('Escape'); frame(366); expect(state.preview).toBeNull();
   key('KeyQ'); expect(document.querySelector('[data-ui="construction"]')!.textContent).toContain('Stone: 64 / 4');
 });
+
+it('confirms an open end, warns about drops, then starts a second route from the first', async () => {
+  vi.spyOn(console, 'info').mockImplementation(() => undefined);
+  await import('../../src/main'); await vi.waitFor(() => expect(state.init).toBe(1)); frame(16);
+  key('KeyQ'); document.querySelector<HTMLButtonElement>('[data-building="conveyor-cell"]')!.click();
+  key('KeyT'); frame(66); click(); frame(116);
+  state.point = { x: -.5, z: .5 }; frame(166);
+  expect(document.querySelector('[data-ui="construction-status"]')!.textContent).toContain('Open end: items may fall');
+  expect(state.preview?.reason).toBe('valid');
+  key('Enter'); frame(216); expect(state.buildings).toHaveLength(5);
+  expect(document.querySelector('[data-ui="interaction-feedback"]')!.textContent).toContain('Open end: items can fall');
+  state.point = { x: -.5, z: -.5 }; frame(266);
+  expect(document.querySelector('[data-ui="construction-status"]')!.textContent).toContain('Valid start');
+  click(); frame(316);
+  expect(document.querySelector('[data-ui="construction-status"]')!.textContent).toContain('Connected end');
+  key('Enter'); frame(366); expect(state.buildings).toHaveLength(6);
+  expect(document.querySelector('[data-ui="interaction-feedback"]')!.textContent).toContain('Route built: 1 cells');
+});

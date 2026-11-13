@@ -223,7 +223,7 @@ async function boot(): Promise<void> {
       if ((code === 'PageUp' || code === 'PageDown') && construction.selected === 'foundation') { construction.adjustFoundationHeight(code === 'PageUp' ? 1 : -1); return true; }
       if (code === 'KeyT' && construction.selected === 'conveyor-cell') {
         routeMode = !routeMode; routeEditor.reset(); pendingConstruction = null;
-        interactionPrompt.showFeedback(routeMode ? 'Route mode: click the first free cell next to an output; aim at the last free cell touching an input and press Enter.' : 'Single-cell placement.'); return true;
+        interactionPrompt.showFeedback(routeMode ? 'Route mode: click the first free cell next to an output, then aim at the desired end and press Enter.' : 'Single-cell placement.'); return true;
       }
       if (routeMode && code === 'Backspace') { routeEditor.undo(); pendingConstruction = null; return true; }
       if (routeMode && code === 'Enter') { pendingConstruction = 'route-confirm'; return true; }
@@ -352,10 +352,10 @@ async function boot(): Promise<void> {
         if (!point) interactionPrompt.showFeedback('Aim at nearby ground.');
         else if (action === 'place') {
           const result = routeEditor.addPoint(point, playerFootprint(), construction.facing(player.view));
-          interactionPrompt.showFeedback(result === 'point added' ? 'Route point added. Aim at the destination and press Enter to build.' : `Cannot add point: ${result}.`);
+          interactionPrompt.showFeedback(result === 'point added' ? 'Route point added. Aim at the desired end and press Enter to build.' : `Cannot add point: ${result}.`);
         } else {
           const result = routeEditor.confirm(point, playerFootprint());
-          interactionPrompt.showFeedback(!result ? 'Select a starting connection first.' : result.reason === 'valid' ? `Route built: ${result.cells.length} cells.` : `Cannot build route: ${result.reason}.`);
+          interactionPrompt.showFeedback(!result ? 'Select a starting connection first.' : result.reason === 'valid' ? `Route built: ${result.cells.length} cells.${result.endConnection === 'open' ? ' Open end: items can fall to the ground.' : ''}` : `Cannot build route: ${result.reason}.`);
         }
       } else if (action === 'place' && construction.active && !constructionUI?.isOpen && !inventoryUI?.isOpen) {
         const result = construction.confirm(player.view, playerFootprint());
@@ -423,8 +423,8 @@ async function boot(): Promise<void> {
         const cost = routePreview?.cost.map((item) => `${registry.get(item.itemId).name} ×${item.quantity}`).join(', ');
         const status = !routePoint ? 'Aim at nearby ground' : !routePreview ? '' : routePreview.starting ?
           (routePreview.startValid ? 'Valid start: click to select' : `Invalid start: ${routePreview.reason}`) :
-          (routePreview.reason === 'valid' ? 'Valid route: Enter builds' : `Route: ${routePreview.reason}`);
-        constructionStatus.textContent = `${buildings.creativeMode ? 'Creative · ' : ''}Route · ${status} · ${routeEditor.pointCount} points${cost ? ` · ${routePreview?.visualCells.length} cells · ${buildings.creativeMode ? 'free' : cost}` : ''} · Bend ${routeEditor.horizontalFirst ? 'X→Z' : 'Z→X'} · Click add point · Enter build at last cell by input · Backspace undo · R change bend · T single cell · Esc cancel`;
+          (routePreview.reason === 'valid' ? `Valid route: Enter builds${routePreview.endConnection === 'open' ? ' · Open end: items may fall' : ' · Connected end'}` : `Route: ${routePreview.reason}`);
+        constructionStatus.textContent = `${buildings.creativeMode ? 'Creative · ' : ''}Route · ${status} · ${routeEditor.pointCount} points${cost ? ` · ${routePreview?.visualCells.length} cells · ${buildings.creativeMode ? 'free' : cost}` : ''} · Bend ${routeEditor.horizontalFirst ? 'X→Z' : 'Z→X'} · Click add point · Enter build at aimed end · Backspace undo · R change bend · T single cell · Esc cancel`;
       } else if (construction.active) constructionStatus.textContent = (buildings.creativeMode ? 'Creative · ' : '') + (preview
         ? `${preview.reason === 'valid' ? 'Valid placement' : `Cannot place: ${preview.reason}`} · R rotate · Left click place · Esc cancel${preview.connection ? ` · ${preview.connection} port` : ''}${construction.selected?.startsWith('conveyor-') ? ' · direction follows view; yellow = output · R rotates' : ''}${construction.selected === 'conveyor-cell' ? ' · T route mode' : ''}${preview.snappedToConveyor || preview.snappedToFoundation ? ' · aligned to neighbour' : ''}${construction.selected === 'foundation' ? ` · Page Up/Down height (${construction.foundationHeightOffset >= 0 ? '+' : ''}${construction.foundationHeightOffset.toFixed(1)} m) · base ${preview.transform.y.toFixed(1)} m` : ''}${preview.conveyorPreviewChanges?.length ? ' · green preview shows belt after placement' : ''}${!createdInput.isPointerLocked ? ' · drag to look · right click to capture mouse' : ''}`
         : `Aim at ground within ${config.construction.reach} m · R rotate · Left click place · Esc cancel${!createdInput.isPointerLocked ? ' · drag to look · right click to capture mouse' : ''}`);

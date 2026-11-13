@@ -1346,24 +1346,26 @@ legacy two-cell conveyor attachment are not provided. All state is session-only.
 orthogonal legs in the requested axis order, rejecting repeated cells and paths
 longer than 24 cells. `BuildingSystem.previewConveyorRoute` stages each cell in
 an isolated copy using the ordinary authoritative placement rules, verifies the
-endpoints (including first-lane port arbitration) and checks the final layout
-against live topology guards. `placeConveyorRoute` revalidates, pays the whole
+starting connection (including first-lane port arbitration), identifies the end
+state, and checks the final layout against live topology guards. `placeConveyorRoute` revalidates, pays the whole
 cost atomically and publishes the resulting cells and updated belt shapes in one
 revision. Creative builds keep their no-refund flag. The live world and inventory
 are not modified by planning; guards may synchronize the logistics network.
 
 At this earlier slice the planner was backend-only; the editor below now provides
-in-game route selection, preview, confirmation and control-point input. Both endpoints must already exist and
-be compatible one-cell belts or supported devices; legacy two-cell belts are not
-endpoints. Incremental staging can reject a layout that might be valid if all
-cells were validated simultaneously. The limit bounds work and cost; see the editor note below for preview caching.
+in-game route selection, preview, confirmation and control-point input. The start
+must be a compatible one-cell belt or supported output; the end can be open or
+connected. Legacy two-cell belts are not supported endpoints. Incremental staging
+can reject a layout that might be valid if all cells were validated simultaneously.
+The limit bounds work and cost; see the editor note below for preview caching.
 
 
 ## Implementation note — Phase 7 in-game route editor
 
 `ConveyorRouteEditor` owns the transient waypoints and bend order independently
 of rendering and input. A source is selected on the first free cell adjoining a
-compatible output; the hovered final cell must adjoin an input or existing cell.
+compatible output; the hovered final cell may be open or connected to an input
+or an existing cell. A non-accepting building directly ahead is reported blocked.
 Click adds points, R flips the orthogonal axis order for every leg, Backspace
 undoes, Enter revalidates and commits, T switches back to single placement, and
 Esc/Q cancel. The first-cell rotation is chosen from compatible source directions;
@@ -1373,9 +1375,11 @@ placement remains available and unchanged.
 
 `BuildingView` reuses the normal first-cell preview and draws additional pooled
 route meshes, releasing them on mode changes/disposal. Green shows a valid start
-or valid full route, red a rejection; the status displays the reason and total
-cost where the staged plan is available. Failed staging shows approximate red
-terrain-height geometry rather than claiming exact supported shapes. The editor
+or valid full route, red a rejection; the status displays the reason, end state,
+and total cost where the staged plan is available. Open ends warn that transported
+items can fall to the ground; no change is made to existing drop semantics.
+Failed staging shows approximate red terrain-height geometry rather than claiming
+exact supported shapes. The editor
 caches the advisory preview by snapped target, waypoints, world/inventory
 revisions, player position and a 250 ms time bucket to account for moving items
 and dynamic obstacles. Click and Enter do not rely on the cache: they revalidate
@@ -1387,3 +1391,17 @@ The user globally validated the previous playable logistics features before this
 editor existed. The editor itself has automated coverage but awaits real player
 validation; arbitrary lift heights, legacy two-cell endpoints and persistence
 remain out of scope for this slice.
+
+
+## Implementation note — open-ended conveyor routes
+
+At the user's request, a destination is no longer required to confirm a route.
+The planner still verifies the existing start, individual placements, payment
+and live topology guards, and reports `endConnection` as connected, open or
+blocked. The blockage check follows the logistics manager's non-accepting
+building-ahead rule; an open end remains a functional belt that can drop items.
+Another route can start in the next free cell using the previously built belt as
+its existing source, preserving the 24-cell limit per transaction. Inputs may be
+placed afterward. Tests cover two consecutive 24-cell builds with in-flight
+items, delayed terminal attachment, open-end drops, safety revalidation and the
+actual application controls. Real-player retesting remains pending.
