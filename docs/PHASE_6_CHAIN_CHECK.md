@@ -1,7 +1,9 @@
 # Phase 6 — automated iron plates: manual validation
 
-The complete chain still needs a real play session. Creative mode can remove
-construction costs, but does not supply machine inputs.
+After this complete-chain test was requested, the user reported that everything
+works; individual checklist outcomes were not specified. This checklist remains
+available for regression checks. Creative mode can remove construction costs,
+but does not supply machine inputs.
 
 1. Place one Miner on iron and another on coal; construct a Smelter, Constructor
    (15 stone and 10 wood), and Receiving Terminal. R rotates machines.

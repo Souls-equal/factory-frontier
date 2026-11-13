@@ -1290,3 +1290,14 @@ output for both processors through the existing one-cell conveyor network.
 The constructor has no electrical network requirement in this slice, and has
 no recipe selector because only one recipe is available. Legacy automatic
 two-cell conveyor topology remains unsupported for these processors.
+
+## Implementation note — Phase 7 storage slice
+
+The LogisticsManager owns an eight-slot inventory for each storage container,
+using the same bounded InventoryReceiver and demolition protection as terminals.
+A directional one-cell input receives items and a source emits the first occupied
+slot through a directional one-cell output. Its inventory is shared by manual
+transfers and conveyor transport; synchronous transfer methods and the fixed clock
+retain conservation and backpressure. The inspection UI reuses logistics slots
+and adds selected-stack deposit. No transport filtering, FIFO guarantee, ground
+item collection or legacy two-cell conveyor support is provided.

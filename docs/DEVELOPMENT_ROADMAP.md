@@ -14,14 +14,14 @@
 ## PROGRESS TRACKER
 
 **Last updated:** 2026-11-11
-**Current phase:** Phase 6 production chain implemented; user acceptance pending; Phase 5 acceptance incomplete
+**Current phase:** Phase 7 storage slice; user play-testing pending; Phase 5 acceptance incomplete
 
 The user explicitly authorized the next step after confirming in-game miner →
 conveyor → terminal transport, turns/slopes without item loss, and blockage/recovery.
 Other Phase 5 checklist scenarios were not explicitly confirmed. Starting the
 smelter slice before full Phase 5 acceptance is a user-directed exception to the
 existing Phase 5 gate below; it does not mark that phase accepted or complete.
-Phase 6 is not accepted: the constructor and plate recipe are implemented, but the complete chain still requires user validation.
+The user reported everything works after the Phase 6 complete-chain play-test was requested, and explicitly asked to proceed. The Phase 6 chain is user-validated; this does not establish acceptance of every Phase 5 scenario. Phase 7 has begun with a storage container; its play-test and the remaining objectives are pending.
 At the user's request the smelter now directly consumes coal (1 per iron ingot);
 this is an early fuel exception, not the Phase 8 electrical power network. The
 user subsequently reported testing without specifying results. A user-requested,
@@ -44,8 +44,8 @@ detailed evidence and verification results live in `PROJECT_STATUS.md`.
 | 3 — Building and placement | 🟡 Acceptance pending | Construction menu, preview, validation, grid, rotation, registration and demolition implemented; real-browser acceptance pending |
 | 4 — First automated extractor | 🟡 User accepted | Browser verification remains pending |
 | 5 — Conveyor foundation | 🟡 Partially user-validated | User confirmed miner → terminal, turns/slopes, blockage and recovery; remaining checklist not confirmed |
-| 6 — First production chain | 🟡 User acceptance pending | Coal-fueled smelter, constructor and plates implemented and simulated; complete-chain play test pending |
-| 7 — Advanced logistics | ◻ Planned | — |
+| 6 — First production chain | ✅ User validated | Coal-fueled smelter, constructor and plates implemented; user reports everything works after complete-chain test request |
+| 7 — Advanced logistics | 🟡 In progress | Storage slice implemented; play-test pending; splitters, mergers, lifts and other routing remain |
 | 8 — Electricity | ◻ Planned | — |
 | 9 — Advanced manufacturing | ◻ Planned | — |
 | 10 — World expansion | ◻ Planned | — |

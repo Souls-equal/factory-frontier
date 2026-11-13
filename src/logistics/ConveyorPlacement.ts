@@ -1,14 +1,14 @@
 import type { BuildingInstance } from '../buildings/BuildingSystem';
 import type { BuildingTransform } from '../buildings/Transform';
-import { BELT_HEIGHT, machinePort, pathForBuilding, RECEIVER_TYPE, isProcessorBuilding } from './ConveyorDefinitions';
+import { BELT_HEIGHT, machinePort, pathForBuilding, RECEIVER_TYPE, isDirectionalMachine } from './ConveyorDefinitions';
 import type { PortPose } from './Ports';
 
 /** Derive the base height from horizontally aligned, direction-compatible adjacent ports. */
 export function connectedHeight(typeId: string, transform: BuildingTransform, existing: readonly BuildingInstance[], cellSize: number): number | null | 'conflict' {
   const candidate: BuildingInstance = { id: '__preview__', typeId, transform: { ...transform, y: 0 } };
   const path = pathForBuilding(candidate, cellSize);
-  const input = path ? { position: path.point(0), direction: path.direction('input') } : (typeId === RECEIVER_TYPE || isProcessorBuilding(typeId)) ? machinePort(candidate, cellSize, 'receiver') : undefined;
-  const output = path ? { position: path.point(path.length), direction: path.direction('output') } : isProcessorBuilding(typeId) ? machinePort(candidate, cellSize, 'source') : undefined;
+  const input = path ? { position: path.point(0), direction: path.direction('input') } : (typeId === RECEIVER_TYPE || isDirectionalMachine(typeId)) ? machinePort(candidate, cellSize, 'receiver') : undefined;
+  const output = path ? { position: path.point(path.length), direction: path.direction('output') } : isDirectionalMachine(typeId) ? machinePort(candidate, cellSize, 'source') : undefined;
   const matches: number[] = [];
   function match(candidatePort: PortPose | undefined, other: PortPose): void {
     if (!candidatePort || Math.hypot(candidatePort.position.x - other.position.x, candidatePort.position.z - other.position.z) > 1e-7 ||
@@ -21,8 +21,8 @@ export function connectedHeight(typeId: string, transform: BuildingTransform, ex
       match(input, { position: other.point(other.length), direction: other.direction('output') });
       match(output, { position: other.point(0), direction: other.direction('input') });
     } else {
-      if (building.typeId === 'miner-mk1' || isProcessorBuilding(building.typeId)) match(input, machinePort(building, cellSize, 'source'));
-      if (building.typeId === RECEIVER_TYPE || isProcessorBuilding(building.typeId)) match(output, machinePort(building, cellSize, 'receiver'));
+      if (building.typeId === 'miner-mk1' || isDirectionalMachine(building.typeId)) match(input, machinePort(building, cellSize, 'source'));
+      if (building.typeId === RECEIVER_TYPE || isDirectionalMachine(building.typeId)) match(output, machinePort(building, cellSize, 'receiver'));
     }
   }
   if (!matches.length) return null;
@@ -35,8 +35,8 @@ export { BELT_HEIGHT };
 export function connectionStatus(typeId: string, transform: BuildingTransform, existing: readonly BuildingInstance[], cellSize: number): 'connected' | 'disconnected' | 'incompatible' {
   const candidate: BuildingInstance = { id: '__preview__', typeId, transform };
   const path = pathForBuilding(candidate, cellSize);
-  const input = path ? { position: path.point(0), direction: path.direction('input') } : (typeId === RECEIVER_TYPE || isProcessorBuilding(typeId)) ? machinePort(candidate, cellSize, 'receiver') : undefined;
-  const output = path ? { position: path.point(path.length), direction: path.direction('output') } : (typeId === 'miner-mk1' || isProcessorBuilding(typeId)) ? machinePort(candidate, cellSize, 'source') : undefined;
+  const input = path ? { position: path.point(0), direction: path.direction('input') } : (typeId === RECEIVER_TYPE || isDirectionalMachine(typeId)) ? machinePort(candidate, cellSize, 'receiver') : undefined;
+  const output = path ? { position: path.point(path.length), direction: path.direction('output') } : (typeId === 'miner-mk1' || isDirectionalMachine(typeId)) ? machinePort(candidate, cellSize, 'source') : undefined;
   let connected = false, incompatible = false;
   function touch(a: PortPose | undefined, b: PortPose | undefined, allowed: boolean): void {
     if (!a || !b || Math.hypot(a.position.x - b.position.x, a.position.z - b.position.z) > 1e-7) return;
@@ -50,8 +50,8 @@ export function connectionStatus(typeId: string, transform: BuildingTransform, e
       otherInput = { position: other.point(0), direction: other.direction('input') };
       otherOutput = { position: other.point(other.length), direction: other.direction('output') };
     } else {
-      if (building.typeId === 'miner-mk1' || isProcessorBuilding(building.typeId)) otherOutput = machinePort(building, cellSize, 'source');
-      if (building.typeId === RECEIVER_TYPE || isProcessorBuilding(building.typeId)) otherInput = machinePort(building, cellSize, 'receiver');
+      if (building.typeId === 'miner-mk1' || isDirectionalMachine(building.typeId)) otherOutput = machinePort(building, cellSize, 'source');
+      if (building.typeId === RECEIVER_TYPE || isDirectionalMachine(building.typeId)) otherInput = machinePort(building, cellSize, 'receiver');
     }
     touch(input, otherOutput, true); touch(output, otherInput, true);
     touch(input, otherInput, false); touch(output, otherOutput, false);
