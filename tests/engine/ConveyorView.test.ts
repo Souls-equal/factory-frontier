@@ -102,3 +102,14 @@ it('renders constructor controls and directional ports in previews and scene', (
   view.setPreview('constructor', { reason: 'valid', transform });
   expect(view.group.getObjectByName('building-preview')).toBeDefined(); view.dispose();
 });
+
+it('renders storage container with directional ports in scene and preview', () => {
+  const registry = createDefaultBuildingRegistry(createDefaultItemRegistry()), view = new BuildingView(registry, 1);
+  const transform = snapFootprint(registry.get('storage-container'), 0, 0, 0, 1);
+  view.sync([{ id: 'storage', typeId: 'storage-container', transform }]);
+  expect(view.group.getObjectByName('storage-lid')).toBeDefined();
+  expect(view.group.getObjectByName('machine-input-port')).toBeDefined();
+  expect(view.group.getObjectByName('machine-output-port')).toBeDefined();
+  view.setPreview('storage-container', { reason: 'valid', transform });
+  expect(view.group.getObjectByName('building-preview')).toBeDefined(); view.dispose();
+});

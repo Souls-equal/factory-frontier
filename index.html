@@ -79,12 +79,12 @@
           <header class="inventory__header terminal__header"><div><span class="inventory__eyebrow">LOGISTICS / STORAGE</span><h2 data-logistics-title>Receiving Terminal</h2></div>
             <button type="button" data-logistics-close>Close · Esc</button></header>
           <div class="terminal__layout">
-            <section class="terminal__pane" aria-label="Terminal storage">
-              <div class="terminal__pane-heading"><div><span class="terminal__eyebrow">01 / STORAGE</span><h3>Terminal</h3></div><span class="terminal__badge">INPUT</span></div>
+            <section class="terminal__pane" aria-label="Storage">
+              <div class="terminal__pane-heading"><div><span class="terminal__eyebrow">01 / STORAGE</span><h3 data-logistics-storage-heading>Terminal</h3></div><span class="terminal__badge" data-logistics-storage-badge>INPUT</span></div>
               <p class="inventory__detail" data-logistics-details></p>
-              <div class="inventory__grid terminal__grid" data-logistics-grid aria-label="Terminal storage slots" hidden></div>
+              <div class="inventory__grid terminal__grid" data-logistics-grid aria-label="Storage slots" hidden></div>
               <p class="inventory__detail terminal__detail" data-logistics-slot-detail></p>
-              <div class="terminal__actions"><button type="button" class="terminal__retrieve" data-logistics-retrieve>Retrieve contents <span aria-hidden="true">→</span></button></div>
+              <div class="terminal__actions"><button type="button" class="terminal__retrieve" data-logistics-deposit hidden>Store selected stack <span aria-hidden="true">←</span></button><button type="button" class="terminal__retrieve" data-logistics-retrieve>Retrieve contents <span aria-hidden="true">→</span></button></div>
               <p class="terminal__notice" data-logistics-notice role="status" aria-live="polite"></p>
             </section>
             <section class="terminal__pane" data-logistics-player-pane aria-label="Player inventory">

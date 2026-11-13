@@ -6,6 +6,7 @@ export const CONVEYOR_SHAPES: Readonly<Record<string, ConveyorShape>> = Object.f
   'conveyor-cell': 'straight', 'conveyor-straight': 'straight', 'conveyor-curve': 'curve-right', 'conveyor-incline': 'incline',
 });
 export const isProcessorBuilding = (typeId: string): boolean => typeId === 'smelter' || typeId === 'constructor';
+export const isDirectionalMachine = (typeId: string): boolean => isProcessorBuilding(typeId) || typeId === 'storage-container';
 export const RECEIVER_TYPE = 'receiving-terminal';
 export const BELT_HEIGHT = .5;
 export const DEFAULT_INCLINE_RISE = 1;

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — Phase 7 storage slice
+
+- Add an eight-stack Storage Container with directional one-cell conveyor input
+  and output, safe backpressure and demolition protection.
+- Add player stack deposit and partial-safe retrieval in the logistics UI.
+- Record user confirmation of the Phase 6 chain; Phase 7 play-testing is pending.
+
 ## Unreleased — constructor and iron plates
 
 - Add the Constructor, fixed iron plate recipe, item art and inspection UI.

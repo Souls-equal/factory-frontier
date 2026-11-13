@@ -24,7 +24,7 @@ export class LogisticsManager implements SimulationSystem {
     if (!Number.isSafeInteger(terminalSlots) || terminalSlots < 1) throw new RangeError('Invalid receiver capacity');
     this.network = new ConveyorNetwork(() => false, groundItems ? (item, position) => groundItems.drop(item.id, item.itemId, position) : undefined);
     buildings.addTopologyGuard((before, after) => {
-      const relevant = (entries: typeof before) => entries.filter((b) => b.typeId.startsWith('conveyor-') || b.typeId === 'miner-mk1' || (b.typeId === 'smelter' || b.typeId === 'constructor') || b.typeId === RECEIVER_TYPE)
+      const relevant = (entries: typeof before) => entries.filter((b) => b.typeId.startsWith('conveyor-') || b.typeId === 'miner-mk1' || (b.typeId === 'smelter' || b.typeId === 'constructor') || b.typeId === RECEIVER_TYPE || b.typeId === 'storage-container')
         .map((b) => [b.id, b.typeId, b.transform.x, b.transform.y, b.transform.z, b.transform.rotation, b.autoConveyor, b.cellConveyor]);
       if (JSON.stringify(relevant(before)) === JSON.stringify(relevant(after))) return true;
       this.sync();
@@ -45,6 +45,7 @@ export class LogisticsManager implements SimulationSystem {
     });
   }
   terminal(id: string): Inventory | undefined { return this.terminals.get(id); }
+  isStorage(id: string): boolean { return this.buildings.get(id)?.typeId === 'storage-container'; }
   retrieve(id: string, destination: Inventory): QuantityResult {
     const inventory = this.terminals.get(id);
     if (!inventory) throw new RangeError('Unknown receiving terminal');
@@ -75,7 +76,8 @@ export class LogisticsManager implements SimulationSystem {
         if (building.typeId === 'conveyor-cell') this.network.addCell(building.id, path, { ...this.settings, spacing: Math.min(this.settings.spacing, path.length / 2) });
         else this.network.add(building.id, path, this.settings);
       }
-      if (building.typeId === RECEIVER_TYPE && !this.terminals.has(building.id)) this.terminals.set(building.id, new Inventory(this.items, this.terminalSlots));
+      if ((building.typeId === RECEIVER_TYPE || building.typeId === 'storage-container') && !this.terminals.has(building.id))
+        this.terminals.set(building.id, new Inventory(this.items, building.typeId === 'storage-container' ? 8 : this.terminalSlots));
     }
     const paths = new Map(buildings.map((b) => [b.id, pathForBuilding(b, this.buildings.cellSize)] as const)
       .filter((entry): entry is readonly [string, NonNullable<typeof entry[1]>] => !!entry[1]));
@@ -132,9 +134,22 @@ export class LogisticsManager implements SimulationSystem {
       }
       const terminal = this.terminals.get(building.id);
       if (terminal) {
+        if (building.typeId === 'storage-container') {
+          const pose = machinePort(building, this.buildings.cellSize, 'source');
+          const source = { id: building.id, pose,
+            peek: () => terminal.snapshot().find((slot) => slot !== null)?.itemId ?? null,
+            take: (itemId: string) => terminal.removeItem(itemId, 1).moved === 1 };
+          const cell = cells.find((b) => cellTouchesMachine(b, building, this.buildings.cellSize, 'source'));
+          if (cell) {
+            const path = pathForBuilding(cell, this.buildings.cellSize)!, d = path.direction('input'), port = pose.direction;
+            const distance = d.x === port.x && d.z === port.z ? 0 : path.length / 2;
+            this.network.attachCellSource(cell.id, source, distance, { x: cell.transform.x - port.x * this.buildings.cellSize / 2,
+              y: pose.position.y, z: cell.transform.z - port.z * this.buildings.cellSize / 2 });
+          }
+        }
         const receiver = new InventoryReceiver(building.id, machinePort(building, this.buildings.cellSize, 'receiver'), terminal);
         for (const cell of cells) if (cellTouchesMachine(cell, building, this.buildings.cellSize, 'receiver')) this.network.attachCellReceiver(cell.id, receiver);
-        for (const segment of legacy) if (this.network.attachReceiver(segment.id, receiver)) break;
+        if (building.typeId === RECEIVER_TYPE) for (const segment of legacy) if (this.network.attachReceiver(segment.id, receiver)) break;
       }
     }
     // A non-accepting building directly ahead is not empty space.

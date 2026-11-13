@@ -927,3 +927,73 @@ it('protects both constructor buffers and halts conveyor output when disabled', 
   const player = new Inventory(items, 1); expect(c.retrieve(player).moved).toBe(1);
   expect(buildings.demolish(constructor.id)).toBe('removed');
 });
+
+it.each([0, 1, 2, 3])('connects a storage container in either placement order at rotation %i', (r) => {
+  for (const storageFirst of [true, false]) {
+    const { buildings, logistics } = setup(); buildings.setCreativeMode(true);
+    const rotate = (x: number, z: number) => { const a = r * Math.PI / 2; return { x: Math.round(x * Math.cos(a) + z * Math.sin(a)) / 2, z: Math.round(-x * Math.sin(a) + z * Math.cos(a)) / 2 }; };
+    const a = rotate(-1, 3), b = rotate(-1, -3);
+    let storage: ReturnType<typeof place>, input: ReturnType<typeof place>, output: ReturnType<typeof place>;
+    if (storageFirst) { storage = place(buildings, 'storage-container', 0, 0, r); input = place(buildings, 'conveyor-cell', a.x, a.z, r); output = place(buildings, 'conveyor-cell', b.x, b.z, r); }
+    else { input = place(buildings, 'conveyor-cell', a.x, a.z, r); output = place(buildings, 'conveyor-cell', b.x, b.z, r); storage = place(buildings, 'storage-container', 0, 0, r); }
+    logistics.sync(); expect(logistics.network.get(input.id)!.receiver?.id).toBe(storage.id);
+    expect(logistics.network.get(output.id)!.source?.id).toBe(storage.id);
+    expect(logistics.terminal(storage.id)!.capacity).toBe(8);
+  }
+});
+
+it('stores and forwards mixed items with bounded capacity, backpressure, and conservation', () => {
+  const { buildings, logistics } = setup(); buildings.setCreativeMode(true);
+  const input = place(buildings, 'conveyor-cell', -.5, 1.5);
+  const storage = place(buildings, 'storage-container', 0, 0);
+  logistics.sync(); const inventory = logistics.terminal(storage.id)!;
+  const receiver = logistics.network.get(input.id)!.receiver!;
+  inventory.addItem('iron-ore', 800); expect(receiver.canAccept('iron-ore')).toBe(false);
+  expect(receiver.accept('coal')).toBe(false); expect(buildings.demolish(storage.id)).toBe('output not empty');
+  inventory.removeItem('iron-ore', 100); expect(receiver.accept('coal')).toBe(true);
+  const output = place(buildings, 'conveyor-cell', -.5, -1.5);
+  const sinkBuilding = place(buildings, 'receiving-terminal', 0, -3);
+  logistics.sync(); const sink = logistics.terminal(sinkBuilding.id)!;
+  sink.addItem('stone', 100);
+  for (let i = 0; i < 500; i++) logistics.fixedUpdate(50);
+  const total = (itemId: string) => inventory.getItemCount(itemId) + sink.getItemCount(itemId) + logistics.network.all().reduce((n, b) => n + b.items.filter((i) => i.itemId === itemId).length, 0);
+  expect(total('iron-ore')).toBe(700); expect(total('coal')).toBe(1);
+  expect(logistics.network.get(output.id)!.state).toBe('BLOCKED');
+  sink.removeItem('stone', 100);
+  for (let i = 0; i < 4000; i++) logistics.fixedUpdate(50);
+  expect(sink.getItemCount('coal')).toBe(1); expect(total('iron-ore')).toBe(700); expect(total('coal')).toBe(1);
+  sink.removeItem('coal', 1);
+  for (let i = 0; i < 4000; i++) logistics.fixedUpdate(50);
+  expect(sink.getItemCount('iron-ore')).toBe(100); expect(total('iron-ore')).toBe(700); expect(total('coal')).toBe(0);
+  expect(buildings.demolish(storage.id)).toBe('output not empty');
+});
+
+it('automatically buffers a real miner through storage and forwards every item into the terminal', () => {
+  const { buildings, machines, logistics } = setup(); buildings.setCreativeMode(true);
+  const miner = place(buildings, 'miner-mk1', 0, 0), input = place(buildings, 'conveyor-cell', -.5, -1.5);
+  const storage = place(buildings, 'storage-container', 0, -3), output = place(buildings, 'conveyor-cell', -.5, -4.5);
+  const terminal = place(buildings, 'receiving-terminal', 0, -6); logistics.sync();
+  expect(logistics.network.get(input.id)!.receiver?.id).toBe(storage.id);
+  expect(logistics.network.get(output.id)!.source?.id).toBe(storage.id);
+  for (let i = 0; i < 1200; i++) { machines.fixedUpdate(50); logistics.fixedUpdate(50); }
+  const sink = logistics.terminal(terminal.id)!, box = logistics.terminal(storage.id)!;
+  expect(sink.getItemCount('iron-ore')).toBeGreaterThan(0);
+  const total = machines.get(miner.id)!.output.getItemCount('iron-ore') + box.getItemCount('iron-ore') + sink.getItemCount('iron-ore') + logistics.network.all().reduce((n, b) => n + b.items.length, 0);
+  expect(total).toBe(30);
+});
+
+it('backs up the miner into a full container and resumes after space is freed', () => {
+  const { buildings, machines, logistics } = setup(); buildings.setCreativeMode(true);
+  const miner = place(buildings, 'miner-mk1', 0, 0), belt = place(buildings, 'conveyor-cell', -.5, -1.5);
+  const storage = place(buildings, 'storage-container', 0, -3); logistics.sync();
+  const stock = machines.get(miner.id)!.output, box = logistics.terminal(storage.id)!;
+  box.addItem('iron-ore', 800); stock.addItem('iron-ore', 10);
+  for (let i = 0; i < 600; i++) logistics.fixedUpdate(50);
+  expect(logistics.network.get(belt.id)!.state).toBe('BLOCKED');
+  expect(stock.getItemCount('iron-ore') + logistics.network.get(belt.id)!.items.length + box.getItemCount('iron-ore')).toBe(810);
+  box.removeItem('iron-ore', 20);
+  for (let i = 0; i < 600; i++) logistics.fixedUpdate(50);
+  expect(box.getItemCount('iron-ore')).toBe(790);
+  expect(stock.getItemCount('iron-ore') + logistics.network.get(belt.id)!.items.length + box.getItemCount('iron-ore')).toBe(790);
+  box.removeItem('iron-ore', 790); expect(buildings.demolish(storage.id)).toBe('removed');
+});

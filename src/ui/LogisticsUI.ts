@@ -19,6 +19,7 @@ export class LogisticsUI {
   private readonly notice: HTMLElement;
   private readonly close: HTMLButtonElement;
   private readonly retrieve: HTMLButtonElement;
+  private readonly deposit: HTMLButtonElement | null;
   constructor(private readonly root: HTMLElement, private readonly logistics: LogisticsManager,
     private readonly player: Inventory, private readonly onClose: () => void) {
     const find = <T extends HTMLElement>(selector: string): T => {
@@ -31,6 +32,8 @@ export class LogisticsUI {
     this.grid.addEventListener('click', this.handleGrid);
     this.details = find('[data-logistics-details]'); this.title = find('[data-logistics-title]'); this.notice = find('[data-logistics-notice]');
     this.close = find('[data-logistics-close]'); this.retrieve = find('[data-logistics-retrieve]');
+    this.deposit = root.querySelector<HTMLButtonElement>('[data-logistics-deposit]');
+    this.deposit?.addEventListener('click', this.handleDeposit);
     this.close.addEventListener('click', this.onClose); this.retrieve.addEventListener('click', this.handleRetrieve);
   }
   get isOpen(): boolean { return !this.root.hidden; }
@@ -44,9 +47,15 @@ export class LogisticsUI {
       const d = segment.path.direction('output');
       const direction = d.x > 0 ? 'east' : d.x < 0 ? 'west' : d.z > 0 ? 'south' : 'north';
       this.details.textContent = `State: ${segment.state} · Direction: ${direction} · Input: ${segment.input ?? segment.source?.id ?? 'not connected'} · Output: ${segment.output ?? segment.receiver?.id ?? 'not connected'} · Items: ${segment.items.length} · Maximum throughput: ${segment.settings.throughputPerMinute} items/min · ${segment.state === 'BLOCKED' ? (segment.output || segment.receiver || this.logistics.network.isCell(segment.id) ? 'Downstream is full or occupied.' : 'Open end: connect another belt or a receiver.') : segment.state === 'DISCONNECTED' ? 'Connect the input to a source.' : !segment.output && !segment.receiver ? (this.logistics.network.dropsOpenEnds ? 'Open end: items fall off.' : 'Open end: items will stop here.') : ''}`;
+      if (this.deposit) this.deposit.hidden = true;
       this.grid.hidden = true; this.playerPane.hidden = true; this.slotDetail.textContent = ''; this.retrieve.hidden = true;
     } else if (receiver) {
-      this.title.textContent = 'Receiving Terminal';
+      const isStorage = this.logistics.isStorage(this.active);
+      this.title.textContent = isStorage ? 'Storage Container' : 'Receiving Terminal';
+      const heading = this.root.querySelector('[data-logistics-storage-heading]'), badge = this.root.querySelector('[data-logistics-storage-badge]');
+      if (heading) heading.textContent = isStorage ? 'Container' : 'Terminal';
+      if (badge) badge.textContent = isStorage ? 'INPUT / OUTPUT' : 'INPUT';
+      if (this.deposit) { this.deposit.hidden = !isStorage; this.deposit.disabled = this.playerSelected === null || !this.player.snapshot()[this.playerSelected]; }
       this.details.textContent = `Capacity: ${receiver.usedSlots} / ${receiver.capacity} slots`;
       this.grid.hidden = false; this.playerPane.hidden = false;
       if (this.shownPlayerRevision !== this.player.revision) this.renderPlayer();
@@ -54,7 +63,7 @@ export class LogisticsUI {
       this.retrieve.hidden = false; this.retrieve.disabled = receiver.usedSlots === 0;
     }
   }
-  dispose(): void { this.playerGrid.removeEventListener('click', this.handlePlayerGrid); this.grid.removeEventListener('click', this.handleGrid); this.close.removeEventListener('click', this.onClose); this.retrieve.removeEventListener('click', this.handleRetrieve); }
+  dispose(): void { this.deposit?.removeEventListener('click', this.handleDeposit); this.playerGrid.removeEventListener('click', this.handlePlayerGrid); this.grid.removeEventListener('click', this.handleGrid); this.close.removeEventListener('click', this.onClose); this.retrieve.removeEventListener('click', this.handleRetrieve); }
   private renderPlayer(): void {
     const slots = this.player.snapshot();
     this.playerGrid.replaceChildren();
@@ -77,7 +86,7 @@ export class LogisticsUI {
     if (!button || !this.playerGrid.contains(button)) return;
     const index = Number(button.dataset.slot);
     this.playerSelected = this.player.snapshot()[index] && this.playerSelected !== index ? index : null;
-    this.renderPlayer();
+    this.renderPlayer(); this.update();
   };
   private renderSlots(inventory: Inventory): void {
     const slots = inventory.snapshot();
@@ -105,6 +114,13 @@ export class LogisticsUI {
     const index = Number(button.dataset.slot);
     this.selected = receiver.snapshot()[index] && this.selected !== index ? index : null;
     this.renderSlots(receiver);
+  };
+  private readonly handleDeposit = (): void => {
+    if (!this.active || !this.logistics.isStorage(this.active) || this.playerSelected === null) return;
+    const inventory = this.logistics.terminal(this.active), slot = this.player.snapshot()[this.playerSelected];
+    if (!inventory || !slot) return;
+    const result = this.player.transferItem(inventory, slot.itemId, slot.quantity);
+    this.notice.textContent = `Stored ${result.moved}; ${result.remainder} remain in inventory.`; this.update();
   };
   private readonly handleRetrieve = (): void => {
     if (!this.active || !this.logistics.terminal(this.active)) return;

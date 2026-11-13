@@ -85,3 +85,24 @@ it('renders all configurable terminal slots, updates and preserves partial trans
   expect(root.querySelector('[data-logistics-slot-detail]')!.textContent).not.toContain('Carbon-rich');
   ui.closePanel(); ui.open(terminal.id); expect(slots()).toHaveLength(3); ui.dispose();
 });
+
+it('shows storage capacity and transfers only what fits in either direction', () => {
+  document.body.innerHTML = '<section hidden><h2 data-logistics-title></h2><span data-logistics-storage-heading></span><span data-logistics-storage-badge></span><button data-logistics-close>close</button><p data-logistics-details></p><div data-logistics-grid hidden></div><p data-logistics-slot-detail></p><div data-logistics-player-pane><div data-logistics-player-grid></div><p data-logistics-player-capacity></p><p data-logistics-player-detail></p></div><button data-logistics-deposit>store</button><button data-logistics-retrieve>retrieve</button><p data-logistics-notice></p></section>';
+  const root = document.querySelector('section')!, items = createDefaultItemRegistry(), builder = new Inventory(items, 5);
+  const buildings = new BuildingSystem(createDefaultBuildingRegistry(items), builder, terrain, [], 1, 19); buildings.setCreativeMode(true);
+  const machines = new MachineManager(buildings, items, () => []), logistics = new LogisticsManager(buildings, machines, items);
+  const storage = buildings.place('storage-container', 0, 0, 0, { x: 8, z: 8, radius: .4 }).building!;
+  logistics.sync(); const inventory = logistics.terminal(storage.id)!;
+  inventory.addItem('iron-ore', 799);
+  const player = new Inventory(items, 1); player.addItem('iron-ore', 5);
+  const ui = new LogisticsUI(root, logistics, player, vi.fn()); ui.open(storage.id);
+  expect(root.querySelector('[data-logistics-title]')!.textContent).toBe('Storage Container');
+  expect(root.querySelectorAll('[data-logistics-grid] [data-slot]')).toHaveLength(8);
+  const store = root.querySelector<HTMLButtonElement>('[data-logistics-deposit]')!; expect(store.disabled).toBe(true);
+  root.querySelector<HTMLButtonElement>('[data-logistics-player-grid] [data-slot="0"]')!.click(); expect(store.disabled).toBe(false); store.click();
+  expect(inventory.getItemCount('iron-ore')).toBe(800); expect(player.getItemCount('iron-ore')).toBe(4);
+  expect(root.textContent).toContain('Stored 1; 4 remain in inventory.');
+  root.querySelector<HTMLButtonElement>('[data-logistics-retrieve]')!.click();
+  expect(player.getItemCount('iron-ore')).toBe(100); expect(inventory.getItemCount('iron-ore')).toBe(704);
+  expect(root.textContent).toContain('Transferred 96; 704 remain.'); ui.dispose();
+});

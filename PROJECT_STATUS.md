@@ -2,12 +2,31 @@
 
 **Project:** Factory Frontier
 **Version:** 0.3.0
-**Current Phase:** Phase 6 — First production chain (implementation in progress)
-**Phase Status:** 🟡 In progress — constructor and iron plates implemented; full-chain player validation pending
-**Next Recommended Task:** Validate the complete iron/coal → smelter → constructor → plates chain in game; complete remaining Phase 5 manual checks as appropriate.
+**Current Phase:** Phase 7 — Advanced logistics (first storage slice)
+**Phase Status:** 🟡 In progress — storage container implemented; play-testing pending
+**Next Recommended Task:** Play-test the new storage container, then continue Phase 7 incrementally; remaining Phase 5 checklist scenarios remain open.
 **Last Updated:** 2026-11-11
 
 ---
+
+## Phase 7 — storage container (first slice)
+
+- After the complete-chain play-test was requested, the user reported that
+  everything works and asked to proceed. The Phase 6 chain has therefore been
+  user-validated; individual outstanding Phase 5 scenarios were not specified.
+- Storage Container costs 15 stone and 10 wood, holds eight item stacks, and
+  connects one-cell belts at its cyan rear input and yellow front output. It can
+  be placed as an end buffer or in-line; a connected output belt draws from the
+  first occupied slot automatically. E opens storage inspection, allows deposit
+  of the selected player stack and retrieval of all contents that fit. Nonempty
+  containers cannot be demolished. No dropped-item collection is provided.
+- Mixed contents are not filtered or FIFO: first occupied slot wins and a
+  downstream incompatible/full receiver can block following items. A belt with
+  an open output can drop items onto the ground. Old two-cell conveyors are not
+  connected to this container. The new feature requires user play-testing; see
+  `docs/PHASE_7_STORAGE_CHECK.md`.
+- Splitters, mergers, conveyor lifts and the rest of Phase 7 remain unimplemented;
+  the phase is not accepted. Session-only state remains unsaved.
 
 ## Phase 6 — constructor and iron plates
 
@@ -23,8 +42,8 @@
 - Automated end-to-end simulation covers two miners, coal-fired smelting,
   construction, terminal delivery, material conservation, full-terminal
   backpressure and recovery. Four rotations, UI and mocked-render bootstrap are
-  also covered. User play-testing of the complete chain remains pending; see
-  `docs/PHASE_6_CHAIN_CHECK.md`. Do not mark Phase 6 accepted on tests alone.
+  also covered. The user later reported that everything works after the complete
+  chain test was requested; see `docs/PHASE_6_CHAIN_CHECK.md`.
 
 ## Creative construction — user-requested testing aid
 
