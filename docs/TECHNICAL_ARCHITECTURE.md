@@ -1483,3 +1483,17 @@ suppression and simulation pause remain in force; E and existing interactions
 are unchanged. The displayed theoretical limit is the smaller of configured
 throughput and `60 * speed / spacing`, an upper bound independent of supply,
 blockages and fixed-step effects. Statistics are not persisted across sessions.
+
+
+## Implementation note — storage output filter
+
+`LogisticsManager` owns a validated optional item ID per storage building. Its
+existing belt source peeks and removes only the selected item; null preserves the
+original first-occupied-slot choice. If the selected item is unavailable, no
+other item is automatically substituted. Changing the filter does not modify
+inventories or recall in-flight items. Incoming ports, manual transfer, downstream
+backpressure and demolition guards are unchanged. Configuration is independent
+per storage, survives `sync` topology rebuilds, is removed on demolition, and is
+not persisted between sessions. The existing E logistics panel selects from the
+item registry; terminals and other devices do not expose the setting. This is an
+output selector, not a splitter or an input/slot filter.

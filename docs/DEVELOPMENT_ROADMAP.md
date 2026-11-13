@@ -14,7 +14,7 @@
 ## PROGRESS TRACKER
 
 **Last updated:** 2026-11-11
-**Current phase:** Phase 7 integration and acceptance; flow inspection and route editor play-tests pending; Phase 5 acceptance incomplete
+**Current phase:** Phase 7 integration and acceptance; storage filter and route editor play-tests pending; Phase 5 acceptance incomplete
 
 The user explicitly authorized the next step after confirming in-game miner →
 conveyor → terminal transport, turns/slopes without item loss, and blockage/recovery.
@@ -22,7 +22,7 @@ Other Phase 5 checklist scenarios were not explicitly confirmed. Starting the
 smelter slice before full Phase 5 acceptance is a user-directed exception to the
 existing Phase 5 gate below; it does not mark that phase accepted or complete.
 The user reported everything works after the Phase 6 complete-chain play-test was requested, and explicitly asked to proceed. The Phase 6 chain is user-validated; this does not establish acceptance of every Phase 5 scenario. Phase 7 includes storage, splitter modes, a fair merger and bounded upward/downward lifts. The user reports that all previously playable additions work after testing; this is a global report, not individual scenario evidence. The new bounded control-point route editor was added afterwards. The user reported that requiring an existing destination prevented incremental construction; open-ended routes and continuation have now been added and still require player retesting. Arbitrary lift heights remain unimplemented, so Phase 7 acceptance remains pending.
-Conveyor and lift flow inspection is implemented with G; player validation remains pending, and the Phase 7 acceptance gate remains open.
+The player confirmed conveyor and lift flow inspection with G works. A storage output filter is now implemented and awaits player validation; the Phase 7 acceptance gate remains open.
 At the user's request the smelter now directly consumes coal (1 per iron ingot);
 this is an early fuel exception, not the Phase 8 electrical power network. The
 user subsequently reported testing without specifying results. A user-requested,

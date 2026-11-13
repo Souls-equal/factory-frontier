@@ -73,3 +73,15 @@ manual scenarios separately; report layout, rotation and any problems found.
    simulated time in one-second buckets, so it starts with partial history and
    does not age while the panel is open. Rebuilding the segment resets its total.
 4. Confirm G does not open inspection through inventory or construction menus.
+
+
+### Storage output filter
+
+1. Put iron ore and coal into a Storage Container with a connected output belt
+   and a receiver. Open it with E and choose Coal under Output filter. Close the
+   panel and verify coal leaves while iron remains. With no coal, output waits.
+2. Add more coal and verify flow resumes. Fill the destination, verify backpressure,
+   then free space. Switch the filter while an item is already on the belt: that
+   item still completes its trip. Inputs and manual retrieval remain available.
+3. Choose Any item to restore first-occupied-slot output. A second container has
+   its own setting. The selection resets after demolition or page reload.
