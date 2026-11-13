@@ -71,10 +71,11 @@ export function createDefaultBuildingRegistry(items: ItemRegistry): BuildingRegi
     description: 'Presses iron ingots into plates. Cyan: input at rear; yellow: output at front.',
     cost: [{ itemId: 'stone', quantity: 15 }, { itemId: 'wood', quantity: 10 }], widthCells: 2, depthCells: 2,
     height: 2.2, maxSlope: .58, maxGroundVariation: .8, color: 0x56777e, placement: 'logistics' });
-  for (const direction of ['up', 'down'] as const) for (let rise = 1; rise <= MAX_LIFT_HEIGHT; rise++) {
+  for (const direction of ['up', 'down'] as const) for (let steps = 10; steps <= MAX_LIFT_HEIGHT * 10; steps++) {
+    const rise = steps / 10;
     const id = `lift-${direction}-${rise}`, input = direction === 'up' ? 'low' : 'high';
     registry.register({ id, name: `Lift ${direction === 'up' ? 'Up' : 'Down'} ${rise}m`, category: 'Logistics',
-      description: `Vertical conveyor: ${input} rear input; ${rise}m height change. Page Up/Down adjusts height.`,
+      description: `Vertical conveyor: ${input} rear input; ${rise}m height change. Page Up/Down: 1m; Shift + Page Up/Down: 0.1m.`,
       cost: [{ itemId: 'stone', quantity: 15 }, { itemId: 'wood', quantity: 10 }], widthCells: 2, depthCells: 2,
       height: rise + .9, maxSlope: .58, maxGroundVariation: .8, color: 0x748c92, placement: 'logistics' });
   }

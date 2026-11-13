@@ -40,4 +40,4 @@ output must already exist. The final destination may be placed afterwards.
 The 250 ms advisory preview may briefly lag moving items, but Enter rechecks.
 Red fallback geometry may not reflect exact foundation height. The ordinary
 terrain-aiming and support restrictions apply. Legacy two-cell belts cannot be
-endpoints; arbitrary lift heights and saved games are not implemented.
+endpoints; lift heights outside 1–8 m or below 0.1 m precision and saved games are not implemented.

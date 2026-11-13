@@ -239,6 +239,26 @@ describe('configurable lift construction', () => {
     controller.adjustLiftHeight(-1); expect(controller.selected).toBe(`lift-${direction}-7`);
     controller.select('foundation'); controller.adjustLiftHeight(1); expect(controller.selected).toBe('foundation');
   });
+  it.each(['up', 'down'])('adjusts %s in tenths without drift or changing placed lifts', (direction) => {
+    const { system, inventory, controller, player, view } = setup();
+    const before = inventory.snapshot();
+    controller.select(`lift-${direction}-1`); controller.adjustLiftHeight(-1, true);
+    expect(controller.selected).toBe(`lift-${direction}-1`);
+    for (let i = 0; i < 23; i++) controller.adjustLiftHeight(1, true);
+    expect(controller.selected).toBe(`lift-${direction}-3.3`);
+    const preview = controller.preview(view, player)!; controller.rotate();
+    const placed = controller.confirm(view, player)!; expect(placed.reason).toBe('valid');
+    expect(placed.building!.typeId).toBe(`lift-${direction}-3.3`);
+    expect(preview.reason).toBe('valid'); expect(system.registry.get(placed.building!.typeId).height).toBeCloseTo(4.2);
+    controller.adjustLiftHeight(1); expect(controller.selected).toBe(`lift-${direction}-4.3`);
+    controller.adjustLiftHeight(-1, true); expect(controller.selected).toBe(`lift-${direction}-4.2`);
+    for (let i = 0; i < 90; i++) controller.adjustLiftHeight(1, true);
+    expect(controller.selected).toBe(`lift-${direction}-8`); controller.adjustLiftHeight(1, true);
+    expect(controller.selected).toBe(`lift-${direction}-8`);
+    expect(placed.building!.typeId).toBe(`lift-${direction}-3.3`);
+    expect(inventory.snapshot()).not.toEqual(before); expect(system.demolish(placed.building!.id)).toBe('removed');
+    expect(inventory.snapshot()).toEqual(before);
+  });
   it('targets a supported conveyor on a high platform without touching the ground ray', () => {
     const { system, controller } = setup(); system.setCreativeMode(true);
     expect(system.place('foundation', 0, 0, 0, { x: 20, z: 20, radius: .4 }, 6).reason).toBe('valid');

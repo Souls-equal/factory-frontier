@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — fine lift-height control
+
+- Add 0.1 m lift height steps with Shift + Page Up/Down, retaining the existing
+  1 m controls, 1–8 m bounds, support rules and fixed placed heights.
+- Record the player validation of direct lift-to-lift connections.
+
 ## Unreleased — direct lift-to-lift connections
 
 - Link aligned lifts directly with shared port geometry, preserving spacing,

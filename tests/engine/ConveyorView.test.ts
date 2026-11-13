@@ -153,7 +153,7 @@ it('renders, reuses, recolors and disposes multi-cell route previews', () => {
   const lastDispose = vi.spyOn(last.geometry, 'dispose'); view.dispose(); expect(lastDispose).toHaveBeenCalledOnce();
 });
 
-it.each(['lift-up-8', 'lift-down-8'])('renders %s endpoint heights aligned with the logical path in every direction', (typeId) => {
+it.each(['lift-up-8', 'lift-down-8', 'lift-up-2.3', 'lift-down-7.9'])('renders %s endpoint heights aligned with the logical path in every direction', (typeId) => {
   const registry = createDefaultBuildingRegistry(createDefaultItemRegistry()), view = new BuildingView(registry, 1);
   for (let rotation = 0; rotation < 4; rotation++) {
     const transform = { ...snapFootprint(registry.get(typeId), 0, 0, rotation, 1), y: 1.25 };

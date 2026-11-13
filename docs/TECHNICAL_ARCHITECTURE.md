@@ -1549,4 +1549,23 @@ Topology projection and direct connection reject pre-existing unsafe item spacin
 The two-phase update, capacity, transfer clocks and per-segment flow counters are
 unchanged. Tests cover every supported height, direction, rotation and placement
 order, occupied links, backpressure, conservation and multi-lift operation.
-Direct legacy-belt links remain unsupported. Player acceptance is still pending.
+Direct legacy-belt links remain unsupported. The player subsequently validated the direct lift-to-lift slice.
+
+
+## Implementation note — fine lift-height control
+
+`LiftDefinitions` accepts canonical lift IDs for every tenth from 1 to 8 cells;
+the registry supplies matching geometry and unchanged costs. Integer IDs remain
+unchanged. The controller stores heights as integer tenths when adjusting,
+preventing floating-point drift: Page Up/Down changes ten steps, Shift plus the
+same keys changes one, and both clamp to the existing bounds. Input passes the
+keyboard modifier through to the controller. The Q menu still offers only the
+existing 1 m and 2 m presets; preview and status show the selected value. Existing
+lifts remain unchanged after placement.
+
+Fractional lifts use existing path geometry, ports, support, collision,
+foundation alignment, routing, backpressure and safety rules; foundation behavior
+itself is unchanged. Tests exercise every canonical height, real keyboard wiring,
+preview, rendering, costs, platform alignment and live connections to machines,
+junctions, belts and other lifts. Heights beyond 1–8 m, sub-tenth increments and
+editing placed lifts remain unsupported. Player acceptance of this slice is pending.

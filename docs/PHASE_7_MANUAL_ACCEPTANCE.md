@@ -33,8 +33,8 @@ blocked or disconnected, and flow resumes after it clears. Return to Balanced.
 ## Lifts
 
 1. From Q choose Lift Up 1m or Lift Up 2m (15 stone + 10 wood); R rotates it.
-   Before placing, use Page Up/Down to select 1–8 m in whole metres; check the
-   HUD, preview and repeated placement. The same controls apply to Lift Down.
+   Before placing, use Page Up/Down for 1 m steps and Shift + Page Up/Down for
+   0.1 m steps between 1 and 8 m; check the HUD, preview and repeated placement. The same controls apply to Lift Down.
    Connect the cyan rear input to a one-cell belt and the yellow elevated front
    output to another belt. Put a receiver at the output. Verify visible items
    travel up and arrive. Adjacent belts snap to the port's height when possible.
@@ -55,8 +55,8 @@ matching down lift back to a low receiver. Check visible movement, blockage and
 recovery. Higher platforms may require reaching them from the side or building
 additional platforms; the usual construction reach still applies.
 
-Limits: heights are selected from 1–8 grid metres before placement, not
-adjustable afterwards. Terrain and foundation support limits still apply, so
+Limits: heights are selected from 1–8 grid metres in 0.1 m steps before placement,
+not adjustable afterwards. Terrain and foundation support limits still apply, so
 some elevated layouts require a supported foundation. Compatible machine ports can connect directly when aligned at the same height;
 splitters and mergers also accept directly aligned lift ports. Legacy two-cell
 belts cannot connect to lifts or one-cell belts. The later route editor is described in `PHASE_7_ROUTE_CHECK.md`. Check previous Phase 5
@@ -127,3 +127,16 @@ manual scenarios separately; report layout, rotation and any problems found.
 3. Try several heights and rotations, including two ascending lifts with an
    appropriately supported upper lift, and a chain of three lifts. Wrong height
    or direction must stay disconnected; normal foundation support still applies.
+
+
+### Fine lift-height adjustment
+
+1. Select Lift Up or Down from Q. Use Page Up/Down to change the height by 1 m,
+   then hold Shift while pressing the same keys to adjust by 0.1 m. Confirm the
+   HUD and preview show the selected height and clamp at 1 and 8 m.
+2. Place a 2.3 m lift next to an existing platform with a top 2.3 m above its
+   base; connect compatible ports and send items. Try descending, rotation and
+   the reverse placement order. Existing support and reach rules still apply.
+3. Block and clear the receiving container, verify recovery, and check the lift
+   cannot be demolished while it contains items. Adjusting a new preview must
+   not resize the lift already placed.
