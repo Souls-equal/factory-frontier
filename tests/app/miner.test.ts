@@ -13,7 +13,7 @@ const state = vi.hoisted(() => ({ buildings: [] as readonly BuildingInstance[], 
 vi.mock('../../src/items/Inventory', async (load) => {
   const actual = await load<typeof import('../../src/items/Inventory')>();
   class StockedInventory extends actual.Inventory {
-    constructor(...args: ConstructorParameters<typeof actual.Inventory>) { super(...args); if (args[1] === 24) { this.addItem('iron-ore', 30); this.addItem('stone', 20); this.addItem('wood', 20); this.addItem('coal', 10); } }
+    constructor(...args: ConstructorParameters<typeof actual.Inventory>) { super(...args); if (args[1] === 24) { this.addItem('iron-ore', 30); this.addItem('stone', 20); this.addItem('wood', 20); this.addItem('coal', 10); this.addItem('iron-ingot', 4); } }
   }
   return { ...actual, Inventory: StockedInventory };
 });
@@ -105,6 +105,30 @@ describe('smelter through real bootstrap with mocked rendering', () => {
     panel.querySelector<HTMLButtonElement>('[data-machine-feed]')!.click();
     expect(panel.textContent).toContain('Input: 30'); expect(panel.textContent).toContain('NO_POWER');
     panel.querySelector<HTMLButtonElement>('[data-machine-feed-fuel]')!.click(); expect(panel.textContent).toContain('Coal: 10');
+    panel.querySelector<HTMLButtonElement>('[data-machine-close]')!.click();
+    for (let i = 0; i < 50; i++) frame();
+    key('KeyE'); frame(); expect(panel.textContent).toMatch(/Output: [1-9]/);
+  });
+});
+
+describe('constructor through real bootstrap with mocked rendering', () => {
+  it('constructs, inspects, feeds and produces a plate', async () => {
+    vi.spyOn(console, 'info').mockImplementation(() => undefined);
+    await import('../../src/main'); await vi.waitFor(() => expect(state.init).toBe(1)); frame();
+    const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
+    canvas.dispatchEvent(new MouseEvent('mousedown', { button: 0, clientX: 5000, clientY: 5000 }));
+    window.dispatchEvent(new MouseEvent('mousemove', { clientX: 5000, clientY: 5200 }));
+    frame(); window.dispatchEvent(new MouseEvent('mouseup'));
+    key('KeyQ'); const menu = document.querySelector<HTMLElement>('[data-ui="construction"]')!;
+    const entry = menu.querySelector<HTMLButtonElement>('[data-building="constructor"]')!;
+    expect(entry.disabled).toBe(false); entry.click(); frame(); expect(state.preview?.reason).toBe('valid');
+    canvas.dispatchEvent(new MouseEvent('mousedown', { button: 0, bubbles: true }));
+    canvas.dispatchEvent(new MouseEvent('mouseup', { button: 0, bubbles: true })); frame();
+    expect(state.buildings[0]?.typeId).toBe('constructor'); key('Escape'); frame(); key('KeyE'); frame();
+    const panel = document.querySelector<HTMLElement>('[data-ui="machine"]')!;
+    expect(panel.hidden).toBe(false); expect(panel.textContent).toContain('Constructor');
+    expect(panel.textContent).toContain('Iron Ingot → 1 Iron Plate'); expect(panel.textContent).toContain('MISSING_INPUT');
+    panel.querySelector<HTMLButtonElement>('[data-machine-feed]')!.click(); expect(panel.textContent).toContain('Input: 4');
     panel.querySelector<HTMLButtonElement>('[data-machine-close]')!.click();
     for (let i = 0; i < 50; i++) frame();
     key('KeyE'); frame(); expect(panel.textContent).toMatch(/Output: [1-9]/);

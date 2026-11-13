@@ -21,6 +21,7 @@ This is a focused check of the first slice, not acceptance of the complete phase
 5. Fill the terminal/output, confirm the line blocks without losing stock; empty
    it and confirm the line resumes. Items other than iron ore and coal must not enter the smelter.
 
-Report results and any position/orientation that fails. The constructor, plates,
-recipe selection and electrical power networks are not in this slice. Old two-cell automatic belts are
+Report results and any position/orientation that fails. The constructor and plates
+are covered separately in `PHASE_6_CHAIN_CHECK.md`; recipe selection and
+electrical power networks remain unimplemented. Old two-cell automatic belts are
 not integrated with the smelter. The rest of the Phase 5 checklist is separate.

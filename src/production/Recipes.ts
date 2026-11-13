@@ -27,5 +27,7 @@ export function createDefaultRecipeRegistry(items: ItemRegistry): RecipeRegistry
   const registry = new RecipeRegistry(items);
   registry.register({ id: 'iron-ingot', name: 'Iron Ingot', input: { itemId: 'iron-ore', quantity: 1 },
     output: { itemId: 'iron-ingot', quantity: 1 }, durationMs: 2000 });
+  registry.register({ id: 'iron-plate', name: 'Iron Plate', input: { itemId: 'iron-ingot', quantity: 1 },
+    output: { itemId: 'iron-plate', quantity: 1 }, durationMs: 2000 });
   return registry;
 }

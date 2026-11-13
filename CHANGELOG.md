@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — constructor and iron plates
+
+- Add the Constructor, fixed iron plate recipe, item art and inspection UI.
+- Connect input and output to one-cell conveyors, with bounded buffers, safe
+  backpressure and demolition; share processor simulation with the coal smelter.
+- Enable an automated iron/coal → ingot → plate chain; full play test pending.
+
 ## Unreleased — creative construction
 
 - Add a session-only Creative mode checkbox to the Q menu to construct without

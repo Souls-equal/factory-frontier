@@ -2,7 +2,7 @@ import { BoxGeometry, Color, InstancedMesh, Matrix4, MeshStandardMaterial, Objec
 import type { GroundItem } from '../logistics/GroundItems';
 import { transportPosition, type ConveyorSegment } from '../logistics/ConveyorNetwork';
 
-const itemColor = (itemId: string): number => itemId === 'coal' ? 0x303a3c : itemId === 'iron-ingot' ? 0xaac5ce :
+const itemColor = (itemId: string): number => itemId === 'iron-plate' ? 0x7c9dac : itemId === 'coal' ? 0x303a3c : itemId === 'iron-ingot' ? 0xaac5ce :
   itemId === 'iron-ore' ? 0xb6a098 : itemId === 'copper-ore' ? 0xd18a56 : 0xc0b99d;
 
 /** One shared instanced mesh; instance transforms are derived solely from simulation. */

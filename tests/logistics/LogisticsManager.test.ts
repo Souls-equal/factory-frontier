@@ -843,3 +843,87 @@ it('protects a creative smelter and its contents even after switching to surviva
   const inventory = new Inventory(items, 1); expect(s.retrieveFuel(inventory).moved).toBe(1);
   expect(buildings.demolish(building.id)).toBe('removed'); expect(inventory.getItemCount('stone')).toBe(0);
 });
+
+it('runs an automated iron and coal to plate chain with exact conservation', () => {
+  const items = createDefaultItemRegistry(), inventory = new Inventory(items, 10);
+  const coal: ResourceDeposit = { ...deposit, id: 'coal', itemId: 'coal', x: 3, z: -3 };
+  const buildings = new BuildingSystem(createDefaultBuildingRegistry(items), inventory, terrain, [], 1, 29, [deposit, coal]);
+  buildings.setCreativeMode(true);
+  const machines = new MachineManager(buildings, items, () => [deposit, coal]);
+  const logistics = new LogisticsManager(buildings, machines, items);
+  const ironMiner = place(buildings, 'miner-mk1', 0, 0), coalMiner = place(buildings, 'miner-mk1', 3, -3, 1);
+  const smelter = place(buildings, 'smelter', 0, -3), constructor = place(buildings, 'constructor', 0, -6);
+  place(buildings, 'conveyor-cell', -.5, -1.5);
+  place(buildings, 'conveyor-cell', 1.5, -2.5, 2); place(buildings, 'conveyor-cell', 1.5, -1.5, 1);
+  place(buildings, 'conveyor-cell', .5, -1.5);
+  const ingotBelt = place(buildings, 'conveyor-cell', -.5, -4.5);
+  const plateBelt = place(buildings, 'conveyor-cell', -.5, -7.5);
+  const terminal = place(buildings, 'receiving-terminal', 0, -9); logistics.sync();
+  const s = machines.smelter(smelter.id)!, c = machines.constructorMachine(constructor.id)!;
+  expect(logistics.network.get(ingotBelt.id)!.source?.id).toBe(s.id);
+  expect(logistics.network.get(ingotBelt.id)!.receiver?.id).toBe(c.id);
+  expect(logistics.network.get(plateBelt.id)!.source?.id).toBe(c.id);
+  expect(logistics.network.get(plateBelt.id)!.receiver?.id).toBe(terminal.id);
+  expect(logistics.network.get(ingotBelt.id)!.receiver!.accept('coal')).toBe(false);
+  for (let i = 0; i < 2000; i++) { machines.fixedUpdate(50); logistics.fixedUpdate(50); }
+  const inTransit = (id: string) => logistics.network.all().reduce((n, belt) => n + belt.items.filter((entry) => entry.itemId === id).length, 0);
+  const plates = logistics.terminal(terminal.id)!.getItemCount('iron-plate'); expect(plates).toBeGreaterThan(0);
+  const iron = machines.get(ironMiner.id)!.output.getItemCount('iron-ore') + s.input.getItemCount('iron-ore') + inTransit('iron-ore') +
+    s.output.getItemCount('iron-ingot') + c.input.getItemCount('iron-ingot') + inTransit('iron-ingot') +
+    c.output.getItemCount('iron-plate') + inTransit('iron-plate') + plates;
+  expect(iron).toBe(50);
+  const transformed = s.output.getItemCount('iron-ingot') + c.input.getItemCount('iron-ingot') + inTransit('iron-ingot') +
+    c.output.getItemCount('iron-plate') + inTransit('iron-plate') + plates;
+  expect(transformed + s.fuel.getItemCount('coal') + machines.get(coalMiner.id)!.output.getItemCount('coal') + inTransit('coal')).toBe(50);
+  expect(buildings.demolish(constructor.id)).toBe('output not empty');
+});
+
+it.each([0, 1, 2, 3])('connects constructor to existing input and output lanes at rotation %i', (r) => {
+  const { buildings, machines, logistics } = setup(); buildings.setCreativeMode(true);
+  const rotate = (x: number, z: number) => { const a = r * Math.PI / 2; return { x: Math.round(x * Math.cos(a) + z * Math.sin(a)) / 2, z: Math.round(-x * Math.sin(a) + z * Math.cos(a)) / 2 }; };
+  const a = rotate(-1, 3), b = rotate(-1, -3);
+  const input = place(buildings, 'conveyor-cell', a.x, a.z, r), output = place(buildings, 'conveyor-cell', b.x, b.z, r);
+  const result = buildings.place('constructor', 0, 0, r, player); expect(result.reason).toBe('valid'); expect(result.connection).toBe('connected');
+  logistics.sync(); expect(logistics.network.get(input.id)!.receiver?.id).toBe(result.building!.id);
+  expect(logistics.network.get(output.id)!.source?.id).toBe(result.building!.id);
+  expect(machines.constructorMachine(result.building!.id)).toBeDefined();
+});
+
+it('backs up a full plate terminal and resumes the entire chain without losing iron', () => {
+  const items = createDefaultItemRegistry(), inventory = new Inventory(items, 10);
+  const coal: ResourceDeposit = { ...deposit, id: 'coal', itemId: 'coal', x: 3, z: -3 };
+  const buildings = new BuildingSystem(createDefaultBuildingRegistry(items), inventory, terrain, [], 1, 29, [deposit, coal]);
+  buildings.setCreativeMode(true);
+  const machines = new MachineManager(buildings, items, () => [deposit, coal]), logistics = new LogisticsManager(buildings, machines, items);
+  const ironMiner = place(buildings, 'miner-mk1', 0, 0), coalMiner = place(buildings, 'miner-mk1', 3, -3, 1);
+  const smelter = place(buildings, 'smelter', 0, -3), constructor = place(buildings, 'constructor', 0, -6);
+  place(buildings, 'conveyor-cell', -.5, -1.5); place(buildings, 'conveyor-cell', 1.5, -2.5, 2);
+  place(buildings, 'conveyor-cell', 1.5, -1.5, 1); place(buildings, 'conveyor-cell', .5, -1.5);
+  place(buildings, 'conveyor-cell', -.5, -4.5); place(buildings, 'conveyor-cell', -.5, -7.5);
+  const terminal = place(buildings, 'receiving-terminal', 0, -9); logistics.sync();
+  const s = machines.smelter(smelter.id)!, c = machines.constructorMachine(constructor.id)!, storage = logistics.terminal(terminal.id)!;
+  storage.addItem('iron-plate', 100);
+  for (let i = 0; i < 16000; i++) { machines.fixedUpdate(50); logistics.fixedUpdate(50); }
+  expect(c.state).toBe('OUTPUT_FULL'); expect(c.input.getItemCount('iron-ingot')).toBe(100);
+  machines.get(ironMiner.id)!.setEnabled(false); machines.get(coalMiner.id)!.setEnabled(false);
+  const ironTotal = () => machines.get(ironMiner.id)!.output.getItemCount('iron-ore') + s.input.getItemCount('iron-ore') +
+    s.output.getItemCount('iron-ingot') + c.input.getItemCount('iron-ingot') + c.output.getItemCount('iron-plate') +
+    storage.getItemCount('iron-plate') + logistics.network.all().reduce((n, belt) => n + belt.items.filter((item) => item.itemId !== 'coal').length, 0);
+  const before = ironTotal(), collected = new Inventory(items, 1);
+  expect(logistics.retrieve(terminal.id, collected).moved).toBe(100);
+  for (let i = 0; i < 1000; i++) { machines.fixedUpdate(50); logistics.fixedUpdate(50); }
+  expect(storage.getItemCount('iron-plate')).toBeGreaterThan(0);
+  expect(ironTotal() + collected.getItemCount('iron-plate')).toBe(before);
+});
+
+it('protects both constructor buffers and halts conveyor output when disabled', () => {
+  const { buildings, machines, logistics, items } = setup(); buildings.setCreativeMode(true);
+  const constructor = place(buildings, 'constructor', 0, 0), belt = place(buildings, 'conveyor-cell', -.5, -1.5);
+  logistics.sync(); const c = machines.constructorMachine(constructor.id)!;
+  c.input.addItem('iron-ingot', 1); expect(buildings.demolish(constructor.id)).toBe('output not empty');
+  c.fixedUpdate(2000); expect(buildings.demolish(constructor.id)).toBe('output not empty');
+  c.setEnabled(false); for (let i = 0; i < 100; i++) logistics.fixedUpdate(50);
+  expect(c.output.getItemCount('iron-plate')).toBe(1); expect(logistics.network.get(belt.id)!.items).toHaveLength(0);
+  const player = new Inventory(items, 1); expect(c.retrieve(player).moved).toBe(1);
+  expect(buildings.demolish(constructor.id)).toBe('removed');
+});

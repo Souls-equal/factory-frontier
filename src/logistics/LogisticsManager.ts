@@ -4,7 +4,7 @@ import type { SimulationSystem } from '../core/Game';
 import { Inventory, type QuantityResult } from '../items/Inventory';
 import type { ItemRegistry } from '../items/ItemRegistry';
 import type { MachineManager } from '../machines/MachineManager';
-import { SMELTER_FUEL } from '../machines/Smelter';
+import { Smelter, SMELTER_FUEL } from '../machines/Smelter';
 import { ConveyorNetwork, type ConveyorSettings, DEFAULT_CONVEYOR_SETTINGS } from './ConveyorNetwork';
 import type { GroundItems } from './GroundItems';
 import { InventoryReceiver, InventorySource } from './Ports';
@@ -24,7 +24,7 @@ export class LogisticsManager implements SimulationSystem {
     if (!Number.isSafeInteger(terminalSlots) || terminalSlots < 1) throw new RangeError('Invalid receiver capacity');
     this.network = new ConveyorNetwork(() => false, groundItems ? (item, position) => groundItems.drop(item.id, item.itemId, position) : undefined);
     buildings.addTopologyGuard((before, after) => {
-      const relevant = (entries: typeof before) => entries.filter((b) => b.typeId.startsWith('conveyor-') || b.typeId === 'miner-mk1' || b.typeId === 'smelter' || b.typeId === RECEIVER_TYPE)
+      const relevant = (entries: typeof before) => entries.filter((b) => b.typeId.startsWith('conveyor-') || b.typeId === 'miner-mk1' || (b.typeId === 'smelter' || b.typeId === 'constructor') || b.typeId === RECEIVER_TYPE)
         .map((b) => [b.id, b.typeId, b.transform.x, b.transform.y, b.transform.z, b.transform.rotation, b.autoConveyor, b.cellConveyor]);
       if (JSON.stringify(relevant(before)) === JSON.stringify(relevant(after))) return true;
       this.sync();
@@ -108,11 +108,11 @@ export class LogisticsManager implements SimulationSystem {
           this.network.attachCellSource(cell.id, conditional, distance, start);
         } else for (const segment of legacy) if (this.network.attachSource(segment.id, conditional)) break;
       }
-      const smelter = this.machines.smelter(building.id);
-      if (smelter) {
-        const rawSource = new InventorySource(building.id, machinePort(building, this.buildings.cellSize, 'source'), smelter.output, smelter.recipe.output.itemId);
-        const source = { id: rawSource.id, pose: rawSource.pose, peek: () => smelter.enabled ? rawSource.peek() : null,
-          take: (itemId: string) => smelter.enabled && rawSource.take(itemId) };
+      const processor = this.machines.smelter(building.id) ?? this.machines.constructorMachine(building.id);
+      if (processor) {
+        const rawSource = new InventorySource(building.id, machinePort(building, this.buildings.cellSize, 'source'), processor.output, processor.recipe.output.itemId);
+        const source = { id: rawSource.id, pose: rawSource.pose, peek: () => processor.enabled ? rawSource.peek() : null,
+          take: (itemId: string) => processor.enabled && rawSource.take(itemId) };
         const cell = cells.find((b) => cellTouchesMachine(b, building, this.buildings.cellSize, 'source'));
         if (cell) {
           const path = pathForBuilding(cell, this.buildings.cellSize)!, d = path.direction('input'), port = source.pose.direction;
@@ -121,9 +121,9 @@ export class LogisticsManager implements SimulationSystem {
             y: source.pose.position.y, z: cell.transform.z - port.z * this.buildings.cellSize / 2 });
         } else for (const segment of legacy) if (this.network.attachSource(segment.id, source)) break;
         const pose = machinePort(building, this.buildings.cellSize, 'receiver');
-        const ore = new InventoryReceiver(building.id, pose, smelter.input);
-        const fuel = new InventoryReceiver(building.id, pose, smelter.fuel);
-        const destination = (itemId: string) => itemId === smelter.recipe.input.itemId ? ore : itemId === SMELTER_FUEL.itemId ? fuel : null;
+        const ore = new InventoryReceiver(building.id, pose, processor.input);
+        const fuel = processor instanceof Smelter ? new InventoryReceiver(building.id, pose, processor.fuel) : null;
+        const destination = (itemId: string) => itemId === processor.recipe.input.itemId ? ore : itemId === SMELTER_FUEL.itemId ? fuel : null;
         const receiver = { id: building.id, pose,
           canAccept: (itemId: string) => destination(itemId)?.canAccept(itemId) ?? false,
           accept: (itemId: string) => destination(itemId)?.accept(itemId) ?? false };
