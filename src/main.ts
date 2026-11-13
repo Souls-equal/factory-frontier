@@ -1,3 +1,4 @@
+import { liftRise } from './logistics/LiftDefinitions';
 import { GroundItems } from './logistics/GroundItems';
 import './styles/main.css';
 
@@ -222,6 +223,7 @@ async function boot(): Promise<void> {
       }
       if (constructionUI?.isOpen) return true;
       if ((code === 'PageUp' || code === 'PageDown') && construction.selected === 'foundation') { construction.adjustFoundationHeight(code === 'PageUp' ? 1 : -1); return true; }
+      if ((code === 'PageUp' || code === 'PageDown') && construction.selected && liftRise(construction.selected) !== null) { construction.adjustLiftHeight(code === 'PageUp' ? 1 : -1); return true; }
       if (code === 'KeyT' && construction.selected === 'conveyor-cell') {
         routeMode = !routeMode; routeEditor.reset(); pendingConstruction = null;
         interactionPrompt.showFeedback(routeMode ? 'Route mode: click the first free cell next to an output, then aim at the desired end and press Enter.' : 'Single-cell placement.'); return true;
@@ -427,8 +429,8 @@ async function boot(): Promise<void> {
           (routePreview.reason === 'valid' ? `Valid route: Enter builds${routePreview.endConnection === 'open' ? ' · Open end: items may fall' : ' · Connected end'}` : `Route: ${routePreview.reason}`);
         constructionStatus.textContent = `${buildings.creativeMode ? 'Creative · ' : ''}Route · ${status} · ${routeEditor.pointCount} points${cost ? ` · ${routePreview?.visualCells.length} cells · ${buildings.creativeMode ? 'free' : cost}` : ''} · Bend ${routeEditor.horizontalFirst ? 'X→Z' : 'Z→X'} · Click add point · Enter build at aimed end · Backspace undo · R change bend · T single cell · Esc cancel`;
       } else if (construction.active) constructionStatus.textContent = (buildings.creativeMode ? 'Creative · ' : '') + (preview
-        ? `${preview.reason === 'valid' ? 'Valid placement' : `Cannot place: ${preview.reason}`} · R rotate · Left click place · Esc cancel${preview.connection ? ` · ${preview.connection} port` : ''}${construction.selected?.startsWith('conveyor-') ? ' · direction follows view; yellow = output · R rotates' : ''}${construction.selected === 'conveyor-cell' ? ' · T route mode' : ''}${preview.snappedToConveyor || preview.snappedToFoundation ? ' · aligned to neighbour' : ''}${construction.selected === 'foundation' ? ` · Page Up/Down height (${construction.foundationHeightOffset >= 0 ? '+' : ''}${construction.foundationHeightOffset.toFixed(1)} m) · base ${preview.transform.y.toFixed(1)} m` : ''}${preview.conveyorPreviewChanges?.length ? ' · green preview shows belt after placement' : ''}${!createdInput.isPointerLocked ? ' · drag to look · right click to capture mouse' : ''}`
-        : `Aim at ground within ${config.construction.reach} m · R rotate · Left click place · Esc cancel${!createdInput.isPointerLocked ? ' · drag to look · right click to capture mouse' : ''}`);
+        ? `${preview.reason === 'valid' ? 'Valid placement' : `Cannot place: ${preview.reason}`} · R rotate · Left click place · Esc cancel${preview.connection ? ` · ${preview.connection} port` : ''}${construction.selected?.startsWith('conveyor-') ? ' · direction follows view; yellow = output · R rotates' : ''}${construction.selected === 'conveyor-cell' ? ' · T route mode' : ''}${preview.snappedToConveyor || preview.snappedToFoundation ? ' · aligned to neighbour' : ''}${construction.selected && liftRise(construction.selected) !== null ? ` · Page Up/Down lift height (${Math.abs(liftRise(construction.selected)!)} m)` : ''}${construction.selected === 'foundation' ? ` · Page Up/Down height (${construction.foundationHeightOffset >= 0 ? '+' : ''}${construction.foundationHeightOffset.toFixed(1)} m) · base ${preview.transform.y.toFixed(1)} m` : ''}${preview.conveyorPreviewChanges?.length ? ' · green preview shows belt after placement' : ''}${!createdInput.isPointerLocked ? ' · drag to look · right click to capture mouse' : ''}`
+        : `Aim at ${construction.selected === 'conveyor-cell' ? 'ground or an elevated platform' : 'ground'} within ${config.construction.reach} m · R rotate · Left click place · Esc cancel${construction.selected && liftRise(construction.selected) !== null ? ` · Page Up/Down lift height (${Math.abs(liftRise(construction.selected)!)} m)` : ''}${!createdInput.isPointerLocked ? ' · drag to look · right click to capture mouse' : ''}`);
       const target = inventoryUI?.isOpen || constructionUI?.isOpen || machineUI?.isOpen || logisticsUI?.isOpen || construction.active ? null : interaction.target;
       engine.setHighlight?.(target?.id ?? null);
 

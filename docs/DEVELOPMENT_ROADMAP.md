@@ -45,7 +45,7 @@ detailed evidence and verification results live in `PROJECT_STATUS.md`.
 | 4 — First automated extractor | 🟡 User accepted | Browser verification remains pending |
 | 5 — Conveyor foundation | 🟡 Partially user-validated | User confirmed miner → terminal, turns/slopes, blockage and recovery; remaining checklist not confirmed |
 | 6 — First production chain | ✅ User validated | Coal-fueled smelter, constructor and plates implemented; user reports everything works after complete-chain test request |
-| 7 — Advanced logistics | 🟡 Acceptance pending | Previous playable logistics additions user-validated globally; bounded route editor supports open ends and continuation after feedback; retest pending; arbitrary lift heights remain unimplemented |
+| 7 — Advanced logistics | 🟡 Acceptance pending | Previous playable logistics additions user-validated globally; route correction and adjustable 1–8 m lifts need player testing; heights outside that range remain unimplemented |
 | 8 — Electricity | ◻ Planned | — |
 | 9 — Advanced manufacturing | ◻ Planned | — |
 | 10 — World expansion | ◻ Planned | — |
@@ -179,7 +179,7 @@ The four selectable building models have a block-style detail refresh; user visu
 The Q menu now includes model-based building thumbnails; browser acceptance remains pending.
 Foundation placement has adjustable burial and elevation with neighbour alignment;
 partial coplanar overlap can fill platform gaps and elevated aiming can extend
-platforms. The correction requires a hands-on check. This does not complete Phase 5.
+platforms. The user confirmed the current foundation placement is superb. This does not complete Phase 5.
 
 ## PHASE 5 — Conveyor foundation
 

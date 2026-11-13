@@ -33,6 +33,8 @@ blocked or disconnected, and flow resumes after it clears. Return to Balanced.
 ## Lifts
 
 1. From Q choose Lift Up 1m or Lift Up 2m (15 stone + 10 wood); R rotates it.
+   Before placing, use Page Up/Down to select 1–8 m in whole metres; check the
+   HUD, preview and repeated placement. The same controls apply to Lift Down.
    Connect the cyan rear input to a one-cell belt and the yellow elevated front
    output to another belt. Put a receiver at the output. Verify visible items
    travel up and arrive. Adjacent belts snap to the port's height when possible.
@@ -43,7 +45,14 @@ blocked or disconnected, and flow resumes after it clears. Return to Balanced.
    back up without items disappearing. Empty/reconnect and confirm flow resumes.
    A lift containing items cannot be demolished; empty it first.
 
-Limits: heights are selected as fixed 1 or 2 grid metres when placing, not
+For a high test, choose 3 m and place the lift beside a foundation with its top
+at the lift output level (foundation base at 2.6 m on flat zero-height ground).
+Aim a one-cell belt at the platform, connect it to the output, and connect a
+matching down lift back to a low receiver. Check visible movement, blockage and
+recovery. Higher platforms may require reaching them from the side or building
+additional platforms; the usual construction reach still applies.
+
+Limits: heights are selected from 1–8 grid metres before placement, not
 adjustable afterwards. Terrain and foundation support limits still apply, so
 some elevated layouts require a supported foundation. Connect via one-cell
 belts, not direct machine ports or legacy two-cell belts. The later route editor is described in `PHASE_7_ROUTE_CHECK.md`. Check previous Phase 5

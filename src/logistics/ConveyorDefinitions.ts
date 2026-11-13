@@ -1,16 +1,13 @@
 import type { BuildingInstance } from '../buildings/BuildingSystem';
 import { ConveyorPath, type ConveyorShape } from './ConveyorPath';
 import type { PortPose } from './Ports';
+import { isLiftBuilding, liftRise } from './LiftDefinitions';
+export { isLiftBuilding, liftRise } from './LiftDefinitions';
 
 export const CONVEYOR_SHAPES: Readonly<Record<string, ConveyorShape>> = Object.freeze({
   'conveyor-cell': 'straight', 'conveyor-straight': 'straight', 'conveyor-curve': 'curve-right', 'conveyor-incline': 'incline',
 });
 export const isProcessorBuilding = (typeId: string): boolean => typeId === 'smelter' || typeId === 'constructor';
-const LIFT_RISES: Readonly<Record<string, number>> = Object.freeze({ 'lift-up-1': 1, 'lift-up-2': 2, 'lift-down-1': -1, 'lift-down-2': -2 });
-export function liftRise(typeId: string): number | null {
-  return Object.hasOwn(LIFT_RISES, typeId) ? LIFT_RISES[typeId]! : null;
-}
-export const isLiftBuilding = (typeId: string): boolean => liftRise(typeId) !== null;
 export const liftInputOffset = (typeId: string, cellSize: number): number => Math.max(0, -(liftRise(typeId) ?? 0)) * cellSize;
 export const liftOutputOffset = (typeId: string, cellSize: number): number => Math.max(0, liftRise(typeId) ?? 0) * cellSize;
 export const isDirectionalMachine = (typeId: string): boolean => isProcessorBuilding(typeId) || typeId === 'storage-container' || typeId === 'splitter' || typeId === 'merger' || isLiftBuilding(typeId);

@@ -1,4 +1,5 @@
 import type { ItemRegistry } from '../items/ItemRegistry';
+import { MAX_LIFT_HEIGHT } from '../logistics/LiftDefinitions';
 
 export interface MaterialCost { readonly itemId: string; readonly quantity: number }
 /** Plain gameplay data; dimensions are integer grid cells and never Three.js meshes. */
@@ -70,13 +71,13 @@ export function createDefaultBuildingRegistry(items: ItemRegistry): BuildingRegi
     description: 'Presses iron ingots into plates. Cyan: input at rear; yellow: output at front.',
     cost: [{ itemId: 'stone', quantity: 15 }, { itemId: 'wood', quantity: 10 }], widthCells: 2, depthCells: 2,
     height: 2.2, maxSlope: .58, maxGroundVariation: .8, color: 0x56777e, placement: 'logistics' });
-  for (const [id, name, rise, input] of [
-    ['lift-up-1', 'Lift Up 1m', 1, 'low'], ['lift-up-2', 'Lift Up 2m', 2, 'low'],
-    ['lift-down-1', 'Lift Down 1m', 1, 'high'], ['lift-down-2', 'Lift Down 2m', 2, 'high'],
-  ] as const) registry.register({ id, name, category: 'Logistics',
-    description: `Vertical conveyor: ${input} rear input; ${rise}m height change.`,
-    cost: [{ itemId: 'stone', quantity: 15 }, { itemId: 'wood', quantity: 10 }], widthCells: 2, depthCells: 2,
-    height: rise + .9, maxSlope: .58, maxGroundVariation: .8, color: 0x748c92, placement: 'logistics' });
+  for (const direction of ['up', 'down'] as const) for (let rise = 1; rise <= MAX_LIFT_HEIGHT; rise++) {
+    const id = `lift-${direction}-${rise}`, input = direction === 'up' ? 'low' : 'high';
+    registry.register({ id, name: `Lift ${direction === 'up' ? 'Up' : 'Down'} ${rise}m`, category: 'Logistics',
+      description: `Vertical conveyor: ${input} rear input; ${rise}m height change. Page Up/Down adjusts height.`,
+      cost: [{ itemId: 'stone', quantity: 15 }, { itemId: 'wood', quantity: 10 }], widthCells: 2, depthCells: 2,
+      height: rise + .9, maxSlope: .58, maxGroundVariation: .8, color: 0x748c92, placement: 'logistics' });
+  }
   registry.register({ id: 'merger', name: 'Merger', category: 'Logistics',
     description: 'Fairly combines three rear and side inputs into one front output.',
     cost: [{ itemId: 'stone', quantity: 15 }, { itemId: 'wood', quantity: 10 }], widthCells: 2, depthCells: 2,

@@ -918,7 +918,8 @@ supporting slab; demolition remains conservative for overlapping logistics.
 The renderer emits each shared cell only once, suppressing overlapping slab details;
 it recomputes visibility on removal. For foundation mode the terrain ray is also
 projected onto neighbouring elevated platform levels within reach, without passing
-through nearer terrain; other construction aiming remains terrain-based.
+through nearer terrain. One-cell conveyor aiming also projects onto actual elevated
+foundation surfaces within reach; other construction aiming remains terrain-based.
 
 `BuildingCollision` composes existing natural sweeps with conservative expanded
 rectangle sweeps. `BuildingTerrain` exposes foundation tops to the player; both
@@ -1342,15 +1343,15 @@ them. `LogisticsManager` wires the three oriented one-cell inputs and one output
 Splitter arbitration additionally supports strict selected-port priority and
 overflow to the next ready output, configured through the inspection UI.
 
-Four buildable lift definitions provide up/down, 1/2-cell vertical differences.
+Initially four buildable lift definitions provided up/down, 1/2-cell vertical differences; the later adjustable-height note extends this.
 `ConveyorPath` defines a continuous horizontal–vertical–horizontal path; the
 existing cell simulation moves, spaces, renders and protects its real item
 entities. The manager connects exactly one matching one-cell belt at either end;
 an unconnected lift output holds items, never drops them. Placement uses port
 height offsets to anchor neighbouring belts, while the existing terrain and
-foundation support limits remain in effect. Lift height/direction are fixed at
-placement; higher travel, route control-point editing, direct machine ports and
-legacy two-cell conveyor attachment are not provided. All state is session-only.
+foundation support limits remain in effect. Height/direction are fixed after
+placement. See the later notes for height adjustment and route editing; direct
+machine ports and legacy two-cell conveyor attachment are not provided. All state is session-only.
 
 
 ## Implementation note — Phase 7 route-planning foundation
@@ -1402,8 +1403,8 @@ large factories before increasing the 24-cell limit.
 
 The user globally validated the previous playable logistics features before this
 editor existed. The editor itself has automated coverage but awaits real player
-validation; arbitrary lift heights, legacy two-cell endpoints and persistence
-remain out of scope for this slice.
+validation; heights outside the later bounded lift range, legacy two-cell endpoints
+and persistence remain out of scope.
 
 
 ## Implementation note — open-ended conveyor routes
@@ -1418,3 +1419,25 @@ its existing source, preserving the 24-cell limit per transaction. Inputs may be
 placed afterward. Tests cover two consecutive 24-cell builds with in-flight
 items, delayed terminal attachment, open-end drops, safety revalidation and the
 actual application controls. Real-player retesting remains pending.
+
+
+## Implementation note — adjustable lift height
+
+`LiftDefinitions` validates the finite family of one- to eight-cell up/down
+variants and shares the bound with the building registry. The Q menu retains
+the existing 1 m and 2 m entries; Page Up/Down changes the selected variant in
+placement mode, preserving direction and rotation, clamped at 1 and 8. The HUD
+reports the size and the chosen variant persists for repeat placement. Preview,
+collision dimensions, path and cost derive from that same registered type;
+confirmation revalidates and placed lifts cannot be resized. Existing type IDs
+and costs are unchanged. No foundation validation or foundation aiming changed.
+
+For conveyor cells, construction aiming also considers the top of a nearby
+elevated foundation when the ray intersects its actual footprint; a closer
+terrain hit still wins. The same aim serves the route editor. Terrain bounds,
+reach, collision and support validation are unchanged. Above the existing
+unsupported-height allowance, a belt needs a suitable supporting foundation;
+the lift endpoints still accept only one-cell belts, not direct machine or
+legacy belt ports. Tests cover geometry, all heights and rotations, UI, high
+supported paths, live backpressure, recovery and material conservation. No
+player acceptance is claimed for the new height controls.

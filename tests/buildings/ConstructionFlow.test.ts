@@ -220,3 +220,64 @@ describe('foundation height workflow', () => {
     controller.select('conveyor-cell'); controller.adjustFoundationHeight(1); expect(controller.foundationHeightOffset).toBe(0);
   });
 });
+
+describe('configurable lift construction', () => {
+  it.each(['up', 'down'])('adjusts %s height within 1–8, preserving rotation and chosen height after placement', (direction) => {
+    const { system, inventory, controller, player, view } = setup();
+    controller.select(`lift-${direction}-1`); controller.adjustLiftHeight(-1);
+    expect(controller.selected).toBe(`lift-${direction}-1`);
+    for (let i = 0; i < 15; i++) controller.adjustLiftHeight(1);
+    expect(controller.selected).toBe(`lift-${direction}-8`);
+    controller.rotate(); const preview = controller.preview(view, player)!;
+    expect(preview.reason).toBe('valid'); expect(preview.transform.rotation).toBe(1);
+    const before = inventory.snapshot();
+    const result = controller.confirm(view, player)!;
+    expect(result.building?.typeId).toBe(`lift-${direction}-8`); expect(result.transform).toEqual(preview.transform);
+    expect(controller.selected).toBe(`lift-${direction}-8`); expect(inventory.snapshot()).not.toEqual(before);
+    expect(system.registry.get(result.building!.typeId).height).toBeCloseTo(8.9);
+    expect(system.demolish(result.building!.id)).toBe('removed'); expect(inventory.snapshot()).toEqual(before);
+    controller.adjustLiftHeight(-1); expect(controller.selected).toBe(`lift-${direction}-7`);
+    controller.select('foundation'); controller.adjustLiftHeight(1); expect(controller.selected).toBe('foundation');
+  });
+  it('targets a supported conveyor on a high platform without touching the ground ray', () => {
+    const { system, controller } = setup(); system.setCreativeMode(true);
+    expect(system.place('foundation', 0, 0, 0, { x: 20, z: 20, radius: .4 }, 6).reason).toBe('valid');
+    controller.select('conveyor-cell');
+    const view = { position: { x: 0, y: 8.1, z: 2.5 }, yaw: 0, pitch: -Math.PI / 4 };
+    const player = { x: 0, z: 2.5, radius: .4 };
+    const preview = controller.preview(view, player)!;
+    expect(preview.reason).toBe('valid'); expect(preview.transform.y).toBeCloseTo(6.4);
+    expect(controller.confirm(view, player)?.transform).toEqual(preview.transform);
+  });
+});
+
+it('uses the full height for lift collisions and keeps insufficient-material placement atomic', () => {
+  const { system, inventory, collision } = setup();
+  const far = { x: 20, z: 20, radius: .4 };
+  const lift = system.place('lift-up-8', 0, 0, 0, far);
+  expect(lift.reason).toBe('valid');
+  expect(collision.moveCircle(0, 3, 0, -4, .3, 7, 8.8).collided).toBe(true);
+  const before = inventory.snapshot();
+  expect(system.place('lift-down-8', 8, 0, 0, far).reason).toBe('insufficient materials');
+  expect(inventory.snapshot()).toEqual(before); expect(system.all()).toHaveLength(1);
+});
+
+it('does not aim at a high platform beyond construction reach or through a nearer hill', () => {
+  const { system, controller } = setup(); system.setCreativeMode(true);
+  expect(system.place('foundation', 0, 0, 0, { x: 20, z: 20, radius: .4 }, 6).reason).toBe('valid');
+  controller.select('conveyor-cell');
+  expect(controller.aim({ position: { x: 0, y: 13.1, z: 0 }, yaw: 0, pitch: -Math.PI / 2 })).toBeNull();
+  const ridge = { ...terrain, heightAt: (_x: number, z: number) => z > 3 ? 7.5 : 0 };
+  const ridgeController = new ConstructionController(system, ridge, 6); ridgeController.select('conveyor-cell');
+  const point = ridgeController.aim({ position: { x: 0, y: 8.1, z: 3.9 }, yaw: 0, pitch: -Math.PI / 4 });
+  expect(point!.z).toBeGreaterThan(3);
+});
+
+it('aims a conveyor with custom registries that do not include foundations', async () => {
+  const { BuildingRegistry } = await import('../../src/buildings/BuildingRegistry');
+  const inventory = new Inventory(createDefaultItemRegistry(), 3), defaults = createDefaultBuildingRegistry(inventory.registry);
+  const registry = new BuildingRegistry(inventory.registry); registry.register(defaults.get('conveyor-cell'));
+  const system = new BuildingSystem(registry, inventory, terrain, [], 1, 40);
+  const controller = new ConstructionController(system, terrain); controller.select('conveyor-cell');
+  expect(controller.aim({ position: { x: 0, y: 1.7, z: 4 }, yaw: 0, pitch: -Math.PI / 4 })).not.toBeNull();
+});

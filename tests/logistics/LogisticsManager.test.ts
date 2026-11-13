@@ -1223,3 +1223,69 @@ it('refuses competing merger and lift port lanes without spending materials', ()
   expect(buildings.place('conveyor-cell', 5.5, 1.5, 0, player).reason).toBe('incompatible connection');
   expect(playerInventory.snapshot()).toEqual(before);
 });
+
+it.each([3, 5, 8])('transports items up and down a supported %im lift, through blockage and recovery', (height) => {
+  const { buildings, logistics } = setup(); buildings.setCreativeMode(true);
+  const source = place(buildings, 'storage-container', 0, 3), first = place(buildings, 'conveyor-cell', -.5, 1.5);
+  const up = place(buildings, `lift-up-${height}`, 0, 0);
+  expect(buildings.place('foundation', 0, -2, 0, player, height - .4).reason).toBe('valid');
+  expect(buildings.place('foundation', 0, -4, 0, player, 0).reason).toBe('valid');
+  const middle = [-1.5, -2.5, -3.5, -4.5].map((z) => place(buildings, 'conveyor-cell', -.5, z));
+  const down = place(buildings, `lift-down-${height}`, 0, -6), last = place(buildings, 'conveyor-cell', -.5, -7.5);
+  const sink = place(buildings, 'receiving-terminal', 0, -9); logistics.sync();
+  expect(middle.map((b) => b.transform.y)).toEqual([height, height, height, height]);
+  expect(logistics.network.get(first.id)!.output).toBe(up.id);
+  expect(logistics.network.get(up.id)!.output).toBe(middle[0]!.id);
+  expect(logistics.network.get(middle[3]!.id)!.output).toBe(down.id);
+  expect(logistics.network.get(down.id)!.output).toBe(last.id);
+  const stock = 80;
+  logistics.terminal(source.id)!.addItem('iron-ore', stock);
+  logistics.terminal(sink.id)!.addItem('stone', 100);
+  const total = () => logistics.terminal(source.id)!.getItemCount('iron-ore') + logistics.terminal(sink.id)!.getItemCount('iron-ore') + logistics.network.all().reduce((n, s) => n + s.items.filter((i) => i.itemId === 'iron-ore').length, 0);
+  let vertical = false;
+  for (let i = 0; i < 1600; i++) {
+    logistics.fixedUpdate(50);
+    const segment = logistics.network.get(up.id)!;
+    if (segment.items.some((item) => { const y = segment.path.point(item.distance).y; return y > .6 && y < height + .4; })) vertical = true;
+    expect(total()).toBe(stock);
+  }
+  expect(vertical).toBe(true); expect(logistics.terminal(sink.id)!.getItemCount('iron-ore')).toBe(0);
+  expect(buildings.demolish(up.id)).toBe('output not empty');
+  logistics.terminal(sink.id)!.removeItem('stone', 100);
+  for (let i = 0; i < 6000; i++) { logistics.fixedUpdate(50); expect(total()).toBe(stock); }
+  expect(logistics.terminal(sink.id)!.getItemCount('iron-ore')).toBe(stock);
+  expect(buildings.demolish(up.id)).toBe('removed');
+});
+
+it.each([0, 1, 2, 3])('connects 8m lifts at every orientation %i', (r) => {
+  const { buildings, logistics } = setup(); buildings.setCreativeMode(true);
+  const rotate = (x: number, z: number) => { const a = r * Math.PI / 2; return { x: Math.round(x * Math.cos(a) + z * Math.sin(a)) / 2, z: Math.round(-x * Math.sin(a) + z * Math.cos(a)) / 2 }; };
+  const at = (type: string, x: number, z: number) => { const p = rotate(x,z); return place(buildings, type, p.x, p.z, r); };
+  at('storage-container', 0, 6); const first = at('conveyor-cell', -1, 3);
+  const up = at('lift-up-8', 0, 0);
+  for (const z of [-4, -8]) {
+    const p = rotate(0,z); const result = buildings.place('foundation', p.x, p.z, r, player, z === -4 ? 7.6 : 0);
+    expect(result.reason).toBe('valid');
+  }
+  const middle = [-3, -5, -7, -9].map((z) => at('conveyor-cell', -1, z));
+  const down = at('lift-down-8', 0, -12), last = at('conveyor-cell', -1, -15); at('receiving-terminal', 0, -18);
+  logistics.sync(); expect(middle.map((b) => b.transform.y)).toEqual([8, 8, 8, 8]);
+  expect(logistics.network.get(first.id)!.output).toBe(up.id);
+  expect(logistics.network.get(up.id)!.output).toBe(middle[0]!.id);
+  expect(logistics.network.get(middle[3]!.id)!.output).toBe(down.id);
+  expect(logistics.network.get(down.id)!.output).toBe(last.id);
+});
+
+it('connects an 8m lift placed after its supported output and low input belts', () => {
+  const { buildings, logistics } = setup(); buildings.setCreativeMode(true);
+  const source = place(buildings, 'storage-container', 0, 3), first = place(buildings, 'conveyor-cell', -.5, 1.5);
+  expect(buildings.place('foundation', 0, -2, 0, player, 7.6).reason).toBe('valid');
+  const high = place(buildings, 'conveyor-cell', -.5, -1.5);
+  const lift = place(buildings, 'lift-up-8', 0, 0); logistics.sync();
+  expect(high.transform.y).toBe(8); expect(lift.transform.y).toBe(0);
+  expect(logistics.network.get(first.id)!.output).toBe(lift.id);
+  expect(logistics.network.get(lift.id)!.output).toBe(high.id);
+  logistics.terminal(source.id)!.addItem('iron-ore', 2);
+  for (let i = 0; i < 500; i++) logistics.fixedUpdate(50);
+  expect(logistics.terminal(source.id)!.getItemCount('iron-ore') + logistics.network.all().reduce((n, b) => n + b.items.length, 0)).toBe(2);
+});

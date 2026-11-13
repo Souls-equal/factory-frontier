@@ -173,3 +173,22 @@ it('exposes route mode, refuses an invalid start and returns safely to single pl
   clickCanvas(); frame(316); expect(state.buildings).toHaveLength(1);
   key('Escape'); frame(366); expect(state.selected).toBeNull();
 });
+
+it('adjusts lift size using real placement controls without changing foundations', async () => {
+  vi.spyOn(console, 'info').mockImplementation(() => undefined);
+  await import('../../src/main'); await vi.waitFor(() => expect(state.init).toBe(1)); frame(16);
+  key('KeyQ'); const menu = document.querySelector<HTMLElement>('[data-ui="construction"]')!;
+  expect(menu.querySelector('[data-building="lift-up-3"]')).toBeNull();
+  menu.querySelector<HTMLButtonElement>('[data-building="lift-up-2"]')!.click();
+  const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
+  canvas.dispatchEvent(new MouseEvent('mousedown', { button: 0, clientX: 500, clientY: 500 }));
+  window.dispatchEvent(new MouseEvent('mousemove', { clientX: 500, clientY: 857 })); window.dispatchEvent(new MouseEvent('mouseup'));
+  frame(66); expect(state.selected).toBe('lift-up-2');
+  key('PageUp'); frame(116); expect(state.selected).toBe('lift-up-3');
+  expect(document.querySelector('[data-ui="construction-status"]')?.textContent).toContain('lift height (3 m)');
+  expect(state.preview?.reason).toBe('valid');
+  clickCanvas(); frame(166); expect(state.buildings[0]?.typeId).toBe('lift-up-3');
+  key('PageDown'); frame(216); expect(state.selected).toBe('lift-up-2');
+  expect(state.buildings[0]?.typeId).toBe('lift-up-3');
+  key('Escape'); frame(266); expect(state.selected).toBeNull();
+});
