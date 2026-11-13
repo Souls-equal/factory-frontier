@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased — direct lift-to-lift connections
+
+- Link aligned lifts directly with shared port geometry, preserving spacing,
+  backpressure, support rules and occupied-transport safety.
+
 ## Unreleased — direct lift and junction connections
 
 - Connect lifts directly to splitter and merger ports while preserving their

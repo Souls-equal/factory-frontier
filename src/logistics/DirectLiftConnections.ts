@@ -3,6 +3,11 @@ import { isLiftBuilding, isProcessorBuilding, machinePort, pathForBuilding, spli
 import { matchesPort } from './Ports';
 
 /** Exact, directional port matches; no implicit height adjustment or lane merging. */
+export function directLiftLink(from: BuildingInstance, to: BuildingInstance, cellSize: number): boolean {
+  if (from.id === to.id || !isLiftBuilding(from.typeId) || !isLiftBuilding(to.typeId)) return false;
+  return pathForBuilding(from, cellSize)!.compatible(pathForBuilding(to, cellSize)!);
+}
+
 export function directLiftSplitterOutput(lift: BuildingInstance, splitter: BuildingInstance, cellSize: number, index: number): boolean {
   if (!isLiftBuilding(lift.typeId) || splitter.typeId !== 'splitter' || !Number.isInteger(index) || index < 0 || index > 2) return false;
   const path = pathForBuilding(lift, cellSize)!;

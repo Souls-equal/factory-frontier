@@ -1,4 +1,4 @@
-import { directLiftInput, directLiftOutput, directLiftSplitterOutput, directLiftMergerInput } from '../logistics/DirectLiftConnections';
+import { directLiftInput, directLiftOutput, directLiftSplitterOutput, directLiftMergerInput, directLiftLink } from '../logistics/DirectLiftConnections';
 import { cellAhead, cellTouchesMachine, cellTouchesSource, cellTouchesReceiver, mergerInputTouches, splitterOutputTouches, resolveCellConveyors, type CellConveyorShape } from '../logistics/CellConveyor';
 import { resolveAutoConveyors, type AutoConveyorShape } from '../logistics/AutoConveyor';
 import { BELT_HEIGHT, machinePort, pathForBuilding, isDirectionalMachine, isLiftBuilding, liftInputOffset, liftOutputOffset } from '../logistics/ConveyorDefinitions';
@@ -332,9 +332,9 @@ export class BuildingSystem {
         return fail('incompatible connection', transform);
     }
 
-    for (const lift of planned.filter((b) => isLiftBuilding(b.typeId))) {
-      if (cells.filter((b) => cellTouchesReceiver(b, lift, this.cellSize)).length > 1 ||
-          cells.filter((b) => cellTouchesSource(b, lift, this.cellSize)).length > 1)
+    for (const lift of lifts) {
+      if (cells.filter((b) => cellTouchesReceiver(b, lift, this.cellSize)).length + lifts.filter((b) => directLiftLink(b, lift, this.cellSize)).length + planned.filter((b) => directLiftInput(lift, b, this.cellSize)).length > 1 ||
+          cells.filter((b) => cellTouchesSource(b, lift, this.cellSize)).length + lifts.filter((b) => directLiftLink(lift, b, this.cellSize)).length + planned.filter((b) => directLiftOutput(lift, b, this.cellSize)).length > 1)
         return fail('incompatible connection', transform);
     }
 
@@ -378,7 +378,8 @@ export class BuildingSystem {
     }
     if (connection === 'disconnected' && planned.some((b) => b.id !== proposed.id &&
       (directLiftInput(proposed, b, this.cellSize) || directLiftOutput(proposed, b, this.cellSize) ||
-       directLiftInput(b, proposed, this.cellSize) || directLiftOutput(b, proposed, this.cellSize)))) connection = 'connected';
+       directLiftInput(b, proposed, this.cellSize) || directLiftOutput(b, proposed, this.cellSize) ||
+       directLiftLink(proposed, b, this.cellSize) || directLiftLink(b, proposed, this.cellSize)))) connection = 'connected';
     if (player.x > f.minX - player.radius && player.x < f.maxX + player.radius &&
         player.z > f.minZ - player.radius && player.z < f.maxZ + player.radius &&
         ((typeId !== 'foundation' && !supportingFoundation) || player.feetY === undefined || player.headY === undefined || intersectsHeight(player.feetY, player.headY))) return fail('player overlap', transform);
