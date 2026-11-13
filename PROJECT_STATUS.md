@@ -3,17 +3,32 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 7 — Advanced logistics (integration and acceptance)
-**Phase Status:** 🟡 In progress — merger, splitter modes and bounded lifts implemented; acceptance deferred
-**Next Recommended Task:** User-directed combined Phase 7 play-test and any fixes; remaining Phase 5 checks are also open.
+**Phase Status:** 🟡 In progress — merger, splitter modes and bounded lifts implemented; player testing in progress; acceptance pending
+**Next Recommended Task:** Connect the route-planning foundation to an in-game control-point editor; follow up on the ongoing Phase 7 play-test and remaining Phase 5 checks.
 **Last Updated:** 2026-11-11
 
 ---
 
+## Phase 7 — route-planning foundation
+
+- A simulation-only first slice expands snapped control points into a bounded
+  orthogonal one-cell route (up to 24 cells), validates placements and endpoints
+  against a shadow world and the live topology guards, then revalidates and
+  commits with one material transaction. Creative builds retain their no-refund
+  provenance. Tests exercise corners, actual transport and conservation, port
+  contention, invalidation, material failure and rejected topology changes.
+- This is not yet accessible to players: input, multi-cell visual preview, cost
+  display, endpoint selection and confirmation UI are still to be implemented.
+  The planner requires existing compatible source and destination connections;
+  it does not support legacy two-cell conveyors. Incremental placement validation
+  may reject some routes that would otherwise be valid as a simultaneous layout.
+  The user is currently testing the existing Phase 7 additions; acceptance remains open.
+
 ## Phase 7 — merger, splitter modes and conveyor lifts
 
 - The user requested finishing Phase 7 and earlier requested testing the new
-  logistics features together later. None of the Phase 7 slices has yet been
-  accepted by the player; follow `docs/PHASE_7_MANUAL_ACCEPTANCE.md`.
+  logistics features together; the user is currently testing them. None of the
+  Phase 7 slices has yet been accepted by the player; follow `docs/PHASE_7_MANUAL_ACCEPTANCE.md`.
 - The Merger (15 stone + 10 wood) combines three cyan rear/side input ports into
   one yellow front output. Each input buffers one item; the output serves occupied
   inputs round-robin. E allows inspection and recovery; demolition is blocked

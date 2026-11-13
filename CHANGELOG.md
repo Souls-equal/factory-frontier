@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — route-planning foundation
+
+- Add bounded orthogonal control-point expansion and atomic multi-cell conveyor
+  planning/placement with endpoint and topology checks. This backend is not yet
+  connected to an in-game editor; existing placement is unchanged.
+
 ## Unreleased — Phase 7 logistics integration
 
 - Add a fair three-input merger with inspection and bounded protected buffers.

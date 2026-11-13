@@ -1338,3 +1338,23 @@ height offsets to anchor neighbouring belts, while the existing terrain and
 foundation support limits remain in effect. Lift height/direction are fixed at
 placement; higher travel, route control-point editing, direct machine ports and
 legacy two-cell conveyor attachment are not provided. All state is session-only.
+
+
+## Implementation note — Phase 7 route-planning foundation
+
+`ConveyorRoute.expandRoute` snaps control points to the one-cell grid and expands
+orthogonal legs in the requested axis order, rejecting repeated cells and paths
+longer than 24 cells. `BuildingSystem.previewConveyorRoute` stages each cell in
+an isolated copy using the ordinary authoritative placement rules, verifies the
+endpoints (including first-lane port arbitration) and checks the final layout
+against live topology guards. `placeConveyorRoute` revalidates, pays the whole
+cost atomically and publishes the resulting cells and updated belt shapes in one
+revision. Creative builds keep their no-refund flag. The live world and inventory
+are not modified by planning; guards may synchronize the logistics network.
+
+This is a backend slice only, with no in-game route selection, visual preview,
+confirmation or control-point editing. Both endpoints must already exist and
+be compatible one-cell belts or supported devices; legacy two-cell belts are not
+endpoints. Incremental staging can reject a layout that might be valid if all
+cells were validated simultaneously. The limit bounds work and cost; performance
+and preview caching must be addressed before running this planner every frame.
