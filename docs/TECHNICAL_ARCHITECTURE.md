@@ -1513,7 +1513,7 @@ segments after wiring one-cell belts, preserving machine enabled state, item
 acceptance, storage filters, transport clocks, flow counters and backpressure.
 Unconnected lifts remain blocked rather than dropping items. No new ownership or
 inventory transfer path is introduced. A later slice adds direct splitter/merger
-ports; direct lift-to-lift and legacy-belt links remain unsupported. Tests exercise both placement orders, all
+ports; a subsequent slice adds direct lift-to-lift links, while legacy-belt links remain unsupported. Tests exercise both placement orders, all
 rotations, high supported endpoints, live reconnection and conservation.
 
 
@@ -1532,4 +1532,21 @@ compete in the same ready-source arbitration, while merger input slots and curso
 remain independent and fair. Unconnected or blocked lifts retain items. Automated
 coverage includes simultaneous direct ports, belt/lift mixtures, all rotations,
 placement orders, high supported connections and blocked recovery. Direct
-lift-to-lift and legacy-belt links remain out of scope.
+lift-to-lift links were added subsequently; legacy-belt links remain out of scope.
+
+
+## Implementation note — direct lift-to-lift links
+
+`directLiftLink` requires exact coincident output/input positions and directions.
+The same geometry determines preview, port exclusivity and runtime topology.
+Lifts retain their original terrain and foundation support, and no height is
+automatically changed. Cell, lift and machine/junction links compete for each
+lift port rather than silently choosing multiple inputs or outputs.
+
+`ConveyorNetwork` treats matching lift endpoints as a continuous path: movement
+is constrained by the downstream tail, retaining spacing across the join.
+Topology projection and direct connection reject pre-existing unsafe item spacing.
+The two-phase update, capacity, transfer clocks and per-segment flow counters are
+unchanged. Tests cover every supported height, direction, rotation and placement
+order, occupied links, backpressure, conservation and multi-lift operation.
+Direct legacy-belt links remain unsupported. Player acceptance is still pending.

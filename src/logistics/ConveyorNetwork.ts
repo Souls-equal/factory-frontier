@@ -113,11 +113,15 @@ export class ConveyorNetwork implements SimulationSystem {
   connectCell(fromId: string, toId: string, inputDistance: number): boolean {
     const from = this.require(fromId), to = this.require(toId);
     if (!this.cells.has(fromId) || !this.cells.has(toId) || fromId === toId || from.output || from.receiver || !Number.isFinite(inputDistance) || inputDistance < 0 || inputDistance > to.path.length) return false;
+    if (from.path.spec.shape === 'lift' && to.path.spec.shape === 'lift' && inputDistance === 0 && from.path.compatible(to.path)) {
+      const front = from.items[0], back = to.items.at(-1);
+      if (to.input || to.source || (front && back && from.path.length - front.distance + back.distance < Math.max(from.settings.spacing, to.settings.spacing) - 1e-8)) return false;
+    }
     from.output = toId; to.input ??= fromId; this.cellInputDistance.set(fromId, inputDistance); this.refreshStates(); return true;
   }
   attachCellSource(id: string, source: ItemSource, distance: number, start?: Point3): boolean {
     const s = this.require(id);
-    if (!this.cells.has(id) || s.source || !Number.isFinite(distance) || distance < 0 || distance > s.path.length || this.all().some((entry) => entry.source?.id === source.id)) return false;
+    if (!this.cells.has(id) || s.source || (s.path.spec.shape === 'lift' && s.input) || !Number.isFinite(distance) || distance < 0 || distance > s.path.length || this.all().some((entry) => entry.source?.id === source.id)) return false;
     s.source = source; this.cellInputDistance.set(`source:${id}`, distance); if (start) this.cellSourceStart.set(id, start); this.refreshStates(); return true;
   }
   attachCellReceiver(id: string, receiver: ItemReceiver): boolean {
@@ -182,6 +186,19 @@ export class ConveyorNetwork implements SimulationSystem {
         const back = projected.get(next)!.at(-1)!;
         const gap = Math.max(settings.spacing, (this.segments.get(next)?.settings ?? newSettings).spacing);
         if (paths.get(id)!.length - items[0]!.distance + back.distance < gap - 1e-8) return null;
+      }
+    }
+    // Lift links are cell-managed but form a continuous centreline. Validate
+    // a newly formed link before committing a construction topology change.
+    for (const [id, path] of paths) {
+      if (!cellIds.has(id) || path.spec.shape !== 'lift') continue;
+      const front = projected.get(id)![0];
+      if (!front) continue;
+      for (const [nextId, next] of paths) {
+        if (id === nextId || !cellIds.has(nextId) || next.spec.shape !== 'lift' || !path.compatible(next)) continue;
+        const back = projected.get(nextId)!.at(-1);
+        const spacing = (key: string, p: ConveyorPath) => this.segments.get(key)?.settings.spacing ?? Math.min(newSettings.spacing, p.length / 2);
+        if (back && path.length - front.distance + back.distance < Math.max(spacing(id, path), spacing(nextId, next)) - 1e-8) return null;
       }
     }
     return projected;
@@ -290,15 +307,23 @@ export class ConveyorNetwork implements SimulationSystem {
   private advanceCells(deltaMs: number, priorityInputs: ReadonlySet<string>): void {
     const cells = [...this.cells].map((id) => this.require(id));
     for (const s of cells) {
-      let ahead = Infinity;
+      // Coincident lift-to-lift ports share a continuous path. Keep the
+      // upstream leader spaced from the downstream tail while it waits.
+      const next = s.output ? this.segments.get(s.output) : undefined;
+      const tail = next?.items.at(-1);
+      const contiguousLifts = s.path.spec.shape === 'lift' && next?.path.spec.shape === 'lift' &&
+        this.cellInputDistance.get(s.id) === 0 && s.path.compatible(next.path);
+      let ahead = contiguousLifts && tail ? s.path.length + tail.distance : Infinity;
+      let gap = contiguousLifts && tail ? Math.max(s.settings.spacing, next!.settings.spacing) : s.settings.spacing;
       for (const item of s.items) {
         if (item.transition) {
           const distance = Math.min(item.transition.length, item.transition.distance + s.settings.speed * deltaMs / 1000);
           item.transition = distance >= item.transition.length - 1e-9 ? undefined : { ...item.transition, distance };
         } else {
-          item.distance = Math.max(item.distance, Math.min(s.path.length, item.distance + s.settings.speed * deltaMs / 1000, ahead - s.settings.spacing));
+          item.distance = Math.max(item.distance, Math.min(s.path.length, item.distance + s.settings.speed * deltaMs / 1000, ahead - gap));
         }
         ahead = item.distance;
+        gap = s.settings.spacing;
       }
     }
     if (cells.length) this.cellOrder = (this.cellOrder + 1) % cells.length;
@@ -359,10 +384,15 @@ export class ConveyorNetwork implements SimulationSystem {
     }
     for (const s of cells) {
       const first = s.items[0];
-      s.state = first && first.distance >= s.path.length - 1e-9 &&
+      const downstream = s.output ? this.segments.get(s.output) : undefined, tail = downstream?.items.at(-1);
+      const liftBoundaryBlocked = first && tail && s.path.spec.shape === 'lift' && downstream?.path.spec.shape === 'lift' &&
+        this.cellInputDistance.get(s.id) === 0 && s.path.compatible(downstream.path) &&
+        tail.distance < Math.max(s.settings.spacing, downstream.settings.spacing) - 1e-8 &&
+        first.distance >= s.path.length + tail.distance - Math.max(s.settings.spacing, downstream.settings.spacing) - 1e-9;
+      s.state = liftBoundaryBlocked || (first && first.distance >= s.path.length - 1e-9 &&
         (s.output ? (() => { const next = this.require(s.output!); const at = this.cellInputDistance.get(s.id)!;
           return priorityInputs.has(next.id) || next.items.some((item) => Math.abs(item.distance - at) < Math.max(s.settings.spacing, next.settings.spacing) - 1e-8); })() :
-          s.receiver ? !s.receiver.canAccept(first.itemId) : this.cellObstacle.has(s.id) || !this.drop)
+          s.receiver ? !s.receiver.canAccept(first.itemId) : this.cellObstacle.has(s.id) || !this.drop))
         ? 'BLOCKED' : s.items.length ? 'RUNNING' : 'IDLE';
     }
   }

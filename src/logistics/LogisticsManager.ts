@@ -10,7 +10,7 @@ import type { GroundItems } from './GroundItems';
 import { InventoryReceiver, InventorySource, matchesPort } from './Ports';
 import { Splitter } from './Splitter';
 import { Merger } from './Merger';
-import { directLiftInput, directLiftOutput, directLiftMergerInput } from './DirectLiftConnections';
+import { directLiftInput, directLiftOutput, directLiftMergerInput, directLiftLink } from './DirectLiftConnections';
 import type { ItemSource, ItemReceiver } from './Ports';
 
 import { pathForBuilding, machinePort, splitterPort, mergerPort, isLiftBuilding, RECEIVER_TYPE } from './ConveyorDefinitions';
@@ -145,6 +145,11 @@ export class LogisticsManager implements SimulationSystem {
       const output = cells.find((b) => cellTouchesSource(b, lift, this.buildings.cellSize));
       if (input) this.network.connectCell(input.id, lift.id, 0);
       if (output) this.network.connectCell(lift.id, output.id, 0);
+    }
+    // Direct links join coincident lift ports; cell links remain authoritative.
+    for (const from of lifts) {
+      const to = lifts.find((entry) => directLiftLink(from, entry, this.buildings.cellSize));
+      if (to && !this.network.get(from.id)!.output && !this.network.get(to.id)!.input) this.network.connectCell(from.id, to.id, 0);
     }
     for (const building of buildings) {
       const miner = this.machines.get(building.id);

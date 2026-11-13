@@ -3,11 +3,23 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 7 — Advanced logistics (integration and acceptance)
-**Phase Status:** 🟡 In progress — direct lift/junction connections and remaining logistics acceptance
-**Next Recommended Task:** Play-test direct junction/lift connections and remaining route/lift/platform scenarios; direct lift-to-lift links and Phase 7 acceptance remain open.
+**Phase Status:** 🟡 In progress — direct lift links and remaining logistics acceptance
+**Next Recommended Task:** Play-test direct lift links and remaining junction, route, lift and platform scenarios; Phase 7 acceptance remains open.
 **Last Updated:** 2026-11-11
 
 ---
+
+## Direct lift-to-lift connections
+
+- Aligned lift outputs connect directly to lift inputs at the same height and
+  direction, for all supported upward/downward heights and either placement order.
+  Existing foundation, height and support rules are unchanged; no auto-height is
+  applied. Legacy belts still cannot connect directly to lifts.
+- A continuous lift boundary preserves spacing, backpressure, conservation and
+  flow counters; unsafe occupied connections are rejected. Each lift port accepts
+  one lane. Automated tests cover all heights and rotations, controller preview,
+  blockage and recovery, multi-lift chains, demolition and occupied links. Player
+  validation of this slice is pending; Phase 7 is not complete.
 
 ## Direct lift-to-splitter and merger connections
 
@@ -19,7 +31,7 @@
 - Direct lifts participate in the existing balanced, overflow and strict-priority
   splitter arbitration and the merger's fair input buffers. Blocked connections
   retain items, recover when cleared, and protect occupied buildings from removal.
-  Direct lift-to-lift and legacy-belt links are still unsupported.
+  Direct lift-to-lift links were added in the later slice above; legacy-belt links remain unsupported.
 - Automated tests cover all ports and rotations, both placement orders, multiple
   simultaneous lifts, mixed belt/lift networks, high ports, modes, fairness,
   blocking, recovery, conservation and construction-controller previews. Player
@@ -33,8 +45,7 @@
   touch exactly and be at the same height; existing support and placement rules
   still apply, and the high machine may need a platform. No automatic new
   foundation placement or height adjustment was added. The later slice above adds
-  splitter/merger direct ports; legacy belts and direct lift-to-lift links remain
-  unsupported (one-cell conveyors can bridge lifts).
+  splitter/merger and lift-to-lift direct ports; legacy belts remain unsupported.
 - Existing belt priority, storage filtering, enabled machine output, accepted item
   checks, backpressure, occupied demolition protection and open lift safety remain
   intact. A connected direct port is reported in construction preview and lift G

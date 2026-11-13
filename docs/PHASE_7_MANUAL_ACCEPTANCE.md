@@ -99,7 +99,7 @@ manual scenarios separately; report layout, rotation and any problems found.
    storage's output filter and verify only the selected item leaves.
 3. Repeat with a downward lift, a machine input/output and a rotated terminal.
    Wrong heights or directions must not connect. Direct links to splitters,
-   other lifts still need one-cell belts; legacy belts cannot connect directly.
+   mergers and other lifts are now supported; legacy belts cannot connect directly.
 
 
 ### Direct lift-to-splitter and merger connections
@@ -113,4 +113,17 @@ manual scenarios separately; report layout, rotation and any problems found.
    disappear when the output is full or after it is emptied.
 3. Try placing lifts and junctions in either order and at a supported upper level.
    Wrong height/direction must not connect. Each port permits one lane; direct
-   lift-to-lift and legacy belt connections remain unsupported.
+   lift-to-lift connections are now supported; legacy belt connections remain unsupported.
+
+
+### Direct lift-to-lift connections
+
+1. Place an upward lift and an adjacent downward lift in the same direction,
+   matching their joined port heights. Try both placement orders and use the
+   construction preview to check the connection. Connect storage at both ends.
+2. Send items through, inspect each lift with G, fill the destination, then free
+   space. Check items stay spaced and none disappear; occupied lifts must not be
+   dismantled. Check the flow counters and dismantle the lifts after emptying.
+3. Try several heights and rotations, including two ascending lifts with an
+   appropriately supported upper lift, and a chain of three lifts. Wrong height
+   or direction must stay disconnected; normal foundation support still applies.
