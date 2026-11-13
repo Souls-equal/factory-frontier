@@ -476,6 +476,11 @@ body {
   clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 @media (max-width: 430px) { .inventory { padding: 10px; } .inventory__panel.inventory-panel { padding: 14px; } }
 
+.construction__creative { display: flex; align-items: flex-start; gap: .75rem; margin: 1rem 0; padding: .75rem;
+  border: 1px solid #57818b; border-radius: .4rem; background: #152933; cursor: pointer; }
+.construction__creative input { accent-color: #70dfc6; width: 18px; height: 18px; flex: 0 0 auto; }
+.construction__creative span { display: grid; gap: .25rem; color: #e1f4f4; }
+.construction__creative small { color: #a8c5c9; line-height: 1.4; }
 .construction__list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
 .inventory .construction__entry { display: grid; grid-template-columns: 105px minmax(0, 1fr); align-items: center; gap: .8rem; text-align: left; padding: .7rem; min-width: 0; color: #d7eef0; background: #152933; border: 1px solid #57818b; border-radius: .4rem; cursor: pointer; }
 .inventory .construction__entry:disabled { opacity: 1; color: #a9bdc2; border-color: #3b5861; cursor: not-allowed; }

@@ -1267,3 +1267,13 @@ buffers, and demolition protects each buffer. This does not implement electrical
 power networks (Phase 8), recipe selection, constructors or plates. Legacy
 two-cell automatic conveyors do not route through the smelter; the currently
 selectable one-cell conveyor is supported.
+
+## Implementation note — creative construction
+
+`BuildingSystem` owns a session-only creative flag. The construction menu updates
+the flag and derives affordability from it; the authoritative placement validator
+and commit both enforce the same policy. Free-placement provenance is recorded
+on each building, preserved through topology replans, and governs demolition
+refunds independently of the current flag. All non-cost validation and demolition
+guards remain in force. No inventory items, machine fuel, recipes, power network
+or persistence are added by this mode.

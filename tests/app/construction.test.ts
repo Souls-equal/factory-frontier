@@ -133,3 +133,23 @@ describe('construction bootstrap wiring', () => {
   });
 
 });
+
+it('enables creative from the build menu and places and demolishes without charging or refunding', async () => {
+  vi.spyOn(console, 'info').mockImplementation(() => undefined);
+  await import('../../src/main'); await vi.waitFor(() => expect(state.init).toBe(1)); frame(16);
+  key('KeyQ'); const menu = document.querySelector<HTMLElement>('[data-ui="construction"]')!;
+  const toggle = menu.querySelector<HTMLInputElement>('[data-construction-creative]')!;
+  expect(toggle.checked).toBe(false); toggle.click(); expect(toggle.checked).toBe(true);
+  expect(menu.querySelector('[data-building="foundation"]')!.textContent).toContain('no construction materials required');
+  menu.querySelector<HTMLButtonElement>('[data-building="foundation"]')!.click();
+  const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
+  canvas.dispatchEvent(new MouseEvent('mousedown', { button: 0, clientX: 500, clientY: 500 }));
+  window.dispatchEvent(new MouseEvent('mousemove', { clientX: 500, clientY: 857 }));
+  window.dispatchEvent(new MouseEvent('mouseup')); frame(66);
+  expect(state.preview?.reason).toBe('valid'); expect(document.querySelector('[data-ui="construction-status"]')!.textContent).toContain('Creative');
+  clickCanvas(); frame(116); expect(state.buildings).toHaveLength(1); expect(state.buildings[0]?.freePlacement).toBe(true);
+  key('Escape'); frame(166); key('KeyF'); frame(216); expect(state.buildings).toHaveLength(0);
+  expect(document.querySelector('[data-ui="interaction-feedback"]')?.textContent).toContain('no materials to refund');
+  key('KeyQ'); expect(toggle.checked).toBe(true); toggle.click();
+  expect(menu.textContent).toContain('Stone: 20 / 10'); expect(menu.textContent).toContain('Wood: 10 / 5');
+});

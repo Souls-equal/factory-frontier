@@ -23,7 +23,10 @@ smelter slice before full Phase 5 acceptance is a user-directed exception to the
 existing Phase 5 gate below; it does not mark that phase accepted or complete.
 Phase 6 is not complete: constructor and iron plates remain to be implemented.
 At the user's request the smelter now directly consumes coal (1 per iron ingot);
-this is an early fuel exception, not the Phase 8 electrical power network.
+this is an early fuel exception, not the Phase 8 electrical power network. The
+user subsequently reported testing without specifying results. A user-requested,
+session-only creative construction toggle bypasses building costs but does not
+bypass placement rules or machine inputs; it is a testing aid, not a new phase.
 
 The voxel transition is underway within Phase 5: finite starter resources and a
 no-iron first Miner and block-style models for current world objects are implemented;

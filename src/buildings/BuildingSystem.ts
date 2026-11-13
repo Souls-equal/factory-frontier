@@ -14,6 +14,8 @@ import { terrainSupport } from './TerrainSupport';
 export interface BuildingInstance {
   readonly id: string;
   readonly typeId: string;
+  /** Free builds never refund construction materials, even after switching modes. */
+  readonly freePlacement?: true;
   readonly transform: BuildingTransform;
   readonly autoConveyor?: AutoConveyorShape;
   readonly cellConveyor?: CellConveyorShape;
@@ -48,6 +50,9 @@ function circleIntersects(box: Footprint, x: number, z: number, radius: number):
 export class BuildingSystem {
   private readonly buildings = new Map<string, BuildingInstance>();
   private nextId = 1;
+  private creativeValue = false;
+  get creativeMode(): boolean { return this.creativeValue; }
+  setCreativeMode(enabled: boolean): void { this.creativeValue = enabled; }
   private readonly topologyGuards = new Set<(before: readonly BuildingInstance[], after: readonly BuildingInstance[]) => boolean>();
   addTopologyGuard(guard: (before: readonly BuildingInstance[], after: readonly BuildingInstance[]) => boolean): void { this.topologyGuards.add(guard); }
   private plan(buildings: readonly BuildingInstance[]): BuildingInstance[] | null {
@@ -255,7 +260,7 @@ export class BuildingSystem {
     }
     if (player.x > f.minX - player.radius && player.x < f.maxX + player.radius &&
         player.z > f.minZ - player.radius && player.z < f.maxZ + player.radius) return fail('player overlap', transform);
-    if (definition.cost.some((entry) => !this.inventory.hasItem(entry.itemId, entry.quantity))) return fail('insufficient materials', transform);
+    if (!this.creativeMode && definition.cost.some((entry) => !this.inventory.hasItem(entry.itemId, entry.quantity))) return fail('insufficient materials', transform);
     const byId = new Map(existing.map((b) => [b.id, b]));
     const conveyorPreviewChanges = planned.filter((b) => (b.typeId === 'conveyor-auto' || b.typeId === 'conveyor-cell') && byId.has(b.id) &&
       (JSON.stringify(byId.get(b.id)!.autoConveyor) !== JSON.stringify(b.autoConveyor) || JSON.stringify(byId.get(b.id)!.cellConveyor) !== JSON.stringify(b.cellConveyor)));
@@ -270,9 +275,9 @@ export class BuildingSystem {
     const result = this.validate(typeId, x, z, rotation, player, foundationOffset);
     if (result.reason !== 'valid') return result;
     const definition = this.registry.get(typeId);
-    const building: BuildingInstance = Object.freeze({ id: `building-${this.nextId}`, typeId, ...(result.depositId && result.depositItemId ? { depositId: result.depositId, depositItemId: result.depositItemId } : {}),
+    const building: BuildingInstance = Object.freeze({ id: `building-${this.nextId}`, typeId, ...(this.creativeMode ? { freePlacement: true as const } : {}), ...(result.depositId && result.depositItemId ? { depositId: result.depositId, depositItemId: result.depositItemId } : {}),
       transform: Object.freeze({ ...result.transform, footprint: Object.freeze({ ...result.transform.footprint }) }), ...(result.autoConveyor ? { autoConveyor: result.autoConveyor } : {}), ...(result.cellConveyor ? { cellConveyor: result.cellConveyor } : {}) });
-    if (!this.inventory.exchange(definition.cost, [])) return { ...result, reason: 'insufficient materials' };
+    if (!this.creativeMode && !this.inventory.exchange(definition.cost, [])) return { ...result, reason: 'insufficient materials' };
     // Commit exactly the plan validated above, without resolving it a second
     // time with a different preview identity or a different set of shapes.
     for (const entry of result.conveyorPreviewChanges ?? []) this.buildings.set(entry.id, entry);
@@ -280,7 +285,7 @@ export class BuildingSystem {
     this.nextId++; this.revisionValue++;
     return { ...result, building };
   }
-  /** Full original refund or no demolition: never discard an overflow remainder. */
+  /** Paid buildings refund in full; free buildings return nothing regardless of current mode. */
   demolish(id: string): 'removed' | 'unknown building' | 'inventory full' | 'output not empty' | 'building supports another' | 'conveyor occupied' {
     const building = this.buildings.get(id);
     if (!building) return 'unknown building';
@@ -289,7 +294,7 @@ export class BuildingSystem {
     const planned = this.plan(this.all().filter((entry) => entry.id !== id));
     if (!planned || !this.safePlan(this.all(), planned)) return 'conveyor occupied';
     const definition: BuildingDefinition = this.registry.get(building.typeId);
-    if (!this.inventory.exchange([], definition.cost)) return 'inventory full';
+    if (!building.freePlacement && !this.inventory.exchange([], definition.cost)) return 'inventory full';
     this.buildings.delete(id); for (const entry of planned) this.buildings.set(entry.id, entry); this.revisionValue++;
     return 'removed';
   }

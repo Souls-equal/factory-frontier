@@ -123,3 +123,51 @@ describe('adjustable and aligned foundations', () => {
     expect(system.demolish(foundation.id)).toBe('removed');
   });
 });
+
+describe('creative construction mode', () => {
+  it('starts disabled, allows free placement when enabled, and restores cost checks when disabled', () => {
+    const { system, inventory } = setup(); expect(system.creativeMode).toBe(false);
+    expect(system.validate('foundation', 0, 0, 0, player).reason).toBe('insufficient materials');
+    system.setCreativeMode(true);
+    const before = inventory.snapshot(), preview = system.validate('foundation', 0, 0, 0, player);
+    const placed = system.place('foundation', 0, 0, 0, player);
+    expect(preview.reason).toBe('valid'); expect(placed.reason).toBe('valid');
+    expect(placed.building?.freePlacement).toBe(true); expect(inventory.snapshot()).toEqual(before);
+    system.setCreativeMode(false);
+    expect(system.place('foundation', 4, 0, 0, player).reason).toBe('insufficient materials');
+    expect(system.demolish(placed.building!.id)).toBe('removed'); expect(inventory.snapshot()).toEqual(before);
+  });
+  it('honours terrain, collision, player, bounds, deposit and demolition safety in creative mode', () => {
+    const { system } = setup(); system.setCreativeMode(true);
+    expect(system.place('foundation', 19, 0, 0, player).reason).toBe('outside bounds');
+    expect(system.place('foundation', -8, -8, 0, player).reason).toBe('player overlap');
+    expect(system.place('miner-mk1', 4, 4, 0, player).reason).toBe('no compatible deposit');
+    const b = system.place('foundation', 0, 0, 0, player).building!;
+    expect(system.place('foundation', 0, 0, 0, player).reason).toBe('occupied space');
+    system.addDemolitionGuard(() => false); expect(system.demolish(b.id)).toBe('output not empty');
+    const steep = setup({ terrain: { ...terrain, slopeAt: () => .5 } }); steep.system.setCreativeMode(true);
+    expect(steep.system.place('foundation', 0, 0, 0, player).reason).toBe('terrain too steep');
+  });
+  it('refunds according to the original payment even after switching modes and topology replan', () => {
+    const { system, inventory } = setup(); stock(inventory);
+    const paid = system.place('foundation', 0, 0, 0, player).building!;
+    system.setCreativeMode(true);
+    const free = system.place('conveyor-cell', 4.5, .5, 0, player).building!;
+    system.place('conveyor-cell', 4.5, -.5, 1, player); // updates the existing topology
+    expect(system.get(free.id)?.freePlacement).toBe(true);
+    expect(system.demolish(paid.id)).toBe('removed');
+    expect(inventory.getItemCount('stone')).toBe(20); expect(inventory.getItemCount('wood')).toBe(10);
+    system.setCreativeMode(false);
+    expect(system.demolish(free.id)).toBe('removed');
+    expect(inventory.getItemCount('stone')).toBe(20); expect(inventory.getItemCount('wood')).toBe(10);
+  });
+  it('demolishes a free building even if inventory is full but preserves paid refund checks', () => {
+    const { system, inventory } = setup({ slots: 2 }); stock(inventory);
+    const paid = system.place('foundation', 0, 0, 0, player).building!;
+    system.setCreativeMode(true); const free = system.place('foundation', 4, 0, 0, player).building!;
+    inventory.addItem('stone', 90); inventory.addItem('wood', 95);
+    expect(system.demolish(paid.id)).toBe('inventory full');
+    expect(system.demolish(free.id)).toBe('removed');
+    expect(inventory.getItemCount('stone')).toBe(100); expect(inventory.getItemCount('wood')).toBe(100);
+  });
+});
