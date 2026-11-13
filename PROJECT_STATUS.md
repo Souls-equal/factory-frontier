@@ -3,11 +3,30 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 7 — Advanced logistics (integration and acceptance)
-**Phase Status:** 🟡 In progress — configurable lift heights and route correction need play-testing
-**Next Recommended Task:** Play-test adjustable lifts together with open-ended routes; remaining Phase 5 checks and Phase 7 scope/acceptance remain open.
+**Phase Status:** 🟡 In progress — elevated platform alignment, configurable lifts and route correction need play-testing
+**Next Recommended Task:** Play-test upper-platform alignment, machine placement, adjustable lifts and open-ended routes; remaining Phase 5 checks and Phase 7 scope/acceptance remain open.
 **Last Updated:** 2026-11-11
 
 ---
+
+## Elevated platform and machine placement correction
+
+- Following user feedback, an interactive foundation preview next to the upper
+  port of a lift or a nearby flat raised one-cell conveyor automatically aligns
+  its top with that conveyor level. Page Up/Down remains available for fine
+  adjustments. Existing coplanar foundation gap filling is preserved; conflicting
+  raised logistics levels are rejected instead of guessing. Direct model callers
+  retain their previous explicit height semantics unless they opt into alignment.
+- Logistics machines and belts can be aimed at foundation tops and stand on a
+  complete footprint supported by multiple coplanar slabs. Supported placements
+  no longer fail for steep ground, low obstacles or the player below the slab;
+  actual vertical obstacle/player overlap is still rejected. Dismantling a slab
+  under a machine remains conservatively blocked. Deposit-based miners still use
+  their deposit/ground rules; vertically overlapping foundations are not supported.
+- Automated tests cover both lift directions and all four rotations, aligned
+  preview/commit, manual height, coverage, collisions, costs, support protection
+  and live transport to a machine spanning two slabs. This correction has not yet
+  been manually tested in-game by the player.
 
 ## Phase 7 — adjustable conveyor lift heights
 

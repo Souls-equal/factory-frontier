@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — raised platform alignment
+
+- Align interactive foundation placement to raised lift ports or nearby flat
+  belts; reject ambiguous heights and preserve manual height controls.
+- Target foundation surfaces for logistics buildings and support complete
+  machine footprints spanning coplanar slabs. Respect real vertical collisions.
+
 ## Unreleased — adjustable conveyor lifts
 
 - Choose up/down lift travel from 1 to 8 m before placement using Page Up/Down.

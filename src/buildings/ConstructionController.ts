@@ -33,14 +33,15 @@ export class ConstructionController {
     // Project onto nearby foundation surfaces before the ground ray so elevated
     // platforms can be extended and supported belts aimed at beyond ground reach.
     let best = Infinity, target: { x: number; z: number } | null = null;
-    if ((this.typeId === 'foundation' || this.typeId === 'conveyor-cell') && direction.y < -1e-8 &&
+    const onFoundation = this.typeId !== null && this.system.registry.get(this.typeId).placement === 'logistics';
+    if ((this.typeId === 'foundation' || onFoundation) && direction.y < -1e-8 &&
         this.system.registry.all().some((definition) => definition.id === 'foundation')) {
       const definition = this.system.registry.get('foundation');
       for (const foundation of this.system.all().filter((b) => b.typeId === 'foundation')) {
         const t = (foundation.transform.y + definition.height - origin.y) / direction.y;
         if (t <= 0 || t > this.reach || t >= best) continue;
         const x = origin.x + direction.x * t, z = origin.z + direction.z * t;
-        if (!this.terrain.contains(x, z) || foundation.transform.y <= this.terrain.heightAt(x, z) + .5) continue;
+        if (!this.terrain.contains(x, z) || (this.typeId === 'foundation' && foundation.transform.y <= this.terrain.heightAt(x, z) + .5)) continue;
         const n = foundation.transform.footprint, epsilon = 1e-7;
         const f = snapFootprint(definition, x, z, this.rotation, this.system.cellSize).footprint;
         const touches = f.minX <= n.maxX + epsilon && f.maxX >= n.minX - epsilon &&
@@ -76,13 +77,13 @@ export class ConstructionController {
   preview(view: CameraView, player: PlayerFootprint): PlacementResult | null {
     if (!this.typeId) return null;
     const point = this.aim(view);
-    return point ? this.system.validate(this.typeId, point.x, point.z, this.facing(view), player, this.typeId === 'foundation' ? this.foundationHeightOffset : undefined) : null;
+    return point ? this.system.validate(this.typeId, point.x, point.z, this.facing(view), player, this.typeId === 'foundation' ? this.foundationHeightOffset : undefined, { alignFoundationToLogistics: this.typeId === 'foundation' }) : null;
   }
   confirm(view: CameraView, player: PlayerFootprint) {
     if (!this.typeId) return null;
     const point = this.aim(view);
     if (!point) return null;
-    const result = this.system.place(this.typeId, point.x, point.z, this.facing(view), player, this.typeId === 'foundation' ? this.foundationHeightOffset : undefined);
+    const result = this.system.place(this.typeId, point.x, point.z, this.facing(view), player, this.typeId === 'foundation' ? this.foundationHeightOffset : undefined, { alignFoundationToLogistics: this.typeId === 'foundation' });
     if (result.reason === 'valid' && this.typeId === 'foundation') this.foundationSteps = 0;
     return result;
   }
