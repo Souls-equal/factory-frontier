@@ -237,3 +237,17 @@ describe('refined construction details', () => {
     view.dispose();
   });
 });
+
+it('renders coplanar overlapping foundation cells once, restoring shared cells when an owner is removed', () => {
+  const registry = createDefaultBuildingRegistry(createDefaultItemRegistry()), view = new BuildingView(registry, 1);
+  const first = { id: 'first', typeId: 'foundation', transform: snapFootprint(registry.get('foundation'), 0, 0, 0, 1) };
+  const second = { id: 'second', typeId: 'foundation', transform: snapFootprint(registry.get('foundation'), 1, 1, 1, 1) };
+  view.sync([first, second]);
+  const cells = (id: string) => view.group.getObjectByName(id)!.children.filter((mesh) => mesh.name === 'foundation-cell');
+  expect(cells('first').filter((mesh) => mesh.visible)).toHaveLength(4);
+  expect(cells('second').filter((mesh) => mesh.visible)).toHaveLength(3);
+  expect(view.group.getObjectByName('second')!.children.filter((mesh) => mesh.name === 'foundation-tile' && mesh.visible)).toHaveLength(3);
+  view.sync([second]); expect(cells('second').filter((mesh) => mesh.visible)).toHaveLength(4);
+  expect(view.group.getObjectByName('second')!.getObjectByName('foundation-corner-plates')!.visible).toBe(true);
+  view.dispose();
+});

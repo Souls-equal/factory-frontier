@@ -178,7 +178,8 @@ Construction now confirms with left click rather than C; hands-on input acceptan
 The four selectable building models have a block-style detail refresh; user visual acceptance remains pending.
 The Q menu now includes model-based building thumbnails; browser acceptance remains pending.
 Foundation placement has adjustable burial and elevation with neighbour alignment;
-a hands-on browser check remains pending. This does not complete Phase 5.
+partial coplanar overlap can fill platform gaps and elevated aiming can extend
+platforms. The correction requires a hands-on check. This does not complete Phase 5.
 
 ## PHASE 5 — Conveyor foundation
 

@@ -3,11 +3,26 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 7 — Advanced logistics (integration and acceptance)
-**Phase Status:** 🟡 In progress — route editor adjusted after user feedback; follow-up play-test pending
-**Next Recommended Task:** Retest open-ended routes, continuation and later attachment; remaining Phase 5 checks and Phase 7 scope/acceptance remain open.
+**Phase Status:** 🟡 In progress — route and foundation corrections require follow-up play-testing
+**Next Recommended Task:** Play-test foundation gap filling and elevated platforms together with open-ended routes; remaining Phase 5 checks and Phase 7 scope/acceptance remain open.
 **Last Updated:** 2026-11-11
 
 ---
+
+## Foundation gap and elevation correction
+
+- A 2×2 foundation can overlap one, two or three already covered grid cells at
+  the same base height; a fully covered footprint remains invalid. Every placed
+  slab costs and refunds its full normal amount. Shared cells are rendered once;
+  removal preserves cells still covered by another slab.
+- Voxel terrain uses the highest column as the default foundation reference;
+  floating slabs no longer fail solely because terrain varies below them. Real
+  vertical overlap with buildings, natural obstacles or the player's body still
+  blocks placement. Non-foundation placement remains conservative. Foundation
+  stacking at different heights in the same footprint is intentionally rejected.
+- Foundation aiming can project onto nearby elevated platform levels (within the
+  normal reach); it does not aim through terrain. This and the gap workflow have
+  automated coverage but have not yet been tested by the player in-game.
 
 ## Phase 7 — open-ended route correction
 
@@ -548,13 +563,11 @@
   and deposit collision, other buildings, player footprint and resources. The
   production heightfield is checked by clipping all intersecting triangles; generic
   `TerrainQuery` implementations fall back to finite samples. Terrain variation
-  is limited to 0.12 m. Foundation height is adjustable with Page Up/Down in
+  is limited to 0.12 m for grounded heightfield placement. Foundation height is adjustable with Page Up/Down in
   0.1 m steps, up to 0.3 m below the highest terrain point, or above ground.
   Adjacent foundations snap edge-to-edge and inherit a neighbour's base height;
-  the height adjustment resets after successful placement. Aim still targets ground
-  within 6 m; all existing slope, overlap and resource checks remain in force.
-  Automated coverage includes burial limits, alignment, floating support and UI
-  keys; hands-on browser acceptance of this new workflow remains pending.
+  the height adjustment resets after successful placement. The subsequent gap and
+  elevation correction above documents the revised aiming and overlap rules.
 - The fixed-step stage consumes queued placement/demolition presses. Inventory
   exchange is all-or-nothing. Demolition refunds all original materials or fails
   without removing the building if they cannot all fit. Rendering and collision

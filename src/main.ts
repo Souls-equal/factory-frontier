@@ -161,7 +161,8 @@ async function boot(): Promise<void> {
     controls: config.controls, player: config.player, terrain: new BuildingTerrain(world.terrain, buildings),
     obstacles: new BuildingCollision(new VoxelCollision(world.terrain, new GatherableCollision(world.obstacles, world.gatherables)), buildings), spawn: world.spawn,
   });
-  const playerFootprint = () => ({ x: player.position.x, z: player.position.z, radius: config.player.radius });
+  const playerFootprint = () => ({ x: player.position.x, z: player.position.z, radius: config.player.radius,
+    feetY: player.position.y, headY: player.position.y + config.player.height });
   const machines = new MachineManager(buildings, registry, () => world.deposits, config.miner,
     () => !!(machineUI?.isOpen || logisticsUI?.isOpen || constructionUI?.isOpen || inventoryUI?.isOpen));
   const logistics = new LogisticsManager(buildings, machines, registry,
