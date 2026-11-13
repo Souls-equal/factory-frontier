@@ -5,6 +5,8 @@ import { ConveyorPath, type Point3 } from './ConveyorPath';
 
 export interface ConveyorSettings { readonly speed: number; readonly throughputPerMinute: number; readonly spacing: number }
 export const DEFAULT_CONVEYOR_SETTINGS: ConveyorSettings = Object.freeze({ speed: 1, throughputPerMinute: 60, spacing: .5 });
+/** Output transfers in the latest 60 one-second simulation-time buckets. */
+export interface ConveyorFlowStats { readonly total: number; readonly lastMinute: number }
 export type ConveyorState = 'DISCONNECTED' | 'IDLE' | 'RUNNING' | 'BLOCKED' | 'INVALID' | 'ERROR';
 export interface CellTransition { readonly from: Point3; readonly to: Point3; readonly distance: number; readonly length: number }
 export interface TransportItem { readonly id: string; readonly itemId: string; readonly distance: number; readonly previousPosition: Point3; readonly transition?: CellTransition }
@@ -38,6 +40,7 @@ type InternalSegment = Omit<Mutable<ConveyorSegment>, 'items'> & { items: Intern
 export class ConveyorNetwork implements SimulationSystem {
   readonly id = 'conveyors';
   private readonly segments = new Map<string, InternalSegment>();
+  private readonly flow = new Map<string, { total: number; buckets: Map<number, number> }>();
   private nextItem = 1;
   private readonly cells = new Set<string>();
   private readonly cellInputDistance = new Map<string, number>();
@@ -51,8 +54,25 @@ export class ConveyorNetwork implements SimulationSystem {
     private readonly drop?: (item: TransportItem, position: Point3) => void) {}
   get dropsOpenEnds(): boolean { return !!this.drop; }
   isCell(id: string): boolean { return this.cells.has(id); }
+  isOutputBlocked(id: string): boolean { return this.cellObstacle.has(id); }
   get(id: string): ConveyorSegment | undefined { return this.segments.get(id); }
   all(): readonly ConveyorSegment[] { return [...this.segments.values()]; }
+  /** Count completed handoffs and ground drops, not manual pickups. Uses the
+   * simulation clock, so pausing or opening an inspection never ages samples. */
+  flowStats(id: string): ConveyorFlowStats | undefined {
+    if (!this.segments.has(id)) return undefined;
+    const data = this.flow.get(id), now = Math.floor(this.timeMs / 1000);
+    let lastMinute = 0;
+    if (data) for (const [second, count] of data.buckets) if (second > now - 60 && second <= now) lastMinute += count;
+    return { total: data?.total ?? 0, lastMinute };
+  }
+  private recordOutput(id: string): void {
+    let data = this.flow.get(id);
+    if (!data) { data = { total: 0, buckets: new Map() }; this.flow.set(id, data); }
+    const second = Math.floor(this.timeMs / 1000);
+    for (const previous of data.buckets.keys()) if (previous <= second - 60) data.buckets.delete(previous);
+    data.buckets.set(second, (data.buckets.get(second) ?? 0) + 1); data.total++;
+  }
   findItem(id: string): { item: TransportItem; position: Point3 } | undefined {
     for (const segment of this.segments.values()) {
       const item = segment.items.find((entry) => entry.id === id);
@@ -219,7 +239,7 @@ export class ConveyorNetwork implements SimulationSystem {
       if (s.input) this.require(s.input).output = null;
       if (s.output) this.require(s.output).input = null;
     }
-    this.segments.delete(id); this.refreshStates(); return true;
+    this.segments.delete(id); this.flow.delete(id); this.refreshStates(); return true;
   }
   /** Rebuild routes on topology changes, never while rendering or per item. */
   private refreshStates(): void {
@@ -304,7 +324,7 @@ export class ConveyorNetwork implements SimulationSystem {
         const end = s.path.point(s.path.length), d = s.path.direction('output');
         this.drop(item, { x: end.x + .2 * d.x, y: end.y + .22, z: end.z + .2 * d.z }); transferred = true;
       }
-      if (transferred) { s.items.shift(); s.nextOutputMs = this.timeMs + 60000 / s.settings.throughputPerMinute; }
+      if (transferred) { this.recordOutput(s.id); s.items.shift(); s.nextOutputMs = this.timeMs + 60000 / s.settings.throughputPerMinute; }
     }
     // Resolve grouped sources once against belts that actually have space. This
     // avoids fixed iteration-order bias and permits fallback when a branch fills.
@@ -363,16 +383,16 @@ export class ConveyorNetwork implements SimulationSystem {
         if (next && (!back || back.distance >= gap)) {
           const remainingSeconds = Math.max(0, deltaMs / 1000 - (length - previousDistance) / s.settings.speed);
           item.distance = Math.min(remainingSeconds * next.settings.speed, back ? back.distance - gap : next.path.length, next.path.length);
-          next.items.push(item); s.items.splice(i, 1); i--;
+          next.items.push(item); this.recordOutput(s.id); s.items.splice(i, 1); i--;
           s.nextOutputMs = this.timeMs + 60000 / s.settings.throughputPerMinute; continue;
         }
         if (!next && !s.receiver && this.drop) {
           const end = s.path.point(length), direction = s.path.direction('output');
           this.drop(item, { x: end.x + direction.x * .2, y: end.y + .22, z: end.z + direction.z * .2 });
-          s.items.splice(i, 1); i--; s.nextOutputMs = this.timeMs + 60000 / s.settings.throughputPerMinute; continue;
+          this.recordOutput(s.id); s.items.splice(i, 1); i--; s.nextOutputMs = this.timeMs + 60000 / s.settings.throughputPerMinute; continue;
         }
         if (!next && s.receiver?.canAccept(item.itemId) && s.receiver.accept(item.itemId)) {
-          s.items.splice(i, 1); i--; s.nextOutputMs = this.timeMs + 60000 / s.settings.throughputPerMinute; continue;
+          this.recordOutput(s.id); s.items.splice(i, 1); i--; s.nextOutputMs = this.timeMs + 60000 / s.settings.throughputPerMinute; continue;
         }
       }
       ahead = item.distance;

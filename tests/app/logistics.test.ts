@@ -152,3 +152,43 @@ it('extends a live cell belt over its dropped items without duplicate interactio
   for (let i = 0; i < 100; i++) { frame(); recovered ||= state.segments.some((s) => s.id === second.building!.id && s.items.some((item) => fallen.includes(item.id))); }
   expect(recovered).toBe(true);
 });
+
+it('inspects a belt with G, pauses the simulation, and does not leak G through a modal', async () => {
+  vi.spyOn(console, 'info').mockImplementation(() => undefined);
+  await import('../../src/main'); await vi.waitFor(() => expect(state.init).toBe(1)); frame();
+  const world = state.world!, deposit = world.deposits.find((entry) => entry.itemId === 'iron-ore')!;
+  const far = { x: 80, z: 80, radius: .4 };
+  const miner = world.buildings.place('miner-mk1', deposit.x, deposit.z, 0, far);
+  const first = world.buildings.place('conveyor-cell', miner.transform.x + .5, miner.transform.z - 1.5, 0, far);
+  const second = world.buildings.place('conveyor-cell', first.transform.x, first.transform.z - 1, 0, far);
+  const belt = world.buildings.place('conveyor-cell', second.transform.x, second.transform.z - 1, 0, far);
+  expect([miner.reason, first.reason, second.reason, belt.reason]).toEqual(['valid', 'valid', 'valid', 'valid']);
+  const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!, sensitivity = createGameConfig().controls.lookSensitivity;
+  const turn = (dx: number, dy: number) => {
+    canvas.dispatchEvent(new MouseEvent('mousedown', { button: 0, clientX: 5000, clientY: 5000 }));
+    window.dispatchEvent(new MouseEvent('mousemove', { clientX: 5000 + dx, clientY: 5000 + dy })); frame();
+    window.dispatchEvent(new MouseEvent('mouseup'));
+  };
+  const initial = state.view!.position, target = belt.transform;
+  const yaw = Math.atan2(-(target.x - initial.x), -(target.z - initial.z)); turn(-yaw / sensitivity, 0);
+  window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyW' }));
+  for (let i = 0; i < 100; i++) { frame(); const p = state.view!.position; if (Math.hypot(p.x - target.x, p.z - target.z) < 2.5) break; }
+  window.dispatchEvent(new KeyboardEvent('keyup', { code: 'KeyW' }));
+  for (let i = 0; i < 100; i++) frame();
+  const p = state.view!.position;
+  const targetYaw = Math.atan2(-(target.x - p.x), -(target.z - p.z));
+  const pitch = Math.atan2(target.y + .275 - p.y, Math.hypot(target.x - p.x, target.z - p.z));
+  turn(-(targetYaw - state.view!.yaw) / sensitivity, -(pitch - state.view!.pitch) / sensitivity);
+  window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyG', cancelable: true })); frame();
+  const panel = document.querySelector<HTMLElement>('[data-ui="logistics"]')!;
+  expect(panel.hidden).toBe(false); expect(panel.textContent).toContain('Observed outputs (up to 60 s, 1 s bins)');
+  expect(panel.textContent).toContain('Simulation paused while inspecting');
+  const before = state.segments.map((s) => s.items.map((i) => ({ id: i.id, distance: i.distance })));
+  for (let i = 0; i < 40; i++) frame();
+  expect(state.segments.map((s) => s.items.map((i) => ({ id: i.id, distance: i.distance })))).toEqual(before);
+  window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', cancelable: true })); frame(); expect(panel.hidden).toBe(true);
+  window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyQ', cancelable: true })); frame();
+  expect(document.querySelector<HTMLElement>('[data-ui="construction"]')!.hidden).toBe(false);
+  window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyG', cancelable: true })); frame(); expect(panel.hidden).toBe(true);
+  window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', cancelable: true })); frame(); expect(panel.hidden).toBe(true);
+});

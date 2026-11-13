@@ -5,9 +5,9 @@
  */
 
 export const CONTROLS_HINT_UNLOCKED =
-  'Click to capture mouse · WASD move · Space jump · Shift sprint · E interact · Q build · F demolish · Tab inventory';
+  'Click to capture mouse · WASD move · Space jump · Shift sprint · E interact · G inspect belt · Q build · F demolish · Tab inventory';
 export const CONTROLS_HINT_LOCKED =
-  'WASD move · Space jump · Shift sprint · E interact · Q build · F demolish · Tab inventory · Esc releases mouse';
+  'WASD move · Space jump · Shift sprint · E interact · G inspect belt · Q build · F demolish · Tab inventory · Esc releases mouse';
 export const CONSTRUCTION_HINT_UNLOCKED =
   'Left click place · Drag to look · Right click capture mouse · R rotate · Esc cancel';
 export const CONSTRUCTION_HINT_LOCKED =

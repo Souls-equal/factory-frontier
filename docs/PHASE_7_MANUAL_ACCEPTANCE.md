@@ -60,3 +60,16 @@ adjustable afterwards. Terrain and foundation support limits still apply, so
 some elevated layouts require a supported foundation. Connect via one-cell
 belts, not direct machine ports or legacy two-cell belts. The later route editor is described in `PHASE_7_ROUTE_CHECK.md`. Check previous Phase 5
 manual scenarios separately; report layout, rotation and any problems found.
+
+
+### Conveyor and lift flow inspection
+
+1. Run a supplied belt and lift into storage; aim at each and press G. Confirm
+   the state, limits, observed output count and total are plausible. E must still
+   pick up belt items; close the panel before attempting this.
+2. Block the output and inspect after it fills, then free it and inspect again.
+   Verify the blocked state and that the total only rises for completed transfers.
+3. The inspection pauses simulation. Its recent count covers up to 60 seconds of
+   simulated time in one-second buckets, so it starts with partial history and
+   does not age while the panel is open. Rebuilding the segment resets its total.
+4. Confirm G does not open inspection through inventory or construction menus.
