@@ -10,6 +10,7 @@ import type { TerrainQuery } from '../world/terrain/TerrainHeightfield';
 import type { BuildingDefinition, BuildingRegistry } from './BuildingRegistry';
 import { snapFootprint, type BuildingTransform, type Footprint } from './Transform';
 import { terrainSupport } from './TerrainSupport';
+import { expandRoute, type RoutePoint } from '../logistics/ConveyorRoute';
 
 export interface BuildingInstance {
   readonly id: string;
@@ -36,6 +37,8 @@ export interface PlacementResult {
   readonly snappedToConveyor?: boolean;
   readonly snappedToFoundation?: boolean;
 }
+export type RouteReason = PlacementReason | 'invalid route' | 'missing source' | 'missing destination';
+export interface RouteResult { readonly reason: RouteReason; readonly cells: readonly BuildingInstance[]; readonly changed: readonly BuildingInstance[]; readonly cost: readonly { readonly itemId: string; readonly quantity: number }[] }
 export interface PlayerFootprint { readonly x: number; readonly z: number; readonly radius: number }
 
 const intersects = (a: Footprint, b: Footprint): boolean =>
@@ -310,6 +313,67 @@ export class BuildingSystem {
     this.nextId++; this.revisionValue++;
     return { ...result, building };
   }
+  /** Revalidate an entire route on an isolated copy, then check the final topology
+   * against the live network. Nothing is paid or committed by preview. */
+  previewConveyorRoute(points: readonly RoutePoint[], player: PlayerFootprint, xFirst = false, defaultRotation = 0): RouteResult {
+    const definition = this.registry.get('conveyor-cell');
+    const expanded = expandRoute(points, definition, this.cellSize, xFirst, defaultRotation);
+    const empty = (reason: RouteReason): RouteResult => ({ reason, cells: [], changed: [], cost: [] });
+    if (!expanded) return empty('invalid route');
+    const shadow = new BuildingSystem(this.registry, this.inventory, this.terrain, this.obstacles, this.cellSize,
+      this.playAreaRadius, this.deposits, this.dynamicObstacles);
+    for (const b of this.all()) shadow.buildings.set(b.id, b);
+    shadow.nextId = this.nextId; shadow.creativeValue = true;
+    const ids: string[] = [];
+    for (const cell of expanded) {
+      const result = shadow.place('conveyor-cell', cell.x, cell.z, cell.rotation, player);
+      if (result.reason !== 'valid' || !result.building) return empty(result.reason);
+      ids.push(result.building.id);
+    }
+    const before = this.all(), after = shadow.all().map((b) => {
+      if (!ids.includes(b.id) || this.creativeMode) return b;
+      const { freePlacement: _free, ...paid } = b; return Object.freeze(paid);
+    });
+    const route = ids.map((id) => after.find((b) => b.id === id)!);
+    const first = route[0]!, last = route.at(-1)!;
+    // Match the network's first-lane arbitration for machine ports. A port
+    // that already selects another lane is not a usable endpoint.
+    const cells = after.filter((b) => b.typeId === 'conveyor-cell');
+    const selected = (predicate: (cell: BuildingInstance) => boolean, target: BuildingInstance) => cells.find(predicate)?.id === target.id;
+    const hasSource = before.some((b) => {
+      if (b.typeId === 'conveyor-cell') return cellAhead(b, first, this.cellSize);
+      if (b.typeId !== 'miner-mk1' && !isDirectionalMachine(b.typeId)) return false;
+      if (b.typeId === 'splitter') return [0, 1, 2].some((i) => selected((cell) => splitterOutputTouches(cell, b, this.cellSize, i), first));
+      return selected((cell) => cellTouchesSource(cell, b, this.cellSize), first);
+    });
+    const hasDestination = before.some((b) => {
+      if (b.typeId === 'conveyor-cell') return cellAhead(last, b, this.cellSize);
+      if (b.typeId !== 'receiving-terminal' && !isDirectionalMachine(b.typeId)) return false;
+      if (b.typeId === 'merger') return [0, 1, 2].some((i) => selected((cell) => mergerInputTouches(cell, b, this.cellSize, i), last));
+      if (b.typeId === 'splitter' || isLiftBuilding(b.typeId)) return selected((cell) => cellTouchesReceiver(cell, b, this.cellSize), last);
+      return cellTouchesReceiver(last, b, this.cellSize);
+    });
+    const cost = definition.cost.map((entry) => ({ itemId: entry.itemId, quantity: entry.quantity * route.length }));
+    const changed = after.filter((b) => !ids.includes(b.id) && (b.typeId === 'conveyor-cell' || b.typeId === 'conveyor-auto') &&
+      JSON.stringify([before.find((old) => old.id === b.id)?.cellConveyor, before.find((old) => old.id === b.id)?.autoConveyor]) !== JSON.stringify([b.cellConveyor, b.autoConveyor]));
+    const result = (reason: RouteReason): RouteResult => ({ reason, cells: route, changed, cost });
+    if (!hasSource) return result('missing source');
+    if (!hasDestination) return result('missing destination');
+    if (!this.creativeMode && cost.some((entry) => !this.inventory.hasItem(entry.itemId, entry.quantity))) return result('insufficient materials');
+    if (!this.safePlan(before, after)) return result('conveyor occupied');
+    return result('valid');
+  }
+  /** Revalidate immediately before a single all-or-nothing payment and commit. */
+  placeConveyorRoute(points: readonly RoutePoint[], player: PlayerFootprint, xFirst = false, defaultRotation = 0): RouteResult {
+    const result = this.previewConveyorRoute(points, player, xFirst, defaultRotation);
+    if (result.reason !== 'valid') return result;
+    if (!this.creativeMode && !this.inventory.exchange(result.cost, [])) return { ...result, reason: 'insufficient materials' };
+    for (const b of result.changed) this.buildings.set(b.id, b);
+    for (const b of result.cells) this.buildings.set(b.id, b);
+    this.nextId += result.cells.length; this.revisionValue++;
+    return result;
+  }
+
   /** Paid buildings refund in full; free buildings return nothing regardless of current mode. */
   demolish(id: string): 'removed' | 'unknown building' | 'inventory full' | 'output not empty' | 'building supports another' | 'conveyor occupied' {
     const building = this.buildings.get(id);
