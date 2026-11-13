@@ -1,5 +1,5 @@
 import type { BuildingInstance } from '../buildings/BuildingSystem';
-import { BELT_HEIGHT, machinePort, pathForBuilding, isDirectionalMachine, splitterPort } from './ConveyorDefinitions';
+import { machinePort, pathForBuilding, isDirectionalMachine, isLiftBuilding, splitterPort, mergerPort } from './ConveyorDefinitions';
 
 const epsilon = 1e-7;
 /** Whether a machine's 2-cell-wide port touches a particular one-cell lane. */
@@ -14,7 +14,7 @@ export function cellTouchesMachine(cell: BuildingInstance, machine: BuildingInst
     const acrossX = d.x !== 0 && Math.abs(p.x - (d.x > 0 ? f.minX : f.maxX)) < epsilon && p.z > f.minZ + epsilon && p.z < f.maxZ - epsilon;
     const acrossZ = d.z !== 0 && Math.abs(p.z - (d.z > 0 ? f.minZ : f.maxZ)) < epsilon && p.x > f.minX + epsilon && p.x < f.maxX - epsilon;
     const directional = !isDirectionalMachine(machine.typeId) || (d.x === port.direction.x && d.z === port.direction.z);
-    return directional && (acrossX || acrossZ) && (ignoreHeight || Math.abs(p.y - (machine.transform.y + BELT_HEIGHT)) < epsilon);
+    return directional && (acrossX || acrossZ) && (ignoreHeight || Math.abs(p.y - port.position.y) < epsilon);
   }
   const dx = cell.transform.x - port.position.x, dz = cell.transform.z - port.position.z;
   return Math.abs(dx * d.x + dz * d.z - cellSize / 2) < epsilon &&
@@ -31,8 +31,26 @@ export function splitterOutputTouches(cell: BuildingInstance, machine: BuildingI
     Math.abs(dx * port.direction.z - dz * port.direction.x) <= cellSize / 2 + epsilon &&
     (ignoreHeight || Math.abs(path.point(0).y - port.position.y) < epsilon);
 }
+/** A merger input accepts one belt pointing inward at the matching face. */
+export function mergerInputTouches(cell: BuildingInstance, machine: BuildingInstance, cellSize: number, index: number, ignoreHeight = false): boolean {
+  const port = mergerPort(machine, cellSize, index), path = pathForBuilding(cell, cellSize)!;
+  const direction = path.direction('output'), dx = cell.transform.x - port.position.x, dz = cell.transform.z - port.position.z;
+  return direction.x === port.direction.x && direction.z === port.direction.z &&
+    Math.abs(dx * port.direction.x + dz * port.direction.z + cellSize / 2) < epsilon &&
+    Math.abs(dx * port.direction.z - dz * port.direction.x) <= cellSize / 2 + epsilon &&
+    (ignoreHeight || Math.abs(path.point(path.length).y - port.position.y) < epsilon);
+}
+export function cellTouchesReceiver(cell: BuildingInstance, machine: BuildingInstance, cellSize: number, ignoreHeight = false): boolean {
+  return machine.typeId === 'merger' ? [0, 1, 2].some((i) => mergerInputTouches(cell, machine, cellSize, i, ignoreHeight)) :
+    cellTouchesMachine(cell, machine, cellSize, 'receiver', ignoreHeight);
+}
+export function liftOutputTouches(cell: BuildingInstance, machine: BuildingInstance, cellSize: number, ignoreHeight = false): boolean {
+  const direction = pathForBuilding(cell, cellSize)!.direction('input'), port = machinePort(machine, cellSize, 'source');
+  return direction.x === port.direction.x && direction.z === port.direction.z && cellTouchesMachine(cell, machine, cellSize, 'source', ignoreHeight);
+}
 export function cellTouchesSource(cell: BuildingInstance, machine: BuildingInstance, cellSize: number, ignoreHeight = false): boolean {
   return machine.typeId === 'splitter' ? [0, 1, 2].some((i) => splitterOutputTouches(cell, machine, cellSize, i, ignoreHeight)) :
+    isLiftBuilding(machine.typeId) ? liftOutputTouches(cell, machine, cellSize, ignoreHeight) :
     cellTouchesMachine(cell, machine, cellSize, 'source', ignoreHeight);
 }
 
@@ -115,7 +133,7 @@ export function resolveCellConveyors(buildings: readonly BuildingInstance[], cel
   }
   // A sideways Miner output also enters through a tile edge, not its rear inlet.
   for (const machine of buildings.filter((b) => (b.typeId === 'miner-mk1' || isDirectionalMachine(b.typeId)))) {
-    if (machine.typeId === 'splitter') continue;
+    if (machine.typeId === 'splitter' || isLiftBuilding(machine.typeId)) continue;
     const cell = cells.find((b) => cellTouchesMachine(b, machine, cellSize, 'source'));
     if (!cell) continue;
     const port = machinePort(machine, cellSize, 'source'), direction = pathForBuilding(cell, cellSize)!.direction('input');

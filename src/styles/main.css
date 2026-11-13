@@ -504,6 +504,12 @@ body {
 .terminal__pane-heading h3 { margin: 4px 0 0; color: #e3f4fb; font-size: 18px; }
 .terminal__eyebrow { color: #74a8bf; font: 10px var(--ff-mono); letter-spacing: .14em; }
 .terminal__badge { color: #80d5de; border: 1px solid #376c7a; background: #173642; border-radius: 4px; padding: 4px 7px; font: 9px var(--ff-mono); letter-spacing: .1em; }
+[data-splitter-settings] { display: grid; gap: 10px; margin: 12px 0; }
+[data-splitter-settings] label { display: grid; gap: 5px; color: #b9d8e4; font-size: 12px; }
+[data-splitter-settings] select { width: 100%; padding: 8px; color: #e3f4fb; background: #132832; border: 1px solid #376c7a; border-radius: 6px; }
+[data-splitter-settings] select:focus-visible { outline: 2px solid #80d5de; outline-offset: 2px; }
+[data-splitter-settings] select:disabled { opacity: .5; }
+[data-splitter-settings] p { margin: 0; }
 .terminal__detail { min-height: 2.7em; }
 .terminal__actions { display: flex; }
 .inventory .terminal__retrieve { flex: 1; display: flex; justify-content: space-between; font-weight: 700; background: #1a5963; border-color: #58b8c2; }

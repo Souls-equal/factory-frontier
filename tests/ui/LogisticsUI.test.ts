@@ -124,3 +124,23 @@ it('inspects and recovers the buffered splitter item without discarding it on a 
   player.removeItem('stone', 100); retrieve.click(); expect(junction.pending).toBeNull(); expect(player.getItemCount('coal')).toBe(1);
   expect(retrieve.disabled).toBe(true); ui.dispose();
 });
+
+it('configures splitter routing and inspects the merger buffer', () => {
+  document.body.innerHTML = '<section hidden><h2 data-logistics-title></h2><button data-logistics-close>close</button><p data-logistics-details></p><div data-splitter-settings hidden><select data-splitter-mode><option value="balanced">Balanced</option><option value="overflow">Overflow</option><option value="priority">Priority</option></select><select data-splitter-priority><option value="0">Front</option><option value="1">Left</option><option value="2">Right</option></select></div><div data-logistics-grid hidden></div><p data-logistics-slot-detail></p><div data-logistics-player-pane><div data-logistics-player-grid></div><p data-logistics-player-capacity></p><p data-logistics-player-detail></p></div><button data-logistics-retrieve>retrieve</button><p data-logistics-notice></p></section>';
+  const root = document.querySelector('section')!, items = createDefaultItemRegistry(), player = new Inventory(items, 5);
+  const buildings = new BuildingSystem(createDefaultBuildingRegistry(items), player, terrain, [], 1, 19); buildings.setCreativeMode(true);
+  const machines = new MachineManager(buildings, items, () => []), logistics = new LogisticsManager(buildings, machines, items);
+  const splitter = buildings.place('splitter', 0, 0, 0, { x: 8, z: 8, radius: .4 }).building!;
+  const merger = buildings.place('merger', 4, 0, 0, { x: 8, z: 8, radius: .4 }).building!;
+  logistics.sync(); const ui = new LogisticsUI(root, logistics, player, vi.fn()); ui.open(splitter.id);
+  const mode = root.querySelector<HTMLSelectElement>('[data-splitter-mode]')!, priority = root.querySelector<HTMLSelectElement>('[data-splitter-priority]')!;
+  expect(priority.disabled).toBe(true); mode.value = 'overflow'; mode.dispatchEvent(new Event('change'));
+  expect(priority.disabled).toBe(false); priority.value = '2'; priority.dispatchEvent(new Event('change'));
+  expect(logistics.splitter(splitter.id)!.mode).toBe('overflow'); expect(logistics.splitter(splitter.id)!.priority).toBe(2);
+  const pose = { position: { x: 0, y: .5, z: 0 }, direction: { x: 0, y: 0, z: -1 } };
+  logistics.merger(merger.id)!.receiver(0, pose).accept('coal'); ui.open(merger.id);
+  expect(root.querySelector<HTMLElement>('[data-splitter-settings]')!.hidden).toBe(true);
+  expect(root.textContent).toContain('Merger'); expect(root.textContent).toContain('Coal');
+  root.querySelector<HTMLButtonElement>('[data-logistics-retrieve]')!.click();
+  expect(player.getItemCount('coal')).toBe(1); expect(logistics.merger(merger.id)!.occupied).toBe(false); ui.dispose();
+});

@@ -21,7 +21,7 @@ nor splitter has been user-validated. This checklist complements
 5. Repeat the storage checklist and the earlier iron/coal → smelter → constructor
    chain in the same session. Report unexpected behavior and the orientations.
 
-Only balanced automatic routing is implemented. Configurable overflow/priority,
-mergers and lifts remain future Phase 7 work. Splitter ports support only the
+Balanced, strict priority and overflow modes are now available in inspection.
+Merger and bounded lifts are covered in `PHASE_7_MANUAL_ACCEPTANCE.md`. Splitter ports support only the
 selectable one-cell conveyors, not legacy two-cell belts. No ground-item pickup
 is provided for the splitter.

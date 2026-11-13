@@ -123,3 +123,12 @@ it('renders a splitter with one cyan and three yellow ports', () => {
   expect(input).toBe(1); expect(output).toBe(3);
   view.setPreview('splitter', { reason: 'valid', transform }); expect(view.group.getObjectByName('building-preview')).toBeDefined(); view.dispose();
 });
+
+it('renders merger ports and lift shafts, retaining visible vertical transport', () => {
+  const registry = createDefaultBuildingRegistry(createDefaultItemRegistry()), view = new BuildingView(registry, 1);
+  const merger = snapFootprint(registry.get('merger'), 0, 0, 0, 1), lift = snapFootprint(registry.get('lift-up-2'), 4, 0, 0, 1);
+  view.sync([{ id: 'merger', typeId: 'merger', transform: merger }, { id: 'lift', typeId: 'lift-up-2', transform: lift }]);
+  let inputs = 0; view.group.getObjectByName('merger')!.traverse((obj) => { if (obj.name === 'machine-input-port') inputs++; });
+  expect(inputs).toBe(3); expect(view.group.getObjectByName('lift-rail')).toBeDefined();
+  view.setPreview('lift-up-2', { reason: 'valid', transform: lift }); expect(view.group.getObjectByName('building-preview')).toBeDefined(); view.dispose();
+});

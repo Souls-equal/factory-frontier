@@ -3,7 +3,7 @@ import { BoxGeometry, Group, Mesh, MeshStandardMaterial, Vector3 } from 'three';
 import type { AutoConveyorShape } from '../logistics/AutoConveyor';
 import type { MachineState } from '../machines/Miner';
 import { ConveyorPath } from '../logistics/ConveyorPath';
-import { CONVEYOR_SHAPES, BELT_HEIGHT } from '../logistics/ConveyorDefinitions';
+import { CONVEYOR_SHAPES, BELT_HEIGHT, isLiftBuilding, liftInputOffset, liftOutputOffset } from '../logistics/ConveyorDefinitions';
 import type { ConveyorState } from '../logistics/ConveyorNetwork';
 import type { BuildingRegistry } from '../buildings/BuildingRegistry';
 import type { BuildingInstance, PlacementResult } from '../buildings/BuildingSystem';
@@ -97,7 +97,7 @@ export class BuildingView {
     const mesh = this.preview!; const definition = this.registry.get(typeId);
     mesh.position.set(placement.transform.x, placement.transform.y + definition.height / 2, placement.transform.z);
     mesh.rotation.y = (placement.autoConveyor?.rotation ?? placement.transform.rotation) * Math.PI / 2;
-    this.tintPreview(mesh, placement.reason === 'valid', (typeId === 'conveyor-auto' || typeId === 'conveyor-cell' || typeId === 'smelter' || typeId === 'constructor' || typeId === 'storage-container' || typeId === 'splitter'));
+    this.tintPreview(mesh, placement.reason === 'valid', (typeId === 'conveyor-auto' || typeId === 'conveyor-cell' || typeId === 'smelter' || typeId === 'constructor' || typeId === 'storage-container' || typeId === 'splitter' || typeId === 'merger' || isLiftBuilding(typeId)));
   }
   private tintPreview(mesh: Mesh<BoxGeometry, MeshStandardMaterial>, valid: boolean, showPorts: boolean): void {
     const color = valid ? 0x55e8b2 : 0xff5363;
@@ -180,6 +180,32 @@ export class BuildingView {
       part(0xf5d056, 0, .5, -scale, .65 * scale, .24, .035 * scale, 'machine-output-port');
       part(0xf5d056, scale, .5, 0, .035 * scale, .24, .65 * scale, 'machine-output-port');
       part(0xf5d056, -scale, .5, 0, .035 * scale, .24, .65 * scale, 'machine-output-port');
+    }
+    if (isLiftBuilding(typeId)) {
+      material.transparent = true; material.opacity = 0; material.depthWrite = false; mesh.castShadow = false;
+      const part = (color: number, x: number, y: number, z: number, w: number, h: number, d: number, name: string): void => {
+        const object = new Mesh(new BoxGeometry(w, h, d), new MeshStandardMaterial({ color, roughness: .75, transparent: preview, opacity: preview ? .5 : 1, depthWrite: !preview }));
+        object.position.set(x, y - def.height / 2, z); object.name = name; object.castShadow = !preview; mesh.add(object);
+      };
+      const scale = this.cellSize, top = Math.max(liftInputOffset(typeId, scale), liftOutputOffset(typeId, scale)) + .5;
+      for (const x of [-.48 * scale, .48 * scale]) for (const z of [-.22 * scale, .22 * scale])
+        part(0x526e78, x, top / 2, z, .12 * scale, top, .12 * scale, 'lift-rail');
+      part(0x59dce1, 0, .5 + liftInputOffset(typeId, scale), scale, .65 * scale, .22, .12 * scale, 'machine-input-port');
+      part(0xf5d056, 0, .5 + liftOutputOffset(typeId, scale), -scale, .65 * scale, .22, .12 * scale, 'machine-output-port');
+      part(0x829ba1, 0, top + .15, 0, 1.15 * scale, .2, .65 * scale, 'lift-cap');
+    }
+    if (typeId === 'merger') {
+      const part = (color: number, x: number, y: number, z: number, w: number, h: number, d: number, name: string): void => {
+        const object = new Mesh(new BoxGeometry(w, h, d), new MeshStandardMaterial({ color, roughness: .75, transparent: preview, opacity: preview ? .5 : 1, depthWrite: !preview }));
+        object.position.set(x, y - def.height / 2, z); object.name = name; object.castShadow = !preview; mesh.add(object);
+      };
+      const scale = this.cellSize;
+      part(0x53483d, 0, .15, 0, 1.95 * scale, .3, 1.95 * scale, 'merger-base');
+      part(0xd2c09b, 0, 1.25, 0, 1.1 * scale, .1, 1.1 * scale, 'merger-top');
+      part(0x59dce1, 0, .5, scale, .65 * scale, .24, .035 * scale, 'machine-input-port');
+      part(0xf5d056, 0, .5, -scale, .65 * scale, .24, .035 * scale, 'machine-output-port');
+      part(0x59dce1, scale, .5, 0, .035 * scale, .24, .65 * scale, 'machine-input-port');
+      part(0x59dce1, -scale, .5, 0, .035 * scale, .24, .65 * scale, 'machine-input-port');
     }
     if (typeId === 'storage-container') {
       const part = (color: number, x: number, y: number, z: number, w: number, h: number, d: number, name: string): void => {

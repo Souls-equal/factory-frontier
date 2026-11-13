@@ -1,5 +1,5 @@
 /** Renderer-independent grid geometry; all distances are metres. */
-export type ConveyorShape = 'straight' | 'curve-right' | 'curve-left' | 'incline';
+export type ConveyorShape = 'straight' | 'curve-right' | 'curve-left' | 'incline' | 'lift';
 export interface Point3 { readonly x: number; readonly y: number; readonly z: number }
 export interface ConveyorPathSpec {
   readonly shape: ConveyorShape;
@@ -19,24 +19,29 @@ export class ConveyorPath {
   readonly rise: number;
   constructor(readonly spec: ConveyorPathSpec) {
     if (![spec.x, spec.y, spec.z, spec.size, spec.rotation, spec.rise ?? 0].every(Number.isFinite) ||
-        spec.size <= 0 || !Number.isInteger(spec.rotation) || !['straight', 'curve-right', 'curve-left', 'incline'].includes(spec.shape) ||
+        spec.size <= 0 || !Number.isInteger(spec.rotation) || !['straight', 'curve-right', 'curve-left', 'incline', 'lift'].includes(spec.shape) ||
         (spec.shape === 'straight' && (spec.rise ?? 0) !== 0)) throw new RangeError('Invalid conveyor path.');
     this.rise = spec.rise ?? 0;
     const horizontal = spec.shape.startsWith('curve-') ? Math.PI * spec.size / 4 : spec.size;
-    this.length = Math.hypot(horizontal, this.rise);
+    this.length = spec.shape === 'lift' ? horizontal + Math.abs(this.rise) : Math.hypot(horizontal, this.rise);
   }
   /** Position at distance along the centreline; endpoints are exactly on grid edges. */
   point(distance: number): Point3 {
     if (!Number.isFinite(distance)) throw new RangeError('Invalid path distance.');
     const t = Math.max(0, Math.min(1, distance / this.length)), half = this.spec.size / 2;
-    let x = 0, z = half - t * this.spec.size;
+    let x = 0, z = half - t * this.spec.size, y = this.spec.y + this.rise * t;
+    if (this.spec.shape === 'lift') {
+      const distanceAlong = Math.max(0, Math.min(this.length, distance)), vertical = Math.abs(this.rise);
+      z = distanceAlong < half ? half - distanceAlong : distanceAlong < half + vertical ? 0 : -(distanceAlong - half - vertical);
+      y = this.spec.y + Math.sign(this.rise) * Math.max(0, Math.min(vertical, distanceAlong - half));
+    }
     if (this.spec.shape === 'curve-right' || this.spec.shape === 'curve-left') {
       const angle = Math.PI + Math.PI * t / 2;
       x = (half + half * Math.cos(angle)) * (this.spec.shape === 'curve-left' ? -1 : 1); z = half + half * Math.sin(angle);
     }
     const rotation = ((this.spec.rotation % 4) + 4) % 4;
     const cos = [1, 0, -1, 0][rotation]!, sin = [0, 1, 0, -1][rotation]!;
-    return { x: this.spec.x + x * cos + z * sin, y: this.spec.y + this.rise * t,
+    return { x: this.spec.x + x * cos + z * sin, y,
       z: this.spec.z - x * sin + z * cos };
   }
   /** Horizontal travel tangent at a path endpoint. */

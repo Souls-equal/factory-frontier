@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — Phase 7 logistics integration
+
+- Add a fair three-input merger with inspection and bounded protected buffers.
+- Add balanced, configurable strict-priority and overflow splitter modes.
+- Add one- and two-cell upward/downward conveyor lifts with continuous real
+  item movement, height-aware ports and backpressure.
+- Add combined logistics play-test guidance; acceptance remains pending.
+
 ## Unreleased — balanced splitter
 
 - Add a one-input, three-output splitter with fair round-robin selection and

@@ -4,13 +4,25 @@ import type { ItemReceiver, ItemSource, PortPose, SourceArbiter } from './Ports'
 
 /** One-item buffer and a persistent round-robin cursor; never consumes an item
  * until an output belt has reserved space for it. */
+export type SplitterMode = 'balanced' | 'overflow' | 'priority';
 export class Splitter implements SourceArbiter {
   private item: string | null = null;
   private cursor = 0;
+  private modeValue: SplitterMode = 'balanced';
+  private priorityValue = 0;
+  get mode(): SplitterMode { return this.modeValue; }
+  get priority(): number { return this.priorityValue; }
+  configure(mode: SplitterMode, priority: number): void {
+    if (!['balanced', 'overflow', 'priority'].includes(mode) || !Number.isInteger(priority) || priority < 0 || priority > 2) throw new RangeError('Invalid splitter configuration');
+    this.modeValue = mode; this.priorityValue = priority;
+  }
   constructor(readonly id: string, private readonly items: ItemRegistry) {}
   get pending(): string | null { return this.item; }
   outputId(index: number): string { return `${this.id}:output:${index}`; }
   choose(ready: readonly string[]): string | null {
+    const priority = this.outputId(this.priorityValue);
+    if (this.modeValue !== 'balanced' && ready.includes(priority)) return priority;
+    if (this.modeValue === 'priority') return null;
     for (let offset = 0; offset < 3; offset++) {
       const id = this.outputId((this.cursor + offset) % 3);
       if (ready.includes(id)) return id;

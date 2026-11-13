@@ -82,6 +82,11 @@
             <section class="terminal__pane" aria-label="Storage">
               <div class="terminal__pane-heading"><div><span class="terminal__eyebrow">01 / STORAGE</span><h3 data-logistics-storage-heading>Terminal</h3></div><span class="terminal__badge" data-logistics-storage-badge>INPUT</span></div>
               <p class="inventory__detail" data-logistics-details></p>
+              <div data-splitter-settings hidden>
+                <label>Distribution <select data-splitter-mode><option value="balanced">Balanced</option><option value="overflow">Overflow (prefer one)</option><option value="priority">Strict priority</option></select></label>
+                <label>Preferred output <select data-splitter-priority><option value="0">Front</option><option value="1">Left</option><option value="2">Right</option></select></label>
+                <p class="inventory__detail">Overflow uses other outputs when the preferred belt is full. Strict priority waits for it.</p>
+              </div>
               <div class="inventory__grid terminal__grid" data-logistics-grid aria-label="Storage slots" hidden></div>
               <p class="inventory__detail terminal__detail" data-logistics-slot-detail></p>
               <div class="terminal__actions"><button type="button" class="terminal__retrieve" data-logistics-deposit hidden>Store selected stack <span aria-hidden="true">←</span></button><button type="button" class="terminal__retrieve" data-logistics-retrieve>Retrieve contents <span aria-hidden="true">→</span></button></div>

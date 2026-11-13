@@ -2,12 +2,38 @@
 
 **Project:** Factory Frontier
 **Version:** 0.3.0
-**Current Phase:** Phase 7 — Advanced logistics (storage and splitter slices)
-**Phase Status:** 🟡 In progress — storage and balanced splitter implemented; player testing deferred
-**Next Recommended Task:** Continue Phase 7 incrementally; the user prefers to test new logistics features together later. Remaining Phase 5 checks are also open.
+**Current Phase:** Phase 7 — Advanced logistics (integration and acceptance)
+**Phase Status:** 🟡 In progress — merger, splitter modes and bounded lifts implemented; acceptance deferred
+**Next Recommended Task:** User-directed combined Phase 7 play-test and any fixes; remaining Phase 5 checks are also open.
 **Last Updated:** 2026-11-11
 
 ---
+
+## Phase 7 — merger, splitter modes and conveyor lifts
+
+- The user requested finishing Phase 7 and earlier requested testing the new
+  logistics features together later. None of the Phase 7 slices has yet been
+  accepted by the player; follow `docs/PHASE_7_MANUAL_ACCEPTANCE.md`.
+- The Merger (15 stone + 10 wood) combines three cyan rear/side input ports into
+  one yellow front output. Each input buffers one item; the output serves occupied
+  inputs round-robin. E allows inspection and recovery; demolition is blocked
+  until the buffers are empty. Each port accepts one one-cell belt lane.
+- Splitter inspection now offers balanced, overflow (prefer a chosen port,
+  fall back to ready outputs) and strict priority (wait for the chosen port).
+  Configuration is session-only. A blocked destination may first fill its belt.
+- Four lift selections offer upward/downward movement by 1 or 2 grid metres.
+  They are real distance-based belt paths with a visible vertical section,
+  bounded spacing, congestion, recovery and demolition protection. Cyan rear
+  and yellow front ports connect via directional one-cell belts at their
+  respective heights; only one lane per port is accepted. Height/direction are
+  chosen in the menu before placement and cannot be edited after placement.
+- Automated coverage includes four orientations, real 3-to-1 streams, fairness,
+  blocked outputs and recovery, 1/2-metre ascents/descents, splitter modes,
+  UI/rendering and the complete two-miner → merger → smelter → constructor chain.
+- Routing still uses individually placed one-cell belts, not the GDD's planned
+  control-point route editor. Lifts have bounded predefined heights (not arbitrary
+  height or direct machine/legacy belt connections), and no state is saved.
+  Player usability/acceptance remains open; do not mark Phase 7 complete.
 
 ## Phase 7 — balanced splitter
 
@@ -25,9 +51,9 @@
   all outputs blocked, recovery, conservation, inspection and mocked bootstrap.
   The splitter and storage still require user play-testing; see
   `docs/PHASE_7_SPLITTER_CHECK.md` and `docs/PHASE_7_STORAGE_CHECK.md`.
-- Only balanced distribution exists; configurable overflow/priority modes,
-  mergers, lifts and full Phase 7 acceptance remain outstanding. Legacy two-cell
-  belts are not supported; open-ended output belts can drop items to the ground.
+- At that point only balanced distribution existed; subsequent additions are
+  recorded above. Legacy two-cell belts are not supported; open-ended output
+  belts can drop items to the ground.
 
 ## Phase 7 — storage container (first slice)
 

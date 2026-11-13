@@ -1,4 +1,4 @@
-import { cellAhead, cellEntryFraction, cellTouchesMachine, splitterOutputTouches } from './CellConveyor';
+import { cellAhead, cellEntryFraction, cellTouchesMachine, splitterOutputTouches, mergerInputTouches, cellTouchesReceiver, cellTouchesSource } from './CellConveyor';
 import type { BuildingInstance, BuildingSystem } from '../buildings/BuildingSystem';
 import type { SimulationSystem } from '../core/Game';
 import { Inventory, type QuantityResult } from '../items/Inventory';
@@ -9,8 +9,9 @@ import { ConveyorNetwork, type ConveyorSettings, DEFAULT_CONVEYOR_SETTINGS } fro
 import type { GroundItems } from './GroundItems';
 import { InventoryReceiver, InventorySource } from './Ports';
 import { Splitter } from './Splitter';
+import { Merger } from './Merger';
 
-import { pathForBuilding, machinePort, splitterPort, RECEIVER_TYPE } from './ConveyorDefinitions';
+import { pathForBuilding, machinePort, splitterPort, mergerPort, isLiftBuilding, RECEIVER_TYPE } from './ConveyorDefinitions';
 
 /** Bridges registered buildings to the existing conveyor simulation, not the renderer. */
 export class LogisticsManager implements SimulationSystem {
@@ -18,6 +19,7 @@ export class LogisticsManager implements SimulationSystem {
   readonly network: ConveyorNetwork;
   private readonly terminals = new Map<string, Inventory>();
   private readonly splitters = new Map<string, Splitter>();
+  private readonly mergers = new Map<string, Merger>();
   private seenRevision = -1;
   constructor(private readonly buildings: BuildingSystem, private readonly machines: MachineManager,
     private readonly items: ItemRegistry, private readonly paused: () => boolean = () => false,
@@ -26,7 +28,7 @@ export class LogisticsManager implements SimulationSystem {
     if (!Number.isSafeInteger(terminalSlots) || terminalSlots < 1) throw new RangeError('Invalid receiver capacity');
     this.network = new ConveyorNetwork(() => false, groundItems ? (item, position) => groundItems.drop(item.id, item.itemId, position) : undefined);
     buildings.addTopologyGuard((before, after) => {
-      const relevant = (entries: typeof before) => entries.filter((b) => b.typeId.startsWith('conveyor-') || b.typeId === 'miner-mk1' || (b.typeId === 'smelter' || b.typeId === 'constructor') || b.typeId === RECEIVER_TYPE || b.typeId === 'storage-container' || b.typeId === 'splitter')
+      const relevant = (entries: typeof before) => entries.filter((b) => b.typeId.startsWith('conveyor-') || b.typeId === 'miner-mk1' || (b.typeId === 'smelter' || b.typeId === 'constructor') || b.typeId === RECEIVER_TYPE || b.typeId === 'storage-container' || b.typeId === 'splitter' || b.typeId === 'merger' || isLiftBuilding(b.typeId))
         .map((b) => [b.id, b.typeId, b.transform.x, b.transform.y, b.transform.z, b.transform.rotation, b.autoConveyor, b.cellConveyor]);
       if (JSON.stringify(relevant(before)) === JSON.stringify(relevant(after))) return true;
       this.sync();
@@ -39,19 +41,21 @@ export class LogisticsManager implements SimulationSystem {
       }
       const paths = new Map(after.map((b) => [b.id, pathForBuilding(b, buildings.cellSize)] as const)
         .filter((entry): entry is readonly [string, NonNullable<typeof entry[1]>] => !!entry[1]));
-      return this.network.canReconfigure(paths, this.settings, new Set(after.filter((b) => b.typeId === 'conveyor-cell').map((b) => b.id)));
+      return this.network.canReconfigure(paths, this.settings, new Set(after.filter((b) => (b.typeId === 'conveyor-cell' || isLiftBuilding(b.typeId))).map((b) => b.id)));
     });
     buildings.addDemolitionGuard((building) => {
       const segment = this.network.get(building.id);
-      return (!segment || segment.items.length === 0) && (this.terminals.get(building.id)?.usedSlots ?? 0) === 0 && !this.splitters.get(building.id)?.pending;
+      return (!segment || segment.items.length === 0) && (this.terminals.get(building.id)?.usedSlots ?? 0) === 0 && !this.splitters.get(building.id)?.pending && !this.mergers.get(building.id)?.occupied;
     });
   }
+  merger(id: string): Merger | undefined { return this.mergers.get(id); }
   splitter(id: string): Splitter | undefined { return this.splitters.get(id); }
   terminal(id: string): Inventory | undefined { return this.terminals.get(id); }
   isStorage(id: string): boolean { return this.buildings.get(id)?.typeId === 'storage-container'; }
   retrieve(id: string, destination: Inventory): QuantityResult {
-    const splitter = this.splitters.get(id);
+    const splitter = this.splitters.get(id), merger = this.mergers.get(id);
     if (splitter) return splitter.retrieve(destination);
+    if (merger) return merger.retrieve(destination);
     const inventory = this.terminals.get(id);
     if (!inventory) throw new RangeError('Unknown receiving terminal');
     let requested = 0, moved = 0;
@@ -79,11 +83,16 @@ export class LogisticsManager implements SimulationSystem {
       if (splitter.pending) throw new Error('Cannot discard a non-empty splitter');
       this.splitters.delete(id);
     }
+    for (const [id, merger] of this.mergers) if (!byId.has(id)) {
+      if (merger.occupied) throw new Error('Cannot discard a non-empty merger');
+      this.mergers.delete(id);
+    }
     for (const building of buildings) {
+      if (building.typeId === 'merger' && !this.mergers.has(building.id)) this.mergers.set(building.id, new Merger(building.id, this.items));
       if (building.typeId === 'splitter' && !this.splitters.has(building.id)) this.splitters.set(building.id, new Splitter(building.id, this.items));
       const path = pathForBuilding(building, this.buildings.cellSize);
       if (path && !this.network.get(building.id)) {
-        if (building.typeId === 'conveyor-cell') this.network.addCell(building.id, path, { ...this.settings, spacing: Math.min(this.settings.spacing, path.length / 2) });
+        if (building.typeId === 'conveyor-cell' || isLiftBuilding(building.typeId)) this.network.addCell(building.id, path, { ...this.settings, spacing: Math.min(this.settings.spacing, path.length / 2) });
         else this.network.add(building.id, path, this.settings);
       }
       if ((building.typeId === RECEIVER_TYPE || building.typeId === 'storage-container') && !this.terminals.has(building.id))
@@ -95,7 +104,7 @@ export class LogisticsManager implements SimulationSystem {
     this.network.resetConnections();
     const segments = this.network.all();
     const cells = buildings.filter((b) => b.typeId === 'conveyor-cell');
-    const legacy = segments.filter((s) => byId.get(s.id)?.typeId !== 'conveyor-cell');
+    const legacy = segments.filter((s) => !this.network.isCell(s.id));
     for (const from of legacy) for (const to of legacy) if (from.id !== to.id && from.path.compatible(to.path)) this.network.connect(from.id, to.id);
     for (const from of cells) {
       const next = cells.find((to) => cellAhead(from, to, this.buildings.cellSize));
@@ -103,6 +112,13 @@ export class LogisticsManager implements SimulationSystem {
         const b = pathForBuilding(next, this.buildings.cellSize)!;
         this.network.connectCell(from.id, next.id, b.length * cellEntryFraction(from, next, this.buildings.cellSize));
       }
+    }
+    for (const lift of buildings.filter((b) => isLiftBuilding(b.typeId))) {
+      const input = cells.find((b) => cellTouchesReceiver(b, lift, this.buildings.cellSize));
+      const output = cells.find((b) => cellTouchesSource(b, lift, this.buildings.cellSize));
+      if (input) this.network.connectCell(input.id, lift.id, 0);
+      if (output) this.network.connectCell(lift.id, output.id, 0);
+      else this.network.blockCellOutput(lift.id);
     }
     for (const building of buildings) {
       const miner = this.machines.get(building.id);
@@ -141,6 +157,20 @@ export class LogisticsManager implements SimulationSystem {
           accept: (itemId: string) => destination(itemId)?.accept(itemId) ?? false };
         for (const cell of cells) if (cellTouchesMachine(cell, building, this.buildings.cellSize, 'receiver')) this.network.attachCellReceiver(cell.id, receiver);
         for (const segment of legacy) if (this.network.attachReceiver(segment.id, receiver)) break;
+      }
+      const merger = this.mergers.get(building.id);
+      if (merger) {
+        for (let i = 0; i < 3; i++) {
+          const input = cells.find((cell) => mergerInputTouches(cell, building, this.buildings.cellSize, i));
+          if (input) this.network.attachCellReceiver(input.id, merger.receiver(i, mergerPort(building, this.buildings.cellSize, i)));
+        }
+        const cell = cells.find((b) => cellTouchesMachine(b, building, this.buildings.cellSize, 'source'));
+        if (cell) {
+          const pose = machinePort(building, this.buildings.cellSize, 'source'), path = pathForBuilding(cell, this.buildings.cellSize)!;
+          const d = path.direction('input'), distance = d.x === pose.direction.x && d.z === pose.direction.z ? 0 : path.length / 2;
+          this.network.attachCellSource(cell.id, merger.source(pose), distance, { x: cell.transform.x - pose.direction.x * this.buildings.cellSize / 2,
+            y: pose.position.y, z: cell.transform.z - pose.direction.z * this.buildings.cellSize / 2 });
+        }
       }
       const splitter = this.splitters.get(building.id);
       if (splitter) {
