@@ -3,11 +3,27 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 7 — Advanced logistics (integration and acceptance)
-**Phase Status:** 🟡 In progress — direct lift connections and remaining advanced logistics acceptance
-**Next Recommended Task:** Play-test direct lift connections, storage filtering and remaining route/lift/platform scenarios; junction-to-lift direct connections and Phase 7 acceptance remain open.
+**Phase Status:** 🟡 In progress — direct lift/junction connections and remaining logistics acceptance
+**Next Recommended Task:** Play-test direct junction/lift connections and remaining route/lift/platform scenarios; direct lift-to-lift links and Phase 7 acceptance remain open.
 **Last Updated:** 2026-11-11
 
 ---
+
+## Direct lift-to-splitter and merger connections
+
+- Lift endpoints can connect directly to all three splitter outputs and its input,
+  and to all three merger inputs and its output. Ports must touch, face the
+  correct way and share a height; existing support and foundation behavior remain
+  unchanged. A high junction may require a platform. One port accepts one belt
+  lane or one direct lift, not both.
+- Direct lifts participate in the existing balanced, overflow and strict-priority
+  splitter arbitration and the merger's fair input buffers. Blocked connections
+  retain items, recover when cleared, and protect occupied buildings from removal.
+  Direct lift-to-lift and legacy-belt links are still unsupported.
+- Automated tests cover all ports and rotations, both placement orders, multiple
+  simultaneous lifts, mixed belt/lift networks, high ports, modes, fairness,
+  blocking, recovery, conservation and construction-controller previews. Player
+  validation of this slice is pending; Phase 7 remains open.
 
 ## Direct lift-to-machine connections
 
@@ -16,9 +32,9 @@
   storage or receiving-terminal inputs. Terminals accept any face. Ports must
   touch exactly and be at the same height; existing support and placement rules
   still apply, and the high machine may need a platform. No automatic new
-  foundation placement or height adjustment was added. Splitters, mergers, legacy
-  belts and lift-to-lift direct connections remain unsupported; splitter/merger
-  and lift-to-lift routes can use one-cell conveyors.
+  foundation placement or height adjustment was added. The later slice above adds
+  splitter/merger direct ports; legacy belts and direct lift-to-lift links remain
+  unsupported (one-cell conveyors can bridge lifts).
 - Existing belt priority, storage filtering, enabled machine output, accepted item
   checks, backpressure, occupied demolition protection and open lift safety remain
   intact. A connected direct port is reported in construction preview and lift G

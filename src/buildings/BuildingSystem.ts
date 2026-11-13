@@ -1,4 +1,4 @@
-import { directLiftInput, directLiftOutput } from '../logistics/DirectLiftConnections';
+import { directLiftInput, directLiftOutput, directLiftSplitterOutput, directLiftMergerInput } from '../logistics/DirectLiftConnections';
 import { cellAhead, cellTouchesMachine, cellTouchesSource, cellTouchesReceiver, mergerInputTouches, splitterOutputTouches, resolveCellConveyors, type CellConveyorShape } from '../logistics/CellConveyor';
 import { resolveAutoConveyors, type AutoConveyorShape } from '../logistics/AutoConveyor';
 import { BELT_HEIGHT, machinePort, pathForBuilding, isDirectionalMachine, isLiftBuilding, liftInputOffset, liftOutputOffset } from '../logistics/ConveyorDefinitions';
@@ -319,15 +319,16 @@ export class BuildingSystem {
     if (!planned) return fail('incompatible connection', transform);
     // Each physical splitter port accepts one lane, not two competing belts.
     const cells = planned.filter((b) => b.typeId === 'conveyor-cell');
+    const lifts = planned.filter((b) => isLiftBuilding(b.typeId));
     for (const junction of planned.filter((b) => b.typeId === 'splitter')) {
-      if (cells.filter((b) => cellTouchesMachine(b, junction, this.cellSize, 'receiver')).length > 1 ||
-          [0, 1, 2].some((i) => cells.filter((b) => splitterOutputTouches(b, junction, this.cellSize, i)).length > 1))
+      if (cells.filter((b) => cellTouchesMachine(b, junction, this.cellSize, 'receiver')).length + lifts.filter((b) => directLiftOutput(b, junction, this.cellSize)).length > 1 ||
+          [0, 1, 2].some((i) => cells.filter((b) => splitterOutputTouches(b, junction, this.cellSize, i)).length + lifts.filter((b) => directLiftSplitterOutput(b, junction, this.cellSize, i)).length > 1))
         return fail('incompatible connection', transform);
     }
 
     for (const junction of planned.filter((b) => b.typeId === 'merger')) {
-      if ([0, 1, 2].some((i) => cells.filter((b) => mergerInputTouches(b, junction, this.cellSize, i)).length > 1) ||
-          cells.filter((b) => cellTouchesSource(b, junction, this.cellSize)).length > 1)
+      if ([0, 1, 2].some((i) => cells.filter((b) => mergerInputTouches(b, junction, this.cellSize, i)).length + lifts.filter((b) => directLiftMergerInput(b, junction, this.cellSize, i)).length > 1) ||
+          cells.filter((b) => cellTouchesSource(b, junction, this.cellSize)).length + lifts.filter((b) => directLiftInput(b, junction, this.cellSize)).length > 1)
         return fail('incompatible connection', transform);
     }
 

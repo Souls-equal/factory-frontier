@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased — direct lift and junction connections
+
+- Connect lifts directly to splitter and merger ports while preserving their
+  existing routing, fairness, safety and support rules.
+
 ## Unreleased — direct lift connections
 
 - Allow exact aligned direct connections between lifts and compatible miners,

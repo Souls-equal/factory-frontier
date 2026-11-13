@@ -1512,6 +1512,24 @@ placement and support rules remain unchanged; matching does not snap heights.
 segments after wiring one-cell belts, preserving machine enabled state, item
 acceptance, storage filters, transport clocks, flow counters and backpressure.
 Unconnected lifts remain blocked rather than dropping items. No new ownership or
-inventory transfer path is introduced. Direct splitter/merger, lift-to-lift and
-legacy-belt links remain unsupported. Tests exercise both placement orders, all
+inventory transfer path is introduced. A later slice adds direct splitter/merger
+ports; direct lift-to-lift and legacy-belt links remain unsupported. Tests exercise both placement orders, all
 rotations, high supported endpoints, live reconnection and conservation.
+
+
+## Implementation note — direct lift/junction ports
+
+`DirectLiftConnections` matches the lift input against each splitter output or
+merger output and the lift output against the splitter input or each merger input.
+It requires exact positions, directions and height, using the same matcher for
+preview and runtime. Placement checks count both lifts and one-cell belts per
+junction port so duplicate lanes cannot claim one port. No foundation or height
+snapping rules changed.
+
+`LogisticsManager` attaches the existing splitter source (including its arbiter)
+or merger source/receiver to the lift segment. Thus direct lifts and belt branches
+compete in the same ready-source arbitration, while merger input slots and cursor
+remain independent and fair. Unconnected or blocked lifts retain items. Automated
+coverage includes simultaneous direct ports, belt/lift mixtures, all rotations,
+placement orders, high supported connections and blocked recovery. Direct
+lift-to-lift and legacy-belt links remain out of scope.
