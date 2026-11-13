@@ -45,7 +45,7 @@ detailed evidence and verification results live in `PROJECT_STATUS.md`.
 | 4 — First automated extractor | 🟡 User accepted | Browser verification remains pending |
 | 5 — Conveyor foundation | 🟡 Partially user-validated | User confirmed miner → terminal, turns/slopes, blockage and recovery; remaining checklist not confirmed |
 | 6 — First production chain | ✅ User validated | Coal-fueled smelter, constructor and plates implemented; user reports everything works after complete-chain test request |
-| 7 — Advanced logistics | 🟡 Acceptance pending | Previous playable logistics additions user-validated globally; route correction and adjustable 1–8 m lifts need player testing; heights outside that range remain unimplemented |
+| 7 — Advanced logistics | 🟡 Acceptance pending | Previous playable logistics additions user-validated globally; route correction, elevated platform alignment and adjustable 1–8 m lifts need player testing; heights outside that range remain unimplemented |
 | 8 — Electricity | ◻ Planned | — |
 | 9 — Advanced manufacturing | ◻ Planned | — |
 | 10 — World expansion | ◻ Planned | — |

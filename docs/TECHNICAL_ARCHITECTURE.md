@@ -918,8 +918,8 @@ supporting slab; demolition remains conservative for overlapping logistics.
 The renderer emits each shared cell only once, suppressing overlapping slab details;
 it recomputes visibility on removal. For foundation mode the terrain ray is also
 projected onto neighbouring elevated platform levels within reach, without passing
-through nearer terrain. One-cell conveyor aiming also projects onto actual elevated
-foundation surfaces within reach; other construction aiming remains terrain-based.
+through nearer terrain. Logistics building aiming also projects onto actual
+foundation surfaces within reach; deposit-based miner aiming remains terrain-based.
 
 `BuildingCollision` composes existing natural sweeps with conservative expanded
 rectangle sweeps. `BuildingTerrain` exposes foundation tops to the player; both
@@ -1430,7 +1430,8 @@ placement mode, preserving direction and rotation, clamped at 1 and 8. The HUD
 reports the size and the chosen variant persists for repeat placement. Preview,
 collision dimensions, path and cost derive from that same registered type;
 confirmation revalidates and placed lifts cannot be resized. Existing type IDs
-and costs are unchanged. No foundation validation or foundation aiming changed.
+and costs are unchanged. At that earlier lift-height step foundation validation and aiming were unchanged;
+the later platform correction below extends height alignment.
 
 For conveyor cells, construction aiming also considers the top of a nearby
 elevated foundation when the ray intersects its actual footprint; a closer
@@ -1441,3 +1442,27 @@ the lift endpoints still accept only one-cell belts, not direct machine or
 legacy belt ports. Tests cover geometry, all heights and rotations, UI, high
 supported paths, live backpressure, recovery and material conservation. No
 player acceptance is claimed for the new height controls.
+
+
+## Implementation note — raised platform and machine support
+
+For interactive foundation previews and confirmation, the controller opts into
+logistics alignment in the authoritative validator. If the 2×2 footprint does not
+overlap a foundation, a neighbouring lift upper port or touching flat one-cell
+belt can set the foundation top to that belt's base level. Ambiguous competing
+levels are rejected, not silently guessed; ground-level anchors that would bury
+the slab beyond the existing limit are ignored. The manual height offset is
+applied relative to the chosen level, while coplanar overlapping foundations
+retain their existing gap-fill rules. Direct `validate`/`place` callers do not
+opt in unless requested, preserving existing explicit height semantics. Bounds,
+terrain burial, collisions, costs and live topology guards remain authoritative.
+
+Logistics buildings may target a foundation surface and use a footprint covered
+entirely by multiple coplanar foundations. Terrain slope below a supported
+building does not invalidate it; supported placements use vertical intervals for
+player and obstacle checks. Other building collisions remain conservative and
+demolition protects any slab overlapping a supported logistics footprint. Miners
+still require their deposit and use their existing ground-based rules. Stacked
+foundations at different heights remain unsupported; this is not multi-floor
+support selection. Automated integration transports real items from storage via
+a lift to a raised receiver straddling two slabs; in-game acceptance is pending.

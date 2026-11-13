@@ -1289,3 +1289,33 @@ it('connects an 8m lift placed after its supported output and low input belts', 
   for (let i = 0; i < 500; i++) logistics.fixedUpdate(50);
   expect(logistics.terminal(source.id)!.getItemCount('iron-ore') + logistics.network.all().reduce((n, b) => n + b.items.length, 0)).toBe(2);
 });
+
+it('automatically builds a raised lift platform and delivers to a machine spanning foundations', async () => {
+  const { ConstructionController } = await import('../../src/buildings/ConstructionController');
+  const { buildings, logistics } = setup(); buildings.setCreativeMode(true);
+  const source = place(buildings, 'storage-container', 0, 3); place(buildings, 'conveyor-cell', -.5, 1.5);
+  const lift = place(buildings, 'lift-up-3', 0, 0);
+  const controller = new ConstructionController(buildings, terrain); controller.select('foundation');
+  const view = (z: number) => ({ position: { x: 0, y: 2, z }, yaw: 0, pitch: -Math.PI / 2 });
+  const first = controller.confirm(view(-2), player)!;
+  expect(first.reason).toBe('valid'); expect(first.transform.y).toBeCloseTo(2.6);
+  const second = controller.confirm(view(-4), player)!;
+  expect(second.reason).toBe('valid'); expect(second.transform.y).toBeCloseTo(2.6);
+  const belt = place(buildings, 'conveyor-cell', -.5, -1.5); expect(belt.transform.y).toBe(3);
+  controller.select('storage-container');
+  const machineView = { position: { x: 0, y: 5, z: -3 }, yaw: 0, pitch: -Math.PI / 2 };
+  const preview = controller.preview(machineView, player)!;
+  expect(preview.reason).toBe('valid'); expect(preview.transform.y).toBe(3);
+  const sink = controller.confirm(machineView, player)!.building!;
+  logistics.sync(); expect(logistics.network.get(lift.id)!.output).toBe(belt.id);
+  expect(logistics.network.get(belt.id)!.receiver?.id).toBe(sink.id);
+  logistics.terminal(source.id)!.addItem('iron-ore', 20);
+  for (let i = 0; i < 900; i++) {
+    logistics.fixedUpdate(50);
+    const total = logistics.terminal(source.id)!.getItemCount('iron-ore') + logistics.terminal(sink.id)!.getItemCount('iron-ore') + logistics.network.all().reduce((n, s) => n + s.items.length, 0);
+    expect(total).toBe(20);
+  }
+  expect(logistics.terminal(sink.id)!.getItemCount('iron-ore')).toBe(20);
+  expect(buildings.demolish(first.building!.id)).toBe('building supports another');
+  expect(buildings.demolish(second.building!.id)).toBe('building supports another');
+});

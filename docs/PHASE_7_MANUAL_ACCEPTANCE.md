@@ -45,8 +45,11 @@ blocked or disconnected, and flow resumes after it clears. Return to Balanced.
    back up without items disappearing. Empty/reconnect and confirm flow resumes.
    A lift containing items cannot be demolished; empty it first.
 
-For a high test, choose 3 m and place the lift beside a foundation with its top
-at the lift output level (foundation base at 2.6 m on flat zero-height ground).
+For a high test, choose 3 m and aim a foundation next to its upper port: the
+preview should align its top with the lift output level (foundation base at
+2.6 m when the lift base is zero). Confirm, then add a neighbouring foundation
+at the same level; aim a storage container spanning both and verify it sits on
+top rather than underneath. Page Up/Down still adjusts the foundation height.
 Aim a one-cell belt at the platform, connect it to the output, and connect a
 matching down lift back to a low receiver. Check visible movement, blockage and
 recovery. Higher platforms may require reaching them from the side or building
