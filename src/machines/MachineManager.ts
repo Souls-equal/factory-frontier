@@ -15,7 +15,8 @@ export class MachineManager implements SimulationSystem {
     private readonly deposits: () => readonly ResourceDeposit[], private readonly config: MinerConfig = DEFAULT_MINER_CONFIG,
     private readonly paused: () => boolean = () => false) {
     buildings.addDemolitionGuard((building) => (this.machines.get(building.id)?.output.usedSlots ?? 0) === 0 &&
-      (this.smelters.get(building.id)?.output.usedSlots ?? 0) === 0 && (this.smelters.get(building.id)?.input.usedSlots ?? 0) === 0);
+      (this.smelters.get(building.id)?.output.usedSlots ?? 0) === 0 && (this.smelters.get(building.id)?.input.usedSlots ?? 0) === 0 &&
+      (this.smelters.get(building.id)?.fuel.usedSlots ?? 0) === 0);
   }
   get(id: string): Miner | undefined { return this.machines.get(id); }
   all(): readonly Miner[] { return [...this.machines.values()]; }

@@ -3,11 +3,29 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 6 — First production chain (first smelter slice in progress)
-**Phase Status:** 🟡 In progress — smelter slice implemented; player validation pending
+**Phase Status:** 🟡 In progress — coal-fueled smelter implemented; player validation pending
 **Next Recommended Task:** Validate the smelter slice in game, then implement the constructor and iron plates. Complete remaining Phase 5 manual checks as appropriate.
 **Last Updated:** 2026-11-11
 
 ---
+
+## Phase 6 — direct coal fuel for the smelter
+
+- At the user's request the smelter consumes **1 coal and 1 iron ore per
+  ingot**, each cycle lasting 2 seconds. This direct fuel rule is an explicit
+  early exception; it does not implement or advance the Phase 8 electricity grid.
+- Coal is extracted using a Miner on a coal deposit and delivered manually via
+  E → Add coal, or by one-cell conveyor into either cyan rear input lane. Ore and
+  fuel have independent buffers; the same belt may carry both, but a blocked item
+  on a shared belt can hold up items behind it. The yellow front port outputs ingots.
+- `NO_POWER (add coal)` is shown when ore and output space exist but coal is
+  missing; no coal is spent while idle, disabled or blocked. Coal and ore are
+  consumed when a cycle completes, and partial progress pauses on interruption.
+  The coal buffer must be emptied, like the other buffers, before demolition.
+- Automated tests cover coal exhaustion/refill, exact consumption, blocked and
+  disabled states, independent buffer capacity, two mined conveyor supplies,
+  item conservation, UI and the generated world's coal Miner. Manual play-testing
+  of this change remains pending; the constructor and plates are not implemented.
 
 ## Phase 6 — iron smelter first slice (2026-11-11)
 
@@ -19,14 +37,15 @@
   roadmap's full-acceptance gate, not a claim that the gate was satisfied.
 - The build menu now offers a Smelter (15 stone, 10 wood). It has a cyan rear
   iron-ore input, yellow front ingot output and a status light. R rotates it.
-  One iron ore becomes one iron ingot in two simulation seconds, no power yet.
+  At that time one ore became one ingot in two seconds without fuel; the newer
+  coal-fuel rule above supersedes this behavior.
   Connect the directional one-cell Conveyor on either side; inspection via E
   shows progress/buffers and allows enable/disable, feeding and retrieval.
 - Full buffers block safely; input and output must be emptied before demolition.
   Tests cover simulation, filter/backpressure, rotation, placement ordering,
   conservation across miner → smelter → terminal, and mocked-render bootstrap/UI.
 - This is **not** the complete Phase 6 chain: constructor, iron plates, recipe
-  selection, power, and user play-testing of the smelter are still outstanding.
+  selection, electrical power, and user play-testing of the smelter are still outstanding.
   Legacy automatic two-cell conveyors are not supported by the new smelter; use
   the one-cell conveyor offered in the construction menu.
 

@@ -13,7 +13,7 @@ const state = vi.hoisted(() => ({ buildings: [] as readonly BuildingInstance[], 
 vi.mock('../../src/items/Inventory', async (load) => {
   const actual = await load<typeof import('../../src/items/Inventory')>();
   class StockedInventory extends actual.Inventory {
-    constructor(...args: ConstructorParameters<typeof actual.Inventory>) { super(...args); if (args[1] === 24) { this.addItem('iron-ore', 30); this.addItem('stone', 20); this.addItem('wood', 20); } }
+    constructor(...args: ConstructorParameters<typeof actual.Inventory>) { super(...args); if (args[1] === 24) { this.addItem('iron-ore', 30); this.addItem('stone', 20); this.addItem('wood', 20); this.addItem('coal', 10); } }
   }
   return { ...actual, Inventory: StockedInventory };
 });
@@ -103,7 +103,8 @@ describe('smelter through real bootstrap with mocked rendering', () => {
     expect(panel.hidden).toBe(false); expect(panel.textContent).toContain('Smelter');
     expect(panel.textContent).toContain('MISSING_INPUT');
     panel.querySelector<HTMLButtonElement>('[data-machine-feed]')!.click();
-    expect(panel.textContent).toContain('Input: 30');
+    expect(panel.textContent).toContain('Input: 30'); expect(panel.textContent).toContain('NO_POWER');
+    panel.querySelector<HTMLButtonElement>('[data-machine-feed-fuel]')!.click(); expect(panel.textContent).toContain('Coal: 10');
     panel.querySelector<HTMLButtonElement>('[data-machine-close]')!.click();
     for (let i = 0; i < 50; i++) frame();
     key('KeyE'); frame(); expect(panel.textContent).toMatch(/Output: [1-9]/);
