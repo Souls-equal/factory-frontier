@@ -48,6 +48,14 @@ describe('platforms at a raised conveyor level', () => {
       expect(belt.reason).toBe('valid'); expect(belt.transform.y).toBeCloseTo(lift.transform.y + 3);
     }
   });
+  it.each(['up', 'down'])('aligns a foundation to a fractional-height %s lift', (direction) => {
+    const { system, controller } = setup(); const lift = place(system, `lift-${direction}-2.3`, 0, 0);
+    controller.select('foundation'); const view = down(0, direction === 'up' ? -2 : 2);
+    const preview = controller.preview(view, far)!;
+    expect(preview.reason).toBe('valid'); expect(preview.snappedToLogistics).toBe(true);
+    expect(preview.transform.y + .4).toBeCloseTo(lift.transform.y + 2.3);
+    expect(controller.confirm(view, far)!.transform).toEqual(preview.transform);
+  });
   it('aligns beneath a flat raised belt and refuses to bury a slab under ground belts', () => {
     const { system, controller } = setup();
     const lift = place(system, 'lift-up-2', 0, 0);

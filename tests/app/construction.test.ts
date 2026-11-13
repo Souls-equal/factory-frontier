@@ -23,7 +23,7 @@ vi.mock('../../src/engine/Engine', () => ({ Engine: { create: () => ({
 const html = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../../index.html'), 'utf8');
 let frames: Array<(t: number) => void> = [];
 const frame = (time: number) => { const fn = frames.shift(); if (!fn) throw new Error('missing frame'); fn(time); };
-const key = (code: string, repeat = false) => window.dispatchEvent(new KeyboardEvent('keydown', { code, repeat, cancelable: true }));
+const key = (code: string, repeat = false, shiftKey = false) => window.dispatchEvent(new KeyboardEvent('keydown', { code, repeat, shiftKey, cancelable: true }));
 const clickCanvas = () => {
   const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
   canvas.dispatchEvent(new MouseEvent('mousedown', { button: 0, bubbles: true }));
@@ -179,6 +179,7 @@ it('adjusts lift size using real placement controls without changing foundations
   await import('../../src/main'); await vi.waitFor(() => expect(state.init).toBe(1)); frame(16);
   key('KeyQ'); const menu = document.querySelector<HTMLElement>('[data-ui="construction"]')!;
   expect(menu.querySelector('[data-building="lift-up-3"]')).toBeNull();
+  expect(menu.querySelector('[data-building="lift-up-1.1"]')).toBeNull();
   menu.querySelector<HTMLButtonElement>('[data-building="lift-up-2"]')!.click();
   const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
   canvas.dispatchEvent(new MouseEvent('mousedown', { button: 0, clientX: 500, clientY: 500 }));
@@ -187,8 +188,11 @@ it('adjusts lift size using real placement controls without changing foundations
   key('PageUp'); frame(116); expect(state.selected).toBe('lift-up-3');
   expect(document.querySelector('[data-ui="construction-status"]')?.textContent).toContain('lift height (3 m)');
   expect(state.preview?.reason).toBe('valid');
-  clickCanvas(); frame(166); expect(state.buildings[0]?.typeId).toBe('lift-up-3');
-  key('PageDown'); frame(216); expect(state.selected).toBe('lift-up-2');
-  expect(state.buildings[0]?.typeId).toBe('lift-up-3');
+  key('PageUp', false, true); frame(141); expect(state.selected).toBe('lift-up-3.1');
+  expect(document.querySelector('[data-ui="construction-status"]')?.textContent).toContain('lift height (3.1 m)');
+  clickCanvas(); frame(166); expect(state.buildings[0]?.typeId).toBe('lift-up-3.1');
+  key('PageDown'); frame(216); expect(state.selected).toBe('lift-up-2.1');
+  key('PageDown', false, true); frame(241); expect(state.selected).toBe('lift-up-2');
+  expect(state.buildings[0]?.typeId).toBe('lift-up-3.1');
   key('Escape'); frame(266); expect(state.selected).toBeNull();
 });

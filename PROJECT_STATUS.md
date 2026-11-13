@@ -3,11 +3,24 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 7 — Advanced logistics (integration and acceptance)
-**Phase Status:** 🟡 In progress — direct lift links and remaining logistics acceptance
-**Next Recommended Task:** Play-test direct lift links and remaining junction, route, lift and platform scenarios; Phase 7 acceptance remains open.
+**Phase Status:** 🟡 In progress — fine lift-height control and remaining logistics acceptance
+**Next Recommended Task:** Play-test fine lift-height control and remaining logistics scenarios; Phase 7 acceptance remains open.
 **Last Updated:** 2026-11-11
 
 ---
+
+## Fine lift-height control
+
+- The player validated the previous direct lift-to-lift slice and requested the
+  next step. Before placement, lifts now support every 0.1 m increment between
+  1 and 8 m: Page Up/Down still changes the selection by 1 m, while holding Shift
+  changes it by 0.1 m. Selection, rotation, price, support and fixed-after-placement
+  behavior are preserved. The menu still shows only the 1 m and 2 m presets.
+- Tests cover all registered heights, actual keyboard and HUD, preview, costs and
+  refund, foundation alignment, visual ports, direct machine/junction/lift links,
+  belts, all rotations, both orders, blocking, recovery and conservation. This
+  new fine-height slice awaits player validation. Heights outside 1–8 m and steps
+  smaller than 0.1 m remain unsupported; Phase 7 acceptance remains open.
 
 ## Direct lift-to-lift connections
 
@@ -18,8 +31,8 @@
 - A continuous lift boundary preserves spacing, backpressure, conservation and
   flow counters; unsafe occupied connections are rejected. Each lift port accepts
   one lane. Automated tests cover all heights and rotations, controller preview,
-  blockage and recovery, multi-lift chains, demolition and occupied links. Player
-  validation of this slice is pending; Phase 7 is not complete.
+  blockage and recovery, multi-lift chains, demolition and occupied links. The
+  player subsequently validated this slice; Phase 7 is not complete.
 
 ## Direct lift-to-splitter and merger connections
 
@@ -108,6 +121,7 @@
 
 - Select Lift Up or Lift Down from Q, then use Page Up/Down to choose a height
   from 1 to 8 m in 1 m increments before placing; the HUD shows the selection.
+  A later slice adds Shift + Page Up/Down for 0.1 m increments.
   Rotation and height stay selected for repeat placement. Existing lifts are not
   resized. All heights cost 15 stone and 10 wood and preserve full refunds.
 - Above-ground conveyor cells can be aimed directly at nearby elevated foundation
@@ -118,8 +132,8 @@
 - Automated coverage includes the actual input/menu wiring, all heights and
   orientations, rendering, costs, collisions, both placement orders and real item
   transport with blockage, recovery and conservation. Player validation of the
-  new height controls is still pending; arbitrary/fractional heights and resizing
-  after placement are not implemented.
+  fine height controls is pending; heights outside 1–8 m, smaller increments and
+  resizing after placement are not implemented.
 
 ## Foundation gap and elevation correction
 
@@ -165,8 +179,8 @@
 - Routes are limited to 24 one-cell belts per confirmation, start at an existing
   compatible output or one-cell belt and may end in empty space. They use
   orthogonal grid legs and inherit placement reach, terrain and support constraints. Incremental staging can reject some otherwise
-  possible layouts. Legacy two-cell endpoints and arbitrary lift heights remain
-  unsupported. Preview is advisory and refreshes at least every 250 ms while
+  possible layouts. Legacy two-cell endpoints and heights outside the supported
+  lift range remain unsupported. Preview is advisory and refreshes at least every 250 ms while
   active; confirmation always revalidates. No state is saved.
 
 ## Phase 7 — merger, splitter modes and conveyor lifts
@@ -961,12 +975,10 @@ This task's merge is deployed by the same pipeline; the result is recorded below
 
 ## Next Recommended Task
 
-Complete Phase 5 physical/user acceptance, including remaining placement,
-connection, demolition and recovery scenarios. A subset passed headless browser
-automation as described above; repeat it for actual usability. Also verify the
-outstanding Phase 4 and earlier browser checks. Fix findings and
-complete CI, protection, PR and deployment checks before declaring acceptance.
-Do not start Phase 6 without authorization.
+Continue Phase 7 integration and acceptance, including the fine lift-height
+controls and the remaining route and logistics scenarios. Phase 5 and earlier
+physical acceptance items also remain outstanding; do not claim full acceptance
+without evidence. Follow CI, PR and deployment checks before completing each slice.
 
 ---
 

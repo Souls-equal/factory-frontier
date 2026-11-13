@@ -26,7 +26,7 @@ export interface InputManagerOptions {
   readonly onPointerLockChange?: (locked: boolean) => void;
   readonly onInventoryToggle?: () => void;
   readonly onInventoryClose?: () => void;
-  readonly onConstructionKey?: (code: string) => boolean;
+  readonly onConstructionKey?: (code: string, shiftKey: boolean) => boolean;
   /** True only while the placement tool is active. */
   readonly isConstructionActive?: () => boolean;
   readonly onConstructionClick?: () => void;
@@ -53,7 +53,7 @@ export class InputManager {
   private readonly onPointerLockChange: ((locked: boolean) => void) | undefined;
   private readonly onInventoryToggle: (() => void) | undefined;
   private readonly onInventoryClose: (() => void) | undefined;
-  private readonly onConstructionKey: ((code: string) => boolean) | undefined;
+  private readonly onConstructionKey: ((code: string, shiftKey: boolean) => boolean) | undefined;
   private readonly isConstructionActive: (() => boolean) | undefined;
   private readonly onConstructionClick: (() => void) | undefined;
   private gameplayEnabled = true;
@@ -298,7 +298,7 @@ export class InputManager {
       return;
     }
     if (this.onConstructionKey && ['KeyQ', 'KeyR', 'KeyF', 'KeyG', 'KeyT', 'Enter', 'Backspace', 'PageUp', 'PageDown', 'Escape'].includes(event.code)) {
-      if (!event.repeat && this.onConstructionKey(event.code)) { event.preventDefault(); return; }
+      if (!event.repeat && this.onConstructionKey(event.code, event.shiftKey)) { event.preventDefault(); return; }
       if (event.repeat && ['KeyQ', 'KeyR', 'KeyF', 'KeyG', 'KeyT', 'Enter', 'Backspace', 'PageUp', 'PageDown'].includes(event.code)) { event.preventDefault(); return; }
     }
     if (event.code === 'Tab' && this.onInventoryToggle) {

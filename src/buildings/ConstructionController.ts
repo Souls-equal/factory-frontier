@@ -18,11 +18,12 @@ export class ConstructionController {
   rotate(): void { if (this.active) this.rotation = (this.rotation + 1) % 4; }
   adjustFoundationHeight(direction: 1 | -1): void { if (this.typeId === 'foundation') this.foundationSteps += direction; }
   /** Change the selected lift variant without mutating already placed lifts. */
-  adjustLiftHeight(direction: 1 | -1): void {
+  adjustLiftHeight(direction: 1 | -1, fine = false): void {
     if (!this.typeId) return;
     const rise = liftRise(this.typeId);
     if (rise === null) return;
-    const height = Math.max(1, Math.min(MAX_LIFT_HEIGHT, Math.abs(rise) + direction));
+    const steps = Math.round(Math.abs(rise) * 10) + direction * (fine ? 1 : 10);
+    const height = Math.max(10, Math.min(MAX_LIFT_HEIGHT * 10, steps)) / 10;
     const next = `lift-${rise > 0 ? 'up' : 'down'}-${height}`;
     // Custom registries may expose only some lift sizes.
     if (this.system.registry.all().some((definition) => definition.id === next)) this.typeId = next;
