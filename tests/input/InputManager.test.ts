@@ -440,3 +440,15 @@ describe('construction mouse gestures', () => {
     mouseDown(); release(); expect(request).toHaveBeenCalledOnce(); expect(place).not.toHaveBeenCalled();
   });
 });
+
+it('routes editor keys only through the construction callback and suppresses key repeat', () => {
+  const onConstructionKey = vi.fn((_code: string) => true);
+  input = new InputManager(canvas, { onConstructionKey });
+  for (const code of ['KeyT', 'Enter', 'Backspace']) {
+    const event = new KeyboardEvent('keydown', { code, bubbles: true, cancelable: true });
+    window.dispatchEvent(event); expect(event.defaultPrevented).toBe(true);
+    const repeat = new KeyboardEvent('keydown', { code, repeat: true, cancelable: true });
+    window.dispatchEvent(repeat); expect(repeat.defaultPrevented).toBe(true);
+  }
+  expect(onConstructionKey.mock.calls.map(([code]) => code)).toEqual(['KeyT', 'Enter', 'Backspace']);
+});

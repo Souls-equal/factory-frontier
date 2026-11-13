@@ -1,7 +1,7 @@
 # Phase 7 — combined logistics play-test: splitter
 
-The player requested testing the new features together later. Neither storage
-nor splitter has been user-validated. This checklist complements
+The user subsequently reported that the previously available additions all work
+after testing, without individual scenario results. This checklist complements
 `PHASE_7_STORAGE_CHECK.md`. State is session-only and is lost on refresh.
 
 1. Build a Splitter (15 stone + 10 wood, or free in creative) and rotate it with

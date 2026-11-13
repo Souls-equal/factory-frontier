@@ -5,6 +5,7 @@ import { VoxelCollision } from './world/terrain/VoxelCollision';
 import { BuildingTerrain } from './buildings/BuildingTerrain';
 import { BuildingCollision } from './buildings/BuildingCollision';
 import { ConstructionController } from './buildings/ConstructionController';
+import { ConveyorRouteEditor } from './buildings/ConveyorRouteEditor';
 import { LogisticsManager } from './logistics/LogisticsManager';
 import { LogisticsInteractable } from './logistics/LogisticsInteractable';
 import { LogisticsUI } from './ui/LogisticsUI';
@@ -165,7 +166,10 @@ async function boot(): Promise<void> {
     () => !!(machineUI?.isOpen || logisticsUI?.isOpen || constructionUI?.isOpen || inventoryUI?.isOpen));
   const logistics = new LogisticsManager(buildings, machines, registry,
     () => !!(machineUI?.isOpen || logisticsUI?.isOpen || constructionUI?.isOpen || inventoryUI?.isOpen), 1, undefined, groundItems);
-  let pendingConstruction: 'place' | 'demolish' | null = null;
+  const routeEditor = new ConveyorRouteEditor(buildings, world.terrain);
+  let routeMode = false;
+  const clearRoute = (): void => { routeMode = false; routeEditor.reset(); };
+  let pendingConstruction: 'place' | 'demolish' | 'route-confirm' | null = null;
   let createdInput: InputManager;
   const closeInventory = (): void => {
     if (!inventoryUI?.isOpen) return;
@@ -187,15 +191,15 @@ async function boot(): Promise<void> {
   machineUI = new MachineUI(machineRoot, inventory, closeMachine);
   inventoryUI = new InventoryUI(inventoryRoot, inventory, closeInventory);
   constructionUI = new ConstructionUI(constructionRoot, buildingRegistry, inventory, (id) => {
-    construction.select(id); closeConstruction();
-    interactionPrompt.showFeedback('Aim at nearby ground. R rotates · Left click places repeatedly · Esc cancels.');
+    clearRoute(); construction.select(id); closeConstruction();
+    interactionPrompt.showFeedback(id === 'conveyor-cell' ? 'Aim at ground. Left click places a cell · T enables route mode.' : 'Aim at nearby ground. R rotates · Left click places repeatedly · Esc cancels.');
   }, closeConstruction, buildings.cellSize, buildings);
   createdInput = new InputManager(canvas as HTMLCanvasElement, {
     onPointerLockChange: (locked) => controlsHint.setPointerLocked(locked),
     onInventoryToggle: () => {
       if (constructionUI?.isOpen || machineUI?.isOpen || logisticsUI?.isOpen) return;
       if (inventoryUI?.isOpen) closeInventory();
-      else { construction.cancel(); pendingConstruction = null; player.stopHorizontalMotion(); createdInput.suspendForModal(); inventoryUI?.open(); }
+      else { clearRoute(); construction.cancel(); pendingConstruction = null; player.stopHorizontalMotion(); createdInput.suspendForModal(); inventoryUI?.open(); }
     },
     onInventoryClose: closeInventory,
     isConstructionActive: () => construction.active,
@@ -206,18 +210,24 @@ async function boot(): Promise<void> {
       if (inventoryUI?.isOpen) return code !== 'Escape';
       if (code === 'Escape') {
         if (constructionUI?.isOpen) { closeConstruction(); return true; }
-        if (construction.active) { construction.cancel(); pendingConstruction = null; return true; }
+        if (construction.active) { clearRoute(); construction.cancel(); pendingConstruction = null; return true; }
         return false;
       }
       if (code === 'KeyQ') {
         if (constructionUI?.isOpen) closeConstruction();
-        else if (construction.active) { construction.cancel(); pendingConstruction = null; }
+        else if (construction.active) { clearRoute(); construction.cancel(); pendingConstruction = null; }
         else { pendingConstruction = null; player.stopHorizontalMotion(); createdInput.suspendForModal(); constructionUI?.open(); }
         return true;
       }
       if (constructionUI?.isOpen) return true;
       if ((code === 'PageUp' || code === 'PageDown') && construction.selected === 'foundation') { construction.adjustFoundationHeight(code === 'PageUp' ? 1 : -1); return true; }
-      if (code === 'KeyR' && construction.active) { construction.rotate(); return true; }
+      if (code === 'KeyT' && construction.selected === 'conveyor-cell') {
+        routeMode = !routeMode; routeEditor.reset(); pendingConstruction = null;
+        interactionPrompt.showFeedback(routeMode ? 'Route mode: click the first free cell next to an output; aim at the last free cell touching an input and press Enter.' : 'Single-cell placement.'); return true;
+      }
+      if (routeMode && code === 'Backspace') { routeEditor.undo(); pendingConstruction = null; return true; }
+      if (routeMode && code === 'Enter') { pendingConstruction = 'route-confirm'; return true; }
+      if (code === 'KeyR' && construction.active) { if (routeMode) routeEditor.toggleAxis(); else construction.rotate(); return true; }
       if (code === 'KeyF' && !construction.active) { pendingConstruction = 'demolish'; return true; }
       return false;
     },
@@ -337,7 +347,17 @@ async function boot(): Promise<void> {
       }
 
       const action = pendingConstruction; pendingConstruction = null;
-      if (action === 'place' && construction.active && !constructionUI?.isOpen && !inventoryUI?.isOpen) {
+      if ((action === 'place' || action === 'route-confirm') && routeMode && construction.active && !constructionUI?.isOpen && !inventoryUI?.isOpen) {
+        const point = construction.aim(player.view);
+        if (!point) interactionPrompt.showFeedback('Aim at nearby ground.');
+        else if (action === 'place') {
+          const result = routeEditor.addPoint(point, playerFootprint(), construction.facing(player.view));
+          interactionPrompt.showFeedback(result === 'point added' ? 'Route point added. Aim at the destination and press Enter to build.' : `Cannot add point: ${result}.`);
+        } else {
+          const result = routeEditor.confirm(point, playerFootprint());
+          interactionPrompt.showFeedback(!result ? 'Select a starting connection first.' : result.reason === 'valid' ? `Route built: ${result.cells.length} cells.` : `Cannot build route: ${result.reason}.`);
+        }
+      } else if (action === 'place' && construction.active && !constructionUI?.isOpen && !inventoryUI?.isOpen) {
         const result = construction.confirm(player.view, playerFootprint());
         interactionPrompt.showFeedback(result ? (result.reason === 'valid' ? `${buildings.registry.get(result.building!.typeId).name} placed.` : `Cannot place: ${result.reason}.`) : 'Aim at nearby ground.');
       } else if (action === 'demolish' && !construction.active && !constructionUI?.isOpen && !inventoryUI?.isOpen) {
@@ -385,15 +405,28 @@ async function boot(): Promise<void> {
     id: 'interaction-presentation',
     update: () => {
       inventoryUI?.update(); constructionUI?.update(); machineUI?.update(); logisticsUI?.update();
-      controlsHint.setConstructionActive(construction.active);
-      const preview = construction.preview(player.view, playerFootprint());
+      controlsHint.setConstructionActive(construction.active); controlsHint.setRouteActive(routeMode);
+      const preview = routeMode ? null : construction.preview(player.view, playerFootprint());
+      const routePoint = routeMode ? construction.aim(player.view) : null;
+      const routePreview = routePoint ? routeEditor.preview(routePoint, playerFootprint(), construction.facing(player.view), inventory.revision, performance.now()) : null;
       engine.syncBuildings?.(buildings.all());
       engine.syncConveyors?.(logistics.network.all(), machineUI?.isOpen || logisticsUI?.isOpen || constructionUI?.isOpen || inventoryUI?.isOpen ? 1 : createdGame.clock.alpha, groundItems.all());
       engine.setMachineStates?.([...machines.all(), ...machines.allSmelters(), ...machines.allConstructors()].map((machine) => ({ id: machine.id, state: machine.state })));
-      engine.setBuildingPreview?.(construction.selected, preview ?? undefined);
+      const routeValid = !!routePreview && (routePreview.starting ? routePreview.startValid : routePreview.reason === 'valid');
+      const first = routePreview?.visualCells[0];
+      engine.setBuildingPreview?.(routeMode ? (first ? 'conveyor-cell' : null) : construction.selected,
+        routeMode ? (first && routePreview ? { reason: routeValid ? 'valid' : 'incompatible connection', transform: first.transform,
+          cellConveyor: first.cellConveyor, ...(routePreview.reason === 'valid' ? { conveyorPreviewChanges: routePreview.changed } : {}) } : undefined) : preview ?? undefined);
+      engine.setRoutePreview?.(routePreview?.visualCells.slice(1) ?? [], routeValid);
       constructionStatus.hidden = !construction.active;
-      if (construction.active) constructionStatus.textContent = (buildings.creativeMode ? 'Creative · ' : '') + (preview
-        ? `${preview.reason === 'valid' ? 'Valid placement' : `Cannot place: ${preview.reason}`} · R rotate · Left click place · Esc cancel${preview.connection ? ` · ${preview.connection} port` : ''}${construction.selected?.startsWith('conveyor-') ? ' · direction follows view; yellow = output · R rotates' : ''}${preview.snappedToConveyor || preview.snappedToFoundation ? ' · aligned to neighbour' : ''}${construction.selected === 'foundation' ? ` · Page Up/Down height (${construction.foundationHeightOffset >= 0 ? '+' : ''}${construction.foundationHeightOffset.toFixed(1)} m) · base ${preview.transform.y.toFixed(1)} m` : ''}${preview.conveyorPreviewChanges?.length ? ' · green preview shows belt after placement' : ''}${!createdInput.isPointerLocked ? ' · drag to look · right click to capture mouse' : ''}`
+      if (construction.active && routeMode) {
+        const cost = routePreview?.cost.map((item) => `${registry.get(item.itemId).name} ×${item.quantity}`).join(', ');
+        const status = !routePoint ? 'Aim at nearby ground' : !routePreview ? '' : routePreview.starting ?
+          (routePreview.startValid ? 'Valid start: click to select' : `Invalid start: ${routePreview.reason}`) :
+          (routePreview.reason === 'valid' ? 'Valid route: Enter builds' : `Route: ${routePreview.reason}`);
+        constructionStatus.textContent = `${buildings.creativeMode ? 'Creative · ' : ''}Route · ${status} · ${routeEditor.pointCount} points${cost ? ` · ${routePreview?.visualCells.length} cells · ${buildings.creativeMode ? 'free' : cost}` : ''} · Bend ${routeEditor.horizontalFirst ? 'X→Z' : 'Z→X'} · Click add point · Enter build at last cell by input · Backspace undo · R change bend · T single cell · Esc cancel`;
+      } else if (construction.active) constructionStatus.textContent = (buildings.creativeMode ? 'Creative · ' : '') + (preview
+        ? `${preview.reason === 'valid' ? 'Valid placement' : `Cannot place: ${preview.reason}`} · R rotate · Left click place · Esc cancel${preview.connection ? ` · ${preview.connection} port` : ''}${construction.selected?.startsWith('conveyor-') ? ' · direction follows view; yellow = output · R rotates' : ''}${construction.selected === 'conveyor-cell' ? ' · T route mode' : ''}${preview.snappedToConveyor || preview.snappedToFoundation ? ' · aligned to neighbour' : ''}${construction.selected === 'foundation' ? ` · Page Up/Down height (${construction.foundationHeightOffset >= 0 ? '+' : ''}${construction.foundationHeightOffset.toFixed(1)} m) · base ${preview.transform.y.toFixed(1)} m` : ''}${preview.conveyorPreviewChanges?.length ? ' · green preview shows belt after placement' : ''}${!createdInput.isPointerLocked ? ' · drag to look · right click to capture mouse' : ''}`
         : `Aim at ground within ${config.construction.reach} m · R rotate · Left click place · Esc cancel${!createdInput.isPointerLocked ? ' · drag to look · right click to capture mouse' : ''}`);
       const target = inventoryUI?.isOpen || constructionUI?.isOpen || machineUI?.isOpen || logisticsUI?.isOpen || construction.active ? null : interaction.target;
       engine.setHighlight?.(target?.id ?? null);

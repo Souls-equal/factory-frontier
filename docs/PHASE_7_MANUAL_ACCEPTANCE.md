@@ -1,7 +1,8 @@
 # Phase 7 — combined logistics acceptance
 
-Player acceptance is pending, as requested. None of these tests has been reported
-as passing in game. Creative construction (Q) can remove building costs, but not
+The user reports that all previously playable additions work after testing.
+This global report does not list individual scenario outcomes. The new route
+editor was added afterwards and has its own pending check in `PHASE_7_ROUTE_CHECK.md`. Creative construction (Q) can remove building costs, but not
 production inputs. State is session-only; refreshing loses the factory.
 
 ## Storage and splitter
@@ -45,6 +46,5 @@ blocked or disconnected, and flow resumes after it clears. Return to Balanced.
 Limits: heights are selected as fixed 1 or 2 grid metres when placing, not
 adjustable afterwards. Terrain and foundation support limits still apply, so
 some elevated layouts require a supported foundation. Connect via one-cell
-belts, not direct machine ports or legacy two-cell belts. Construction remains
-individual cell placement, not a control-point route editor. Check previous Phase 5
+belts, not direct machine ports or legacy two-cell belts. The later route editor is described in `PHASE_7_ROUTE_CHECK.md`. Check previous Phase 5
 manual scenarios separately; report layout, rotation and any problems found.

@@ -35,7 +35,7 @@ export class ConstructionController {
     }
     return null;
   }
-  private facing(view: CameraView): number {
+  facing(view: CameraView): number {
     return this.typeId === 'conveyor-cell' ? ((Math.round(view.yaw / (Math.PI / 2)) + this.rotation) % 4 + 4) % 4 : this.rotation;
   }
   preview(view: CameraView, player: PlayerFootprint): PlacementResult | null {

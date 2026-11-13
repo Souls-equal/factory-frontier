@@ -297,9 +297,9 @@ export class InputManager {
     if (isTypingTarget(event.target)) {
       return;
     }
-    if (this.onConstructionKey && ['KeyQ', 'KeyR', 'KeyF', 'PageUp', 'PageDown', 'Escape'].includes(event.code)) {
+    if (this.onConstructionKey && ['KeyQ', 'KeyR', 'KeyF', 'KeyT', 'Enter', 'Backspace', 'PageUp', 'PageDown', 'Escape'].includes(event.code)) {
       if (!event.repeat && this.onConstructionKey(event.code)) { event.preventDefault(); return; }
-      if (event.repeat && ['KeyQ', 'KeyR', 'KeyF', 'PageUp', 'PageDown'].includes(event.code)) { event.preventDefault(); return; }
+      if (event.repeat && ['KeyQ', 'KeyR', 'KeyF', 'KeyT', 'Enter', 'Backspace', 'PageUp', 'PageDown'].includes(event.code)) { event.preventDefault(); return; }
     }
     if (event.code === 'Tab' && this.onInventoryToggle) {
       event.preventDefault();

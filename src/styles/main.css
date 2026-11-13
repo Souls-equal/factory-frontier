@@ -493,7 +493,7 @@ body {
 .construction__entry:disabled .construction__cost { color: #efb69d; }
 @media (max-width: 700px) { .construction__list { grid-template-columns: 1fr; } }
 @media (max-width: 430px) { .inventory .construction__entry { grid-template-columns: 78px minmax(0, 1fr); } }
-.construction-status { position: absolute; bottom: 5rem; left: 50%; transform: translateX(-50%); padding: .6rem .9rem; color: #e7f5f5; background: rgba(6,20,28,.88); border: 1px solid #5a8790; border-radius: .3rem; pointer-events: none; }
+.construction-status { position: absolute; bottom: 5rem; left: 50%; width: max-content; max-width: calc(100% - 32px); box-sizing: border-box; overflow-wrap: anywhere; transform: translateX(-50%); padding: .6rem .9rem; color: #e7f5f5; background: rgba(6,20,28,.88); border: 1px solid #5a8790; border-radius: .3rem; pointer-events: none; }
 
 /* Two separate, dark storage panels echo the reference without fake slots. */
 .inventory__panel.terminal { width: min(1060px, 100%); padding: 20px; background: #091827; border-color: #233f56; }
