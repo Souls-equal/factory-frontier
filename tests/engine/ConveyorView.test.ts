@@ -113,3 +113,13 @@ it('renders storage container with directional ports in scene and preview', () =
   view.setPreview('storage-container', { reason: 'valid', transform });
   expect(view.group.getObjectByName('building-preview')).toBeDefined(); view.dispose();
 });
+
+it('renders a splitter with one cyan and three yellow ports', () => {
+  const registry = createDefaultBuildingRegistry(createDefaultItemRegistry()), view = new BuildingView(registry, 1);
+  const transform = snapFootprint(registry.get('splitter'), 0, 0, 0, 1);
+  view.sync([{ id: 'splitter', typeId: 'splitter', transform }]);
+  let input = 0, output = 0;
+  view.group.traverse((object) => { if (object.name === 'machine-input-port') input++; if (object.name === 'machine-output-port') output++; });
+  expect(input).toBe(1); expect(output).toBe(3);
+  view.setPreview('splitter', { reason: 'valid', transform }); expect(view.group.getObjectByName('building-preview')).toBeDefined(); view.dispose();
+});

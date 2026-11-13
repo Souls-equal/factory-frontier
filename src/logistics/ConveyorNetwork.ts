@@ -306,20 +306,38 @@ export class ConveyorNetwork implements SimulationSystem {
       }
       if (transferred) { s.items.shift(); s.nextOutputMs = this.timeMs + 60000 / s.settings.throughputPerMinute; }
     }
-    for (const s of cells) {
-      if (s.source && !priorityInputs.has(s.id) && this.timeMs >= s.nextInputMs) {
-        const distance = this.cellInputDistance.get(`source:${s.id}`) ?? 0;
-        if (s.items.every((other) => Math.abs(other.distance - distance) >= s.settings.spacing - 1e-8)) {
-          const itemId = s.source.peek();
-          if (itemId && s.source.take(itemId)) {
-            const to = s.path.point(distance), from = this.cellSourceStart.get(s.id) ?? to;
-            const length = Math.hypot(to.x - from.x, to.y - from.y, to.z - from.z);
-            s.items.push({ id: `transport-${this.nextItem++}`, itemId, distance, previousPosition: from,
-              ...(length > 1e-9 ? { transition: { from, to, distance: 0, length } } : {}) });
-            s.items.sort((a, b) => b.distance - a.distance); s.nextInputMs = this.timeMs + 60000 / s.settings.throughputPerMinute;
-          }
-        }
+    // Resolve grouped sources once against belts that actually have space. This
+    // avoids fixed iteration-order bias and permits fallback when a branch fills.
+    const ready = cells.filter((s) => {
+      if (!s.source || priorityInputs.has(s.id) || this.timeMs < s.nextInputMs) return false;
+      const distance = this.cellInputDistance.get(`source:${s.id}`) ?? 0;
+      return s.items.every((other) => Math.abs(other.distance - distance) >= s.settings.spacing - 1e-8);
+    });
+    const groups = new Map<NonNullable<ItemSource['arbiter']>, InternalSegment[]>();
+    for (const s of ready) if (s.source!.arbiter) {
+      const arbiter = s.source!.arbiter;
+      if (!groups.has(arbiter)) groups.set(arbiter, []);
+      groups.get(arbiter)!.push(s);
+    }
+    const chosen = new Set<string>();
+    for (const [arbiter, entries] of groups) {
+      const id = arbiter.choose(entries.map((entry) => entry.source!.id));
+      if (id) chosen.add(id);
+    }
+    for (const s of ready) {
+      const source = s.source!;
+      if (source.arbiter && !chosen.has(source.id)) continue;
+      const distance = this.cellInputDistance.get(`source:${s.id}`) ?? 0;
+      const itemId = source.peek();
+      if (itemId && source.take(itemId)) {
+        const to = s.path.point(distance), from = this.cellSourceStart.get(s.id) ?? to;
+        const length = Math.hypot(to.x - from.x, to.y - from.y, to.z - from.z);
+        s.items.push({ id: `transport-${this.nextItem++}`, itemId, distance, previousPosition: from,
+          ...(length > 1e-9 ? { transition: { from, to, distance: 0, length } } : {}) });
+        s.items.sort((a, b) => b.distance - a.distance); s.nextInputMs = this.timeMs + 60000 / s.settings.throughputPerMinute;
       }
+    }
+    for (const s of cells) {
       const first = s.items[0];
       s.state = first && first.distance >= s.path.length - 1e-9 &&
         (s.output ? (() => { const next = this.require(s.output!); const at = this.cellInputDistance.get(s.id)!;

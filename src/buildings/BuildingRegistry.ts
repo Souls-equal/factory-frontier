@@ -70,6 +70,10 @@ export function createDefaultBuildingRegistry(items: ItemRegistry): BuildingRegi
     description: 'Presses iron ingots into plates. Cyan: input at rear; yellow: output at front.',
     cost: [{ itemId: 'stone', quantity: 15 }, { itemId: 'wood', quantity: 10 }], widthCells: 2, depthCells: 2,
     height: 2.2, maxSlope: .58, maxGroundVariation: .8, color: 0x56777e, placement: 'logistics' });
+  registry.register({ id: 'splitter', name: 'Splitter', category: 'Logistics',
+    description: 'Balances one rear input across up to three front and side outputs.',
+    cost: [{ itemId: 'stone', quantity: 15 }, { itemId: 'wood', quantity: 10 }], widthCells: 2, depthCells: 2,
+    height: 1.3, maxSlope: .58, maxGroundVariation: .8, color: 0x627991, placement: 'logistics' });
   registry.register({ id: 'storage-container', name: 'Storage Container', category: 'Logistics',
     description: 'Stores 8 stacks. Cyan: input at rear; yellow: output at front.',
     cost: [{ itemId: 'stone', quantity: 15 }, { itemId: 'wood', quantity: 10 }], widthCells: 2, depthCells: 2,
