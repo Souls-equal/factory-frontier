@@ -1352,9 +1352,38 @@ cost atomically and publishes the resulting cells and updated belt shapes in one
 revision. Creative builds keep their no-refund flag. The live world and inventory
 are not modified by planning; guards may synchronize the logistics network.
 
-This is a backend slice only, with no in-game route selection, visual preview,
-confirmation or control-point editing. Both endpoints must already exist and
+At this earlier slice the planner was backend-only; the editor below now provides
+in-game route selection, preview, confirmation and control-point input. Both endpoints must already exist and
 be compatible one-cell belts or supported devices; legacy two-cell belts are not
 endpoints. Incremental staging can reject a layout that might be valid if all
-cells were validated simultaneously. The limit bounds work and cost; performance
-and preview caching must be addressed before running this planner every frame.
+cells were validated simultaneously. The limit bounds work and cost; see the editor note below for preview caching.
+
+
+## Implementation note — Phase 7 in-game route editor
+
+`ConveyorRouteEditor` owns the transient waypoints and bend order independently
+of rendering and input. A source is selected on the first free cell adjoining a
+compatible output; the hovered final cell must adjoin an input or existing cell.
+Click adds points, R flips the orthogonal axis order for every leg, Backspace
+undoes, Enter revalidates and commits, T switches back to single placement, and
+Esc/Q cancel. The first-cell rotation is chosen from compatible source directions;
+subsequent directions follow the generated route. The regular construction ray
+and reach apply, so the player may move between points. The existing one-cell
+placement remains available and unchanged.
+
+`BuildingView` reuses the normal first-cell preview and draws additional pooled
+route meshes, releasing them on mode changes/disposal. Green shows a valid start
+or valid full route, red a rejection; the status displays the reason and total
+cost where the staged plan is available. Failed staging shows approximate red
+terrain-height geometry rather than claiming exact supported shapes. The editor
+caches the advisory preview by snapped target, waypoints, world/inventory
+revisions, player position and a 250 ms time bucket to account for moving items
+and dynamic obstacles. Click and Enter do not rely on the cache: they revalidate
+against the current authoritative world and live topology guards. Note that each
+new hovered grid cell still causes a fresh bounded plan; test performance in
+large factories before increasing the 24-cell limit.
+
+The user globally validated the previous playable logistics features before this
+editor existed. The editor itself has automated coverage but awaits real player
+validation; arbitrary lift heights, legacy two-cell endpoints and persistence
+remain out of scope for this slice.

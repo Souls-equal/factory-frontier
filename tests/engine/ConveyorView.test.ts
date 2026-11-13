@@ -132,3 +132,22 @@ it('renders merger ports and lift shafts, retaining visible vertical transport',
   expect(inputs).toBe(3); expect(view.group.getObjectByName('lift-rail')).toBeDefined();
   view.setPreview('lift-up-2', { reason: 'valid', transform: lift }); expect(view.group.getObjectByName('building-preview')).toBeDefined(); view.dispose();
 });
+
+it('renders, reuses, recolors and disposes multi-cell route previews', () => {
+  const registry = createDefaultBuildingRegistry(createDefaultItemRegistry()), view = new BuildingView(registry, 1);
+  const cell = (x: number, rotation = 0) => ({ id: `cell-${x}`, typeId: 'conveyor-cell',
+    transform: snapFootprint(registry.get('conveyor-cell'), x, -2, rotation, 1) });
+  view.setRoutePreview([cell(.5), cell(1.5, 3)], true);
+  const first = view.group.getObjectByName('route-preview:1') as import('three').Mesh;
+  const second = view.group.getObjectByName('route-preview:2') as import('three').Mesh;
+  expect(first.position.x).toBe(.5); expect(second.rotation.y).toBeCloseTo(3 * Math.PI / 2);
+  expect((first.material as import('three').MeshStandardMaterial).color.getHex()).toBe(0x55e8b2);
+  const dispose = vi.spyOn(second.geometry, 'dispose');
+  view.setRoutePreview([cell(2.5)], false);
+  expect(view.group.getObjectByName('route-preview:1')).toBe(first); expect(first.position.x).toBe(2.5);
+  expect((first.material as import('three').MeshStandardMaterial).color.getHex()).toBe(0xff5363);
+  expect(dispose).toHaveBeenCalledOnce();
+  view.setRoutePreview([], false); expect(view.group.getObjectByName('route-preview:1')).toBeUndefined();
+  view.setRoutePreview([cell(.5)], true); const last = view.group.getObjectByName('route-preview:1') as import('three').Mesh;
+  const lastDispose = vi.spyOn(last.geometry, 'dispose'); view.dispose(); expect(lastDispose).toHaveBeenCalledOnce();
+});

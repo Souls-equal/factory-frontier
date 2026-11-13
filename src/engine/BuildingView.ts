@@ -16,6 +16,7 @@ export class BuildingView {
   private preview: Mesh<BoxGeometry, MeshStandardMaterial> | null = null;
   private previewType: string | null = null;
   private readonly shapes = new Map<string, string>();
+  private readonly routePreviews = new Map<number, { readonly mesh: Mesh<BoxGeometry, MeshStandardMaterial>; readonly key: string }>();
   private previewShape = '';
   private readonly changedPreviews = new Map<string, { readonly mesh: Mesh<BoxGeometry, MeshStandardMaterial>; readonly key: string }>();
   constructor(private readonly registry: BuildingRegistry, private readonly cellSize: number) {}
@@ -99,6 +100,26 @@ export class BuildingView {
     mesh.rotation.y = (placement.autoConveyor?.rotation ?? placement.transform.rotation) * Math.PI / 2;
     this.tintPreview(mesh, placement.reason === 'valid', (typeId === 'conveyor-auto' || typeId === 'conveyor-cell' || typeId === 'smelter' || typeId === 'constructor' || typeId === 'storage-container' || typeId === 'splitter' || typeId === 'merger' || isLiftBuilding(typeId)));
   }
+  /** Additional cells after the first, which uses the normal placement preview. */
+  setRoutePreview(cells: readonly BuildingInstance[], valid: boolean): void {
+    for (const [i, entry] of this.routePreviews) if (i >= cells.length) {
+      this.release(entry.mesh); this.routePreviews.delete(i);
+    }
+    cells.forEach((cell, i) => {
+      const key = JSON.stringify([cell.typeId, cell.cellConveyor, cell.autoConveyor]);
+      let entry = this.routePreviews.get(i);
+      if (entry && entry.key !== key) { this.release(entry.mesh); this.routePreviews.delete(i); entry = undefined; }
+      if (!entry) {
+        const mesh = this.createMesh(cell.typeId, true, cell.autoConveyor, cell.cellConveyor);
+        mesh.name = `route-preview:${i + 1}`;
+        entry = { mesh, key }; this.routePreviews.set(i, entry); this.group.add(mesh);
+      }
+      const def = this.registry.get(cell.typeId);
+      entry.mesh.position.set(cell.transform.x, cell.transform.y + def.height / 2, cell.transform.z);
+      entry.mesh.rotation.y = cell.transform.rotation * Math.PI / 2;
+      this.tintPreview(entry.mesh, valid, true);
+    });
+  }
   private tintPreview(mesh: Mesh<BoxGeometry, MeshStandardMaterial>, valid: boolean, showPorts: boolean): void {
     const color = valid ? 0x55e8b2 : 0xff5363;
     mesh.material.color.setHex(color);
@@ -112,6 +133,8 @@ export class BuildingView {
     this.meshes.clear();
     for (const { mesh } of this.changedPreviews.values()) this.release(mesh);
     this.changedPreviews.clear();
+    for (const { mesh } of this.routePreviews.values()) this.release(mesh);
+    this.routePreviews.clear();
     if (this.preview) this.release(this.preview);
     this.preview = null; this.previewType = null; this.group.clear();
   }

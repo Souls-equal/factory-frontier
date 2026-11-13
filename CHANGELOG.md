@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — conveyor route editor
+
+- Wire control-point route editing to construction input, previews, cost and
+  atomic confirmation; preserve single-cell placement and revalidate on actions.
+- Record the user's global success report for previously playable Phase 7 work;
+  the new editor still requires a player test.
+
 ## Unreleased — route-planning foundation
 
 - Add bounded orthogonal control-point expansion and atomic multi-cell conveyor

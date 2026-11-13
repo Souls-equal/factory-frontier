@@ -17,6 +17,7 @@ export class ControlsHint {
   private readonly element: HTMLElement;
   private locked = false;
   private constructing = false;
+  private routing = false;
 
   private constructor(element: HTMLElement) {
     this.element = element;
@@ -49,8 +50,12 @@ export class ControlsHint {
     this.render();
   }
 
+  setRouteActive(active: boolean): void { if (this.routing !== active) { this.routing = active; this.render(); } }
+
   private render(): void {
-    this.element.textContent = this.constructing
+    this.element.textContent = this.constructing && this.routing
+      ? 'Click add point · Enter build · Backspace undo · R bend · T single cell · Esc cancel'
+      : this.constructing
       ? (this.locked ? CONSTRUCTION_HINT_LOCKED : CONSTRUCTION_HINT_UNLOCKED)
       : (this.locked ? CONTROLS_HINT_LOCKED : CONTROLS_HINT_UNLOCKED);
     this.element.classList.toggle('is-locked', this.locked);

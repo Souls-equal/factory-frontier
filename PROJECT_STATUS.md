@@ -3,57 +3,56 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 7 — Advanced logistics (integration and acceptance)
-**Phase Status:** 🟡 In progress — merger, splitter modes and bounded lifts implemented; player testing in progress; acceptance pending
-**Next Recommended Task:** Connect the route-planning foundation to an in-game control-point editor; follow up on the ongoing Phase 7 play-test and remaining Phase 5 checks.
+**Phase Status:** 🟡 In progress — previous playable additions user-validated; route editor implemented, awaiting play-test
+**Next Recommended Task:** Play-test the new route editor and address any issues; remaining Phase 5 checks and Phase 7 scope/acceptance remain open.
 **Last Updated:** 2026-11-11
 
 ---
 
-## Phase 7 — route-planning foundation
+## Phase 7 — conveyor route editor
 
-- A simulation-only first slice expands snapped control points into a bounded
-  orthogonal one-cell route (up to 24 cells), validates placements and endpoints
-  against a shadow world and the live topology guards, then revalidates and
-  commits with one material transaction. Creative builds retain their no-refund
-  provenance. Tests exercise corners, actual transport and conservation, port
-  contention, invalidation, material failure and rejected topology changes.
-- This is not yet accessible to players: input, multi-cell visual preview, cost
-  display, endpoint selection and confirmation UI are still to be implemented.
-  The planner requires existing compatible source and destination connections;
-  it does not support legacy two-cell conveyors. Incremental placement validation
-  may reject some routes that would otherwise be valid as a simultaneous layout.
-  The user is currently testing the existing Phase 7 additions; acceptance remains open.
+- The user reported having tested everything available and that everything
+  works; this confirms the previous playable Phase 7 additions globally, without
+  a scenario-by-scenario report. The route editor was not yet available then.
+- Select Conveyor from Q and press T for route mode. Click the first free cell
+  touching an output, then optional intermediate points; aim at the last free
+  cell touching an input and press Enter. The multi-cell preview shows validity,
+  proposed belt shapes and aggregate cost. R toggles orthogonal bend order for
+  the whole route; Backspace undoes a point; T returns to individual placement;
+  Esc/Q cancel. Confirmation revalidates and pays/commits all cells or none.
+- Automated coverage includes editor input, caching and live revalidation,
+  visual cleanup, bootstrap wiring, real transport and resource conservation.
+  In-game usability and acceptance are pending: see `docs/PHASE_7_ROUTE_CHECK.md`.
+- Routes are limited to 24 one-cell belts, start/end at existing compatible
+  ports or one-cell belts, use orthogonal grid legs, and inherit placement reach,
+  terrain and support constraints. Incremental staging can reject some otherwise
+  possible layouts. Legacy two-cell endpoints and arbitrary lift heights remain
+  unsupported. Preview is advisory and refreshes at least every 250 ms while
+  active; confirmation always revalidates. No state is saved.
 
 ## Phase 7 — merger, splitter modes and conveyor lifts
 
-- The user requested finishing Phase 7 and earlier requested testing the new
-  logistics features together; the user is currently testing them. None of the
-  Phase 7 slices has yet been accepted by the player; follow `docs/PHASE_7_MANUAL_ACCEPTANCE.md`.
+- The user reports all previously available additions work after testing them;
+  see `docs/PHASE_7_MANUAL_ACCEPTANCE.md` for the combined scenarios. This report
+  predates the route editor and does not validate that new interface.
 - The Merger (15 stone + 10 wood) combines three cyan rear/side input ports into
   one yellow front output. Each input buffers one item; the output serves occupied
   inputs round-robin. E allows inspection and recovery; demolition is blocked
   until the buffers are empty. Each port accepts one one-cell belt lane.
-- Splitter inspection now offers balanced, overflow (prefer a chosen port,
-  fall back to ready outputs) and strict priority (wait for the chosen port).
+- Splitter inspection offers balanced, overflow and strict priority modes.
   Configuration is session-only. A blocked destination may first fill its belt.
 - Four lift selections offer upward/downward movement by 1 or 2 grid metres.
   They are real distance-based belt paths with a visible vertical section,
-  bounded spacing, congestion, recovery and demolition protection. Cyan rear
-  and yellow front ports connect via directional one-cell belts at their
-  respective heights; only one lane per port is accepted. Height/direction are
-  chosen in the menu before placement and cannot be edited after placement.
-- Automated coverage includes four orientations, real 3-to-1 streams, fairness,
-  blocked outputs and recovery, 1/2-metre ascents/descents, splitter modes,
-  UI/rendering and the complete two-miner → merger → smelter → constructor chain.
-- Routing still uses individually placed one-cell belts, not the GDD's planned
-  control-point route editor. Lifts have bounded predefined heights (not arbitrary
-  height or direct machine/legacy belt connections), and no state is saved.
-  Player usability/acceptance remains open; do not mark Phase 7 complete.
+  bounded spacing, congestion, recovery and demolition protection. Height and
+  direction are chosen before placement and cannot be edited afterwards.
+- The phase remains open for the newly implemented editor's player validation,
+  arbitrary lift heights and other outstanding requirements; do not declare the
+  whole phase complete solely on the user's earlier report.
 
 ## Phase 7 — balanced splitter
 
-- The user explicitly requested proceeding directly and testing the logistics
-  additions together later; the storage slice has not been player-validated.
+- The user subsequently reported that all previously available additions work
+  after testing them together (global report, no individual scenario details).
 - Splitter costs 15 stone + 10 wood. One cyan rear input and up to three yellow
   outputs (front, left, right) each accept one directional one-cell conveyor lane.
   Place belts or splitter first; duplicate lanes on a port are rejected.
@@ -64,7 +63,7 @@
 - Automated integration tests cover all rotations, both placement orders, a
   real storage-to-three-terminal network, balanced delivery, blocked branches,
   all outputs blocked, recovery, conservation, inspection and mocked bootstrap.
-  The splitter and storage still require user play-testing; see
+  For the original splitter and storage play-test procedures, see
   `docs/PHASE_7_SPLITTER_CHECK.md` and `docs/PHASE_7_STORAGE_CHECK.md`.
 - At that point only balanced distribution existed; subsequent additions are
   recorded above. Legacy two-cell belts are not supported; open-ended output
@@ -84,7 +83,7 @@
 - Mixed contents are not filtered or FIFO: first occupied slot wins and a
   downstream incompatible/full receiver can block following items. A belt with
   an open output can drop items onto the ground. Old two-cell conveyors are not
-  connected to this container. The new feature requires user play-testing; see
+  connected to this container. For the original play-test procedure, see
   `docs/PHASE_7_STORAGE_CHECK.md`.
 - At that point splitters, mergers and lifts were not implemented; the newer
   splitter slice is described above. The phase is not accepted and session-only

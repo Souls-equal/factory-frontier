@@ -92,6 +92,7 @@ export class Engine implements GameEngine {
 
   syncBuildings(buildings: readonly BuildingInstance[]): void { this.buildingView?.sync(buildings); }
   setBuildingPreview(typeId: string | null, result?: PlacementResult): void { this.buildingView?.setPreview(typeId, result); }
+  setRoutePreview(cells: readonly BuildingInstance[], valid: boolean): void { this.buildingView?.setRoutePreview(cells, valid); }
   setMachineStates(states: readonly { readonly id: string; readonly state: MachineState }[]): void { this.buildingView?.setMachineStates(states); }
 
   syncConveyors(segments: readonly ConveyorSegment[], alpha: number, ground: readonly GroundItem[] = []): void {

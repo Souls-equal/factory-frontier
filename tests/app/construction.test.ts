@@ -153,3 +153,23 @@ it('enables creative from the build menu and places and demolishes without charg
   key('KeyQ'); expect(toggle.checked).toBe(true); toggle.click();
   expect(menu.textContent).toContain('Stone: 20 / 10'); expect(menu.textContent).toContain('Wood: 10 / 5');
 });
+
+it('exposes route mode, refuses an invalid start and returns safely to single placement', async () => {
+  vi.spyOn(console, 'info').mockImplementation(() => undefined);
+  await import('../../src/main'); await vi.waitFor(() => expect(state.init).toBe(1)); frame(16);
+  key('KeyQ'); document.querySelector<HTMLButtonElement>('[data-building="conveyor-cell"]')!.click();
+  const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
+  canvas.dispatchEvent(new MouseEvent('mousedown', { button: 0, clientX: 500, clientY: 500 }));
+  window.dispatchEvent(new MouseEvent('mousemove', { clientX: 500, clientY: 857 })); window.dispatchEvent(new MouseEvent('mouseup'));
+  frame(66); expect(document.querySelector('[data-ui="construction-status"]')!.textContent).toContain('T route mode');
+  key('KeyT'); frame(116);
+  expect(document.querySelector('[data-ui="construction-status"]')!.textContent).toContain('Invalid start');
+  expect(document.querySelector('[data-ui="controls-hint"]')!.textContent).toContain('Enter build');
+  clickCanvas(); frame(166); expect(state.buildings).toHaveLength(0);
+  expect(document.querySelector('[data-ui="interaction-feedback"]')!.textContent).toContain('Cannot add point');
+  key('Enter'); frame(216); expect(state.buildings).toHaveLength(0);
+  expect(document.querySelector('[data-ui="interaction-feedback"]')!.textContent).toContain('Select a starting');
+  key('KeyT'); frame(266); expect(state.preview?.reason).toBe('valid');
+  clickCanvas(); frame(316); expect(state.buildings).toHaveLength(1);
+  key('Escape'); frame(366); expect(state.selected).toBeNull();
+});
