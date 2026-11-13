@@ -12,9 +12,11 @@ export function matchesPort(pose: PortPose, position: Point3, direction: Point3)
 }
 
 /** All port methods are synchronous; take/accept succeed only when one item moves. */
+export interface SourceArbiter { choose(ready: readonly string[]): string | null }
 export interface ItemSource {
   readonly id: string;
   readonly pose: PortPose;
+  readonly arbiter?: SourceArbiter;
   peek(): string | null;
   take(itemId: string): boolean;
 }

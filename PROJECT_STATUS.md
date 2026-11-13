@@ -2,12 +2,32 @@
 
 **Project:** Factory Frontier
 **Version:** 0.3.0
-**Current Phase:** Phase 7 — Advanced logistics (first storage slice)
-**Phase Status:** 🟡 In progress — storage container implemented; play-testing pending
-**Next Recommended Task:** Play-test the new storage container, then continue Phase 7 incrementally; remaining Phase 5 checklist scenarios remain open.
+**Current Phase:** Phase 7 — Advanced logistics (storage and splitter slices)
+**Phase Status:** 🟡 In progress — storage and balanced splitter implemented; player testing deferred
+**Next Recommended Task:** Continue Phase 7 incrementally; the user prefers to test new logistics features together later. Remaining Phase 5 checks are also open.
 **Last Updated:** 2026-11-11
 
 ---
+
+## Phase 7 — balanced splitter
+
+- The user explicitly requested proceeding directly and testing the logistics
+  additions together later; the storage slice has not been player-validated.
+- Splitter costs 15 stone + 10 wood. One cyan rear input and up to three yellow
+  outputs (front, left, right) each accept one directional one-cell conveyor lane.
+  Place belts or splitter first; duplicate lanes on a port are rejected.
+- A one-item buffer distributes to available output belts round-robin, skipping
+  full or absent outputs. When all are blocked it applies backpressure. The
+  cursor advances only after a successful transfer; E can recover the buffered
+  item, and a nonempty splitter cannot be demolished.
+- Automated integration tests cover all rotations, both placement orders, a
+  real storage-to-three-terminal network, balanced delivery, blocked branches,
+  all outputs blocked, recovery, conservation, inspection and mocked bootstrap.
+  The splitter and storage still require user play-testing; see
+  `docs/PHASE_7_SPLITTER_CHECK.md` and `docs/PHASE_7_STORAGE_CHECK.md`.
+- Only balanced distribution exists; configurable overflow/priority modes,
+  mergers, lifts and full Phase 7 acceptance remain outstanding. Legacy two-cell
+  belts are not supported; open-ended output belts can drop items to the ground.
 
 ## Phase 7 — storage container (first slice)
 
@@ -25,8 +45,9 @@
   an open output can drop items onto the ground. Old two-cell conveyors are not
   connected to this container. The new feature requires user play-testing; see
   `docs/PHASE_7_STORAGE_CHECK.md`.
-- Splitters, mergers, conveyor lifts and the rest of Phase 7 remain unimplemented;
-  the phase is not accepted. Session-only state remains unsaved.
+- At that point splitters, mergers and lifts were not implemented; the newer
+  splitter slice is described above. The phase is not accepted and session-only
+  state remains unsaved.
 
 ## Phase 6 — constructor and iron plates
 

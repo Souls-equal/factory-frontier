@@ -291,7 +291,7 @@ async function boot(): Promise<void> {
   const logisticsInteractions = new Map<string, () => void>();
   const syncLogistics = (): void => {
     logistics.sync();
-    const active = new Set(buildings.all().filter((building) => buildings.registry.get(building.typeId).placement === 'logistics' && (building.typeId === 'receiving-terminal' || building.typeId === 'storage-container')).map((building) => building.id));
+    const active = new Set(buildings.all().filter((building) => buildings.registry.get(building.typeId).placement === 'logistics' && (building.typeId === 'receiving-terminal' || building.typeId === 'storage-container' || building.typeId === 'splitter')).map((building) => building.id));
     for (const [id, unregister] of logisticsInteractions) if (!active.has(id)) { unregister(); logisticsInteractions.delete(id); }
     for (const id of active) {
       if (logisticsInteractions.has(id)) continue;

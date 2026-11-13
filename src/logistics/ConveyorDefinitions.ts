@@ -6,7 +6,7 @@ export const CONVEYOR_SHAPES: Readonly<Record<string, ConveyorShape>> = Object.f
   'conveyor-cell': 'straight', 'conveyor-straight': 'straight', 'conveyor-curve': 'curve-right', 'conveyor-incline': 'incline',
 });
 export const isProcessorBuilding = (typeId: string): boolean => typeId === 'smelter' || typeId === 'constructor';
-export const isDirectionalMachine = (typeId: string): boolean => isProcessorBuilding(typeId) || typeId === 'storage-container';
+export const isDirectionalMachine = (typeId: string): boolean => isProcessorBuilding(typeId) || typeId === 'storage-container' || typeId === 'splitter';
 export const RECEIVER_TYPE = 'receiving-terminal';
 export const BELT_HEIGHT = .5;
 export const DEFAULT_INCLINE_RISE = 1;
@@ -23,4 +23,10 @@ export function machinePort(building: BuildingInstance, cellSize: number, type: 
   const { x, y, z, rotation } = building.transform;
   const direction = new ConveyorPath({ shape: 'straight', x, y: y + BELT_HEIGHT, z, rotation, size: 2 * cellSize });
   return { position: direction.point(type === 'source' ? direction.length : 0), direction: direction.direction('input') };
+}
+
+/** Splitter outputs are front, left and right relative to its cyan rear input. */
+export function splitterPort(building: BuildingInstance, cellSize: number, index: number): PortPose {
+  const rotation = building.transform.rotation + [0, 1, 3][index]!;
+  return machinePort({ ...building, transform: { ...building.transform, rotation } }, cellSize, 'source');
 }

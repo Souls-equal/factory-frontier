@@ -97,7 +97,7 @@ export class BuildingView {
     const mesh = this.preview!; const definition = this.registry.get(typeId);
     mesh.position.set(placement.transform.x, placement.transform.y + definition.height / 2, placement.transform.z);
     mesh.rotation.y = (placement.autoConveyor?.rotation ?? placement.transform.rotation) * Math.PI / 2;
-    this.tintPreview(mesh, placement.reason === 'valid', (typeId === 'conveyor-auto' || typeId === 'conveyor-cell' || typeId === 'smelter' || typeId === 'constructor' || typeId === 'storage-container'));
+    this.tintPreview(mesh, placement.reason === 'valid', (typeId === 'conveyor-auto' || typeId === 'conveyor-cell' || typeId === 'smelter' || typeId === 'constructor' || typeId === 'storage-container' || typeId === 'splitter'));
   }
   private tintPreview(mesh: Mesh<BoxGeometry, MeshStandardMaterial>, valid: boolean, showPorts: boolean): void {
     const color = valid ? 0x55e8b2 : 0xff5363;
@@ -167,6 +167,19 @@ export class BuildingView {
       part(0x59dce1, 0, .5, scale, .65 * scale, .24, .035 * scale, 'machine-input-port');
       part(0xf5d056, 0, .5, -scale, .65 * scale, .24, .035 * scale, 'machine-output-port');
       part(0x59656c, -.65 * scale, 1.7, -1.04 * scale, .24, .24, .04, 'machine-indicator');
+    }
+    if (typeId === 'splitter') {
+      const part = (color: number, x: number, y: number, z: number, w: number, h: number, d: number, name: string): void => {
+        const object = new Mesh(new BoxGeometry(w, h, d), new MeshStandardMaterial({ color, roughness: .75, transparent: preview, opacity: preview ? .5 : 1, depthWrite: !preview }));
+        object.position.set(x, y - def.height / 2, z); object.name = name; object.castShadow = !preview; mesh.add(object);
+      };
+      const scale = this.cellSize;
+      part(0x3c4d63, 0, .15, 0, 1.95 * scale, .3, 1.95 * scale, 'splitter-base');
+      part(0x9db6bf, 0, 1.25, 0, 1.1 * scale, .1, 1.1 * scale, 'splitter-top');
+      part(0x59dce1, 0, .5, scale, .65 * scale, .24, .035 * scale, 'machine-input-port');
+      part(0xf5d056, 0, .5, -scale, .65 * scale, .24, .035 * scale, 'machine-output-port');
+      part(0xf5d056, scale, .5, 0, .035 * scale, .24, .65 * scale, 'machine-output-port');
+      part(0xf5d056, -scale, .5, 0, .035 * scale, .24, .65 * scale, 'machine-output-port');
     }
     if (typeId === 'storage-container') {
       const part = (color: number, x: number, y: number, z: number, w: number, h: number, d: number, name: string): void => {

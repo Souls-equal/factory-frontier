@@ -1,5 +1,5 @@
 import type { BuildingInstance } from '../buildings/BuildingSystem';
-import { BELT_HEIGHT, machinePort, pathForBuilding, isDirectionalMachine } from './ConveyorDefinitions';
+import { BELT_HEIGHT, machinePort, pathForBuilding, isDirectionalMachine, splitterPort } from './ConveyorDefinitions';
 
 const epsilon = 1e-7;
 /** Whether a machine's 2-cell-wide port touches a particular one-cell lane. */
@@ -20,6 +20,20 @@ export function cellTouchesMachine(cell: BuildingInstance, machine: BuildingInst
   return Math.abs(dx * d.x + dz * d.z - cellSize / 2) < epsilon &&
     Math.abs(dx * d.z - dz * d.x) <= cellSize / 2 + epsilon &&
     (ignoreHeight || Math.abs(path.point(0).y - port.position.y) < epsilon);
+}
+
+/** One-cell output lane adjacent to a splitter port, pointing away from it. */
+export function splitterOutputTouches(cell: BuildingInstance, machine: BuildingInstance, cellSize: number, index: number, ignoreHeight = false): boolean {
+  const port = splitterPort(machine, cellSize, index), path = pathForBuilding(cell, cellSize)!;
+  const direction = path.direction('input'), dx = cell.transform.x - port.position.x, dz = cell.transform.z - port.position.z;
+  return direction.x === port.direction.x && direction.z === port.direction.z &&
+    Math.abs(dx * port.direction.x + dz * port.direction.z - cellSize / 2) < epsilon &&
+    Math.abs(dx * port.direction.z - dz * port.direction.x) <= cellSize / 2 + epsilon &&
+    (ignoreHeight || Math.abs(path.point(0).y - port.position.y) < epsilon);
+}
+export function cellTouchesSource(cell: BuildingInstance, machine: BuildingInstance, cellSize: number, ignoreHeight = false): boolean {
+  return machine.typeId === 'splitter' ? [0, 1, 2].some((i) => splitterOutputTouches(cell, machine, cellSize, i, ignoreHeight)) :
+    cellTouchesMachine(cell, machine, cellSize, 'source', ignoreHeight);
 }
 
 export function cellAhead(from: BuildingInstance, to: BuildingInstance, cellSize: number): boolean {
@@ -80,7 +94,7 @@ export function resolveCellConveyors(buildings: readonly BuildingInstance[], cel
   for (const to of cells) {
     const incoming = cells.filter((from) => next.get(from.id)?.id === to.id);
     if (incoming.length !== 1 || rise.get(to.id)! > epsilon ||
-        sourceMachines.some((machine) => cellTouchesMachine(to, machine, cellSize, 'source', true))) continue;
+        sourceMachines.some((machine) => cellTouchesSource(to, machine, cellSize, true))) continue;
     const from = incoming[0]!, a = pathForBuilding(from, cellSize)!.direction('output');
     const b = pathForBuilding(to, cellSize)!.direction('input');
     const drop = from.transform.y + rise.get(from.id)! - to.transform.y;
@@ -101,6 +115,7 @@ export function resolveCellConveyors(buildings: readonly BuildingInstance[], cel
   }
   // A sideways Miner output also enters through a tile edge, not its rear inlet.
   for (const machine of buildings.filter((b) => (b.typeId === 'miner-mk1' || isDirectionalMachine(b.typeId)))) {
+    if (machine.typeId === 'splitter') continue;
     const cell = cells.find((b) => cellTouchesMachine(b, machine, cellSize, 'source'));
     if (!cell) continue;
     const port = machinePort(machine, cellSize, 'source'), direction = pathForBuilding(cell, cellSize)!.direction('input');

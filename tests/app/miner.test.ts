@@ -134,3 +134,25 @@ describe('constructor through real bootstrap with mocked rendering', () => {
     key('KeyE'); frame(); expect(panel.textContent).toMatch(/Output: [1-9]/);
   });
 });
+
+describe('splitter through real bootstrap with mocked rendering', () => {
+  it('offers construction, places the splitter and opens inspection', async () => {
+    vi.spyOn(console, 'info').mockImplementation(() => undefined);
+    await import('../../src/main'); await vi.waitFor(() => expect(state.init).toBe(1)); frame();
+    const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
+    canvas.dispatchEvent(new MouseEvent('mousedown', { button: 0, clientX: 5000, clientY: 5000 }));
+    window.dispatchEvent(new MouseEvent('mousemove', { clientX: 5000, clientY: 5200 })); frame();
+    window.dispatchEvent(new MouseEvent('mouseup'));
+    key('KeyQ'); const menu = document.querySelector<HTMLElement>('[data-ui="construction"]')!;
+    const entry = menu.querySelector<HTMLButtonElement>('[data-building="splitter"]')!;
+    expect(entry.disabled).toBe(false); entry.click(); frame(); expect(state.preview?.reason).toBe('valid');
+    canvas.dispatchEvent(new MouseEvent('mousedown', { button: 0, bubbles: true }));
+    canvas.dispatchEvent(new MouseEvent('mouseup', { button: 0, bubbles: true })); frame();
+    expect(state.buildings[0]?.typeId).toBe('splitter'); key('Escape'); frame();
+    canvas.dispatchEvent(new MouseEvent('mousedown', { button: 0, clientX: 5000, clientY: 5000 }));
+    window.dispatchEvent(new MouseEvent('mousemove', { clientX: 5000, clientY: 4920 })); frame();
+    window.dispatchEvent(new MouseEvent('mouseup')); key('KeyE'); frame();
+    const panel = document.querySelector<HTMLElement>('[data-ui="logistics"]')!;
+    expect(panel.hidden).toBe(false); expect(panel.textContent).toContain('Splitter'); expect(panel.textContent).toContain('buffer empty');
+  });
+});

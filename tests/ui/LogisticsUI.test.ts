@@ -106,3 +106,21 @@ it('shows storage capacity and transfers only what fits in either direction', ()
   expect(player.getItemCount('iron-ore')).toBe(100); expect(inventory.getItemCount('iron-ore')).toBe(704);
   expect(root.textContent).toContain('Transferred 96; 704 remain.'); ui.dispose();
 });
+
+it('inspects and recovers the buffered splitter item without discarding it on a full player', () => {
+  document.body.innerHTML = '<section hidden><h2 data-logistics-title></h2><button data-logistics-close>close</button><p data-logistics-details></p><div data-logistics-grid hidden></div><p data-logistics-slot-detail></p><div data-logistics-player-pane><div data-logistics-player-grid></div><p data-logistics-player-capacity></p><p data-logistics-player-detail></p></div><button data-logistics-retrieve>retrieve</button><p data-logistics-notice></p></section>';
+  const root = document.querySelector('section')!, items = createDefaultItemRegistry(), builder = new Inventory(items, 5);
+  const buildings = new BuildingSystem(createDefaultBuildingRegistry(items), builder, terrain, [], 1, 19); buildings.setCreativeMode(true);
+  const machines = new MachineManager(buildings, items, () => []), logistics = new LogisticsManager(buildings, machines, items);
+  const splitter = buildings.place('splitter', 0, 0, 0, { x: 8, z: 8, radius: .4 }).building!;
+  logistics.sync(); const junction = logistics.splitter(splitter.id)!;
+  const pose = { position: { x: 0, y: .5, z: 1 }, direction: { x: 0, y: 0, z: -1 } };
+  junction.receiver(pose).accept('coal');
+  const player = new Inventory(items, 1); player.addItem('stone', 100);
+  const ui = new LogisticsUI(root, logistics, player, vi.fn()); ui.open(splitter.id);
+  expect(root.querySelector('[data-logistics-title]')!.textContent).toBe('Splitter'); expect(root.textContent).toContain('Buffered: Coal');
+  const retrieve = root.querySelector<HTMLButtonElement>('[data-logistics-retrieve]')!; retrieve.click();
+  expect(junction.pending).toBe('coal'); expect(root.textContent).toContain('Transferred 0; 1 remain.');
+  player.removeItem('stone', 100); retrieve.click(); expect(junction.pending).toBeNull(); expect(player.getItemCount('coal')).toBe(1);
+  expect(retrieve.disabled).toBe(true); ui.dispose();
+});

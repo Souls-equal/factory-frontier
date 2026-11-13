@@ -1301,3 +1301,20 @@ transfers and conveyor transport; synchronous transfer methods and the fixed clo
 retain conservation and backpressure. The inspection UI reuses logistics slots
 and adds selected-stack deposit. No transport filtering, FIFO guarantee, ground
 item collection or legacy two-cell conveyor support is provided.
+
+## Implementation note — Phase 7 balanced splitter
+
+`Splitter` owns a one-item buffer and a persistent round-robin cursor. It exposes
+one input receiver and three output sources. `LogisticsManager` wires one-cell
+belts at the four directional ports, protects buffered contents from demolition,
+and offers manual retrieval through `LogisticsUI`. Placement and topology
+planning reject multiple lanes at the same port and anchor adjacent belts at the
+correct height. Rendered port colors mirror the logical ports.
+
+`ConveyorNetwork` first identifies source belts with capacity and then asks a
+shared `SourceArbiter` to choose one among the ready sources. This maintains
+round-robin fairness, skips blocked/absent branches and transfers at most one
+buffered item in the tick. Normal non-grouped sources retain their existing
+behavior. A belt may fill before a downstream blockage makes it unavailable.
+Only balanced routing is implemented: no configurable overflow/priority, no
+legacy two-cell support or ground-drop intake. Splitter buffering is session-only.

@@ -24,5 +24,5 @@ are not individually confirmed.
 Mixed items are emitted from the first occupied storage slot, not FIFO or sorted.
 An incompatible/full destination can therefore hold up other items behind it.
 The container does not automatically collect items dropped on the ground, and
-legacy two-cell conveyor types are not supported. Splitters, mergers and lifts
-remain future Phase 7 work. Record any issue and its layout/orientation.
+legacy two-cell conveyor types are not supported. The balanced splitter is
+described in `PHASE_7_SPLITTER_CHECK.md`; mergers and lifts remain future work. Record any issue and its layout/orientation.

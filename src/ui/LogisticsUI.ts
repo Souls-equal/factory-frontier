@@ -41,7 +41,7 @@ export class LogisticsUI {
   closePanel(): void { this.active = null; this.selected = null; this.root.hidden = true; }
   update(): void {
     if (!this.active || !this.isOpen) return;
-    const segment = this.logistics.network.get(this.active), receiver = this.logistics.terminal(this.active);
+    const segment = this.logistics.network.get(this.active), receiver = this.logistics.terminal(this.active), splitter = this.logistics.splitter(this.active);
     if (segment) {
       this.title.textContent = `Conveyor: ${segment.path.spec.shape}`;
       const d = segment.path.direction('output');
@@ -49,6 +49,15 @@ export class LogisticsUI {
       this.details.textContent = `State: ${segment.state} · Direction: ${direction} · Input: ${segment.input ?? segment.source?.id ?? 'not connected'} · Output: ${segment.output ?? segment.receiver?.id ?? 'not connected'} · Items: ${segment.items.length} · Maximum throughput: ${segment.settings.throughputPerMinute} items/min · ${segment.state === 'BLOCKED' ? (segment.output || segment.receiver || this.logistics.network.isCell(segment.id) ? 'Downstream is full or occupied.' : 'Open end: connect another belt or a receiver.') : segment.state === 'DISCONNECTED' ? 'Connect the input to a source.' : !segment.output && !segment.receiver ? (this.logistics.network.dropsOpenEnds ? 'Open end: items fall off.' : 'Open end: items will stop here.') : ''}`;
       if (this.deposit) this.deposit.hidden = true;
       this.grid.hidden = true; this.playerPane.hidden = true; this.slotDetail.textContent = ''; this.retrieve.hidden = true;
+    } else if (splitter) {
+      this.title.textContent = 'Splitter';
+      const heading = this.root.querySelector('[data-logistics-storage-heading]'), badge = this.root.querySelector('[data-logistics-storage-badge]');
+      if (heading) heading.textContent = 'Splitter';
+      if (badge) badge.textContent = 'BALANCED';
+      this.details.textContent = splitter.pending ? `Buffered: ${this.player.registry.get(splitter.pending).name}. Connect an output or retrieve it.` : 'Balanced distribution · buffer empty.';
+      this.grid.hidden = true; this.playerPane.hidden = true; this.slotDetail.textContent = '';
+      if (this.deposit) this.deposit.hidden = true;
+      this.retrieve.hidden = false; this.retrieve.disabled = !splitter.pending;
     } else if (receiver) {
       const isStorage = this.logistics.isStorage(this.active);
       this.title.textContent = isStorage ? 'Storage Container' : 'Receiving Terminal';
@@ -123,7 +132,7 @@ export class LogisticsUI {
     this.notice.textContent = `Stored ${result.moved}; ${result.remainder} remain in inventory.`; this.update();
   };
   private readonly handleRetrieve = (): void => {
-    if (!this.active || !this.logistics.terminal(this.active)) return;
+    if (!this.active || (!this.logistics.terminal(this.active) && !this.logistics.splitter(this.active))) return;
     const result = this.logistics.retrieve(this.active, this.player);
     this.notice.textContent = `Transferred ${result.moved}; ${result.remainder} remain.`; this.update();
   };

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — balanced splitter
+
+- Add a one-input, three-output splitter with fair round-robin selection and
+  blocked-branch fallback for one-cell belts.
+- Protect its one-item buffer on demolition; provide inspection and retrieval.
+- Record that the player deferred storage and splitter play-tests to test together.
+
 ## Unreleased — Phase 7 storage slice
 
 - Add an eight-stack Storage Container with directional one-cell conveyor input

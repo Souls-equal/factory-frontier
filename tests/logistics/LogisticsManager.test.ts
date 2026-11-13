@@ -997,3 +997,90 @@ it('backs up the miner into a full container and resumes after space is freed', 
   expect(stock.getItemCount('iron-ore') + logistics.network.get(belt.id)!.items.length + box.getItemCount('iron-ore')).toBe(790);
   box.removeItem('iron-ore', 790); expect(buildings.demolish(storage.id)).toBe('removed');
 });
+
+it.each([0, 1, 2, 3])('connects all splitter ports at rotation %i in either placement order', (r) => {
+  for (const first of [true, false]) {
+    const { buildings, logistics } = setup(); buildings.setCreativeMode(true);
+    const rotate = (x: number, z: number) => { const a = r * Math.PI / 2; return { x: Math.round(x * Math.cos(a) + z * Math.sin(a)) / 2, z: Math.round(-x * Math.sin(a) + z * Math.cos(a)) / 2 }; };
+    const cells = [[-1, 3, 0], [-1, -3, 0], [-3, -1, 1], [3, 1, 3]] as const;
+    const buildCells = () => cells.map(([x,z,rotation]) => { const p = rotate(x,z); return place(buildings, 'conveyor-cell', p.x, p.z, (rotation+r)%4); });
+    let splitter: ReturnType<typeof place>, belts: ReturnType<typeof buildCells>;
+    if (first) { splitter = place(buildings, 'splitter', 0, 0, r); belts = buildCells(); }
+    else { belts = buildCells(); splitter = place(buildings, 'splitter', 0, 0, r); }
+    logistics.sync(); expect(logistics.network.get(belts[0]!.id)!.receiver?.id).toBe(splitter.id);
+    for (let i = 0; i < 3; i++) expect(logistics.network.get(belts[i+1]!.id)!.source?.id).toBe(`${splitter.id}:output:${i}`);
+  }
+});
+
+it('distributes a stored supply fairly across three terminals and preserves all items', () => {
+  const { buildings, logistics } = setup(); buildings.setCreativeMode(true);
+  const supply = place(buildings, 'storage-container', 0, 3);
+  place(buildings, 'conveyor-cell', -.5, 1.5); const splitter = place(buildings, 'splitter', 0, 0);
+  place(buildings, 'conveyor-cell', -.5, -1.5); place(buildings, 'conveyor-cell', -1.5, -.5, 1); place(buildings, 'conveyor-cell', 1.5, .5, 3);
+  const destinations = [place(buildings, 'receiving-terminal', 0, -3), place(buildings, 'receiving-terminal', -3, 0), place(buildings, 'receiving-terminal', 3, 0)];
+  logistics.sync(); logistics.terminal(supply.id)!.addItem('iron-ore', 30);
+  const total = () => logistics.terminal(supply.id)!.getItemCount('iron-ore') + (logistics.splitter(splitter.id)!.pending ? 1 : 0) +
+    logistics.network.all().reduce((n, belt) => n + belt.items.length, 0) + destinations.reduce((n, b) => n + logistics.terminal(b.id)!.getItemCount('iron-ore'), 0);
+  for (let i = 0; i < 1600; i++) { logistics.fixedUpdate(50); expect(total()).toBe(30); }
+  expect(destinations.map((b) => logistics.terminal(b.id)!.getItemCount('iron-ore'))).toEqual([10,10,10]);
+});
+
+it('bypasses a blocked splitter branch and resumes balanced delivery when it clears', () => {
+  const { buildings, logistics } = setup(); buildings.setCreativeMode(true);
+  const supply = place(buildings, 'storage-container', 0, 3); place(buildings, 'conveyor-cell', -.5, 1.5);
+  const splitter = place(buildings, 'splitter', 0, 0);
+  place(buildings, 'conveyor-cell', -.5, -1.5); place(buildings, 'conveyor-cell', -1.5, -.5, 1); place(buildings, 'conveyor-cell', 1.5, .5, 3);
+  const ends = [place(buildings, 'receiving-terminal', 0, -3), place(buildings, 'receiving-terminal', -3, 0), place(buildings, 'receiving-terminal', 3, 0)];
+  logistics.sync(); const stores = ends.map((b) => logistics.terminal(b.id)!);
+  stores[0]!.addItem('stone', 100); logistics.terminal(supply.id)!.addItem('iron-ore', 60);
+  for (let i = 0; i < 900; i++) logistics.fixedUpdate(50);
+  expect(stores[1]!.getItemCount('iron-ore')).toBeGreaterThan(10); expect(stores[2]!.getItemCount('iron-ore')).toBeGreaterThan(10);
+  stores[0]!.removeItem('stone', 100);
+  for (let i = 0; i < 1200; i++) logistics.fixedUpdate(50);
+  const total = logistics.terminal(supply.id)!.getItemCount('iron-ore') + (logistics.splitter(splitter.id)!.pending ? 1 : 0) + logistics.network.all().reduce((n,b) => n + b.items.length, 0) + stores.reduce((n,s) => n + s.getItemCount('iron-ore'), 0);
+  expect(total).toBe(60); expect(stores[0]!.getItemCount('iron-ore')).toBeGreaterThan(0);
+});
+
+it('protects and allows recovery of a splitter buffer when all outputs are absent', () => {
+  const { buildings, logistics, items } = setup(); buildings.setCreativeMode(true);
+  const belt = place(buildings, 'conveyor-cell', -.5, 1.5), splitter = place(buildings, 'splitter', 0, 0);
+  logistics.sync(); const receiver = logistics.network.get(belt.id)!.receiver!;
+  expect(receiver.canAccept('not-an-item')).toBe(false); expect(receiver.accept('not-an-item')).toBe(false);
+  expect(receiver.accept('coal')).toBe(true); expect(receiver.accept('iron-ore')).toBe(false);
+  expect(buildings.demolish(splitter.id)).toBe('output not empty');
+  const player = new Inventory(items, 1); player.addItem('iron-ore', 100);
+  expect(logistics.retrieve(splitter.id, player).moved).toBe(0); expect(logistics.splitter(splitter.id)!.pending).toBe('coal');
+  player.removeItem('iron-ore', 100); expect(logistics.retrieve(splitter.id, player).moved).toBe(1);
+  expect(buildings.demolish(splitter.id)).toBe('removed');
+});
+
+it('rejects two belts competing for a splitter port before charging the player', () => {
+  const { buildings, playerInventory } = setup(); buildings.setCreativeMode(true);
+  place(buildings, 'splitter', 0, 0); place(buildings, 'conveyor-cell', -.5, 1.5);
+  const before = playerInventory.snapshot();
+  expect(buildings.place('conveyor-cell', .5, 1.5, 0, player).reason).toBe('incompatible connection');
+  expect(playerInventory.snapshot()).toEqual(before);
+  place(buildings, 'conveyor-cell', -.5, -1.5);
+  expect(buildings.place('conveyor-cell', .5, -1.5, 0, player).reason).toBe('incompatible connection');
+});
+
+it('holds items safely when every splitter output is blocked and resumes after one clears', () => {
+  const { buildings, logistics } = setup(); buildings.setCreativeMode(true);
+  const supply = place(buildings, 'storage-container', 0, 3); place(buildings, 'conveyor-cell', -.5, 1.5);
+  const splitter = place(buildings, 'splitter', 0, 0);
+  place(buildings, 'conveyor-cell', -.5, -1.5); place(buildings, 'conveyor-cell', -1.5, -.5, 1); place(buildings, 'conveyor-cell', 1.5, .5, 3);
+  const ends = [place(buildings, 'receiving-terminal', 0, -3), place(buildings, 'receiving-terminal', -3, 0), place(buildings, 'receiving-terminal', 3, 0)];
+  logistics.sync(); const stores = ends.map((b) => logistics.terminal(b.id)!);
+  for (const store of stores) store.addItem('stone', 100);
+  logistics.terminal(supply.id)!.addItem('iron-ore', 30);
+  for (let i = 0; i < 800; i++) logistics.fixedUpdate(50);
+  expect(logistics.splitter(splitter.id)!.pending).toBe('iron-ore');
+  expect(logistics.terminal(supply.id)!.getItemCount('iron-ore')).toBeGreaterThan(0);
+  expect(buildings.demolish(splitter.id)).toBe('output not empty');
+  stores[1]!.removeItem('stone', 100);
+  for (let i = 0; i < 1600; i++) logistics.fixedUpdate(50);
+  expect(stores[1]!.getItemCount('iron-ore')).toBeGreaterThan(20);
+  const total = logistics.terminal(supply.id)!.getItemCount('iron-ore') + (logistics.splitter(splitter.id)!.pending ? 1 : 0) +
+    logistics.network.all().reduce((n,b) => n + b.items.length, 0) + stores.reduce((n,s) => n + s.getItemCount('iron-ore'), 0);
+  expect(total).toBe(30);
+});

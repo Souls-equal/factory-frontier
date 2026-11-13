@@ -1,4 +1,4 @@
-import { cellAhead, cellEntryFraction, cellTouchesMachine } from './CellConveyor';
+import { cellAhead, cellEntryFraction, cellTouchesMachine, splitterOutputTouches } from './CellConveyor';
 import type { BuildingInstance, BuildingSystem } from '../buildings/BuildingSystem';
 import type { SimulationSystem } from '../core/Game';
 import { Inventory, type QuantityResult } from '../items/Inventory';
@@ -8,14 +8,16 @@ import { Smelter, SMELTER_FUEL } from '../machines/Smelter';
 import { ConveyorNetwork, type ConveyorSettings, DEFAULT_CONVEYOR_SETTINGS } from './ConveyorNetwork';
 import type { GroundItems } from './GroundItems';
 import { InventoryReceiver, InventorySource } from './Ports';
+import { Splitter } from './Splitter';
 
-import { pathForBuilding, machinePort, RECEIVER_TYPE } from './ConveyorDefinitions';
+import { pathForBuilding, machinePort, splitterPort, RECEIVER_TYPE } from './ConveyorDefinitions';
 
 /** Bridges registered buildings to the existing conveyor simulation, not the renderer. */
 export class LogisticsManager implements SimulationSystem {
   readonly id = 'logistics';
   readonly network: ConveyorNetwork;
   private readonly terminals = new Map<string, Inventory>();
+  private readonly splitters = new Map<string, Splitter>();
   private seenRevision = -1;
   constructor(private readonly buildings: BuildingSystem, private readonly machines: MachineManager,
     private readonly items: ItemRegistry, private readonly paused: () => boolean = () => false,
@@ -24,7 +26,7 @@ export class LogisticsManager implements SimulationSystem {
     if (!Number.isSafeInteger(terminalSlots) || terminalSlots < 1) throw new RangeError('Invalid receiver capacity');
     this.network = new ConveyorNetwork(() => false, groundItems ? (item, position) => groundItems.drop(item.id, item.itemId, position) : undefined);
     buildings.addTopologyGuard((before, after) => {
-      const relevant = (entries: typeof before) => entries.filter((b) => b.typeId.startsWith('conveyor-') || b.typeId === 'miner-mk1' || (b.typeId === 'smelter' || b.typeId === 'constructor') || b.typeId === RECEIVER_TYPE || b.typeId === 'storage-container')
+      const relevant = (entries: typeof before) => entries.filter((b) => b.typeId.startsWith('conveyor-') || b.typeId === 'miner-mk1' || (b.typeId === 'smelter' || b.typeId === 'constructor') || b.typeId === RECEIVER_TYPE || b.typeId === 'storage-container' || b.typeId === 'splitter')
         .map((b) => [b.id, b.typeId, b.transform.x, b.transform.y, b.transform.z, b.transform.rotation, b.autoConveyor, b.cellConveyor]);
       if (JSON.stringify(relevant(before)) === JSON.stringify(relevant(after))) return true;
       this.sync();
@@ -41,12 +43,15 @@ export class LogisticsManager implements SimulationSystem {
     });
     buildings.addDemolitionGuard((building) => {
       const segment = this.network.get(building.id);
-      return (!segment || segment.items.length === 0) && (this.terminals.get(building.id)?.usedSlots ?? 0) === 0;
+      return (!segment || segment.items.length === 0) && (this.terminals.get(building.id)?.usedSlots ?? 0) === 0 && !this.splitters.get(building.id)?.pending;
     });
   }
+  splitter(id: string): Splitter | undefined { return this.splitters.get(id); }
   terminal(id: string): Inventory | undefined { return this.terminals.get(id); }
   isStorage(id: string): boolean { return this.buildings.get(id)?.typeId === 'storage-container'; }
   retrieve(id: string, destination: Inventory): QuantityResult {
+    const splitter = this.splitters.get(id);
+    if (splitter) return splitter.retrieve(destination);
     const inventory = this.terminals.get(id);
     if (!inventory) throw new RangeError('Unknown receiving terminal');
     let requested = 0, moved = 0;
@@ -70,7 +75,12 @@ export class LogisticsManager implements SimulationSystem {
         this.terminals.delete(id);
       }
     }
+    for (const [id, splitter] of this.splitters) if (!byId.has(id)) {
+      if (splitter.pending) throw new Error('Cannot discard a non-empty splitter');
+      this.splitters.delete(id);
+    }
     for (const building of buildings) {
+      if (building.typeId === 'splitter' && !this.splitters.has(building.id)) this.splitters.set(building.id, new Splitter(building.id, this.items));
       const path = pathForBuilding(building, this.buildings.cellSize);
       if (path && !this.network.get(building.id)) {
         if (building.typeId === 'conveyor-cell') this.network.addCell(building.id, path, { ...this.settings, spacing: Math.min(this.settings.spacing, path.length / 2) });
@@ -131,6 +141,17 @@ export class LogisticsManager implements SimulationSystem {
           accept: (itemId: string) => destination(itemId)?.accept(itemId) ?? false };
         for (const cell of cells) if (cellTouchesMachine(cell, building, this.buildings.cellSize, 'receiver')) this.network.attachCellReceiver(cell.id, receiver);
         for (const segment of legacy) if (this.network.attachReceiver(segment.id, receiver)) break;
+      }
+      const splitter = this.splitters.get(building.id);
+      if (splitter) {
+        const input = cells.find((cell) => cellTouchesMachine(cell, building, this.buildings.cellSize, 'receiver'));
+        if (input) this.network.attachCellReceiver(input.id, splitter.receiver(machinePort(building, this.buildings.cellSize, 'receiver')));
+        for (let i = 0; i < 3; i++) {
+          const cell = cells.find((entry) => splitterOutputTouches(entry, building, this.buildings.cellSize, i));
+          if (!cell) continue;
+          const pose = splitterPort(building, this.buildings.cellSize, i);
+          this.network.attachCellSource(cell.id, splitter.source(i, pose), 0);
+        }
       }
       const terminal = this.terminals.get(building.id);
       if (terminal) {
