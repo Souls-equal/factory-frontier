@@ -189,3 +189,25 @@ it('configures a storage output filter through the actual page and preserves man
   ui.open(terminal.id); expect(settings.hidden).toBe(true);
   ui.open(sink.id); expect(settings.hidden).toBe(false); expect(filter.value).toBe(''); ui.dispose();
 });
+
+it('configures independent splitter item filters through the actual page', () => {
+  const html = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../../index.html'), 'utf8');
+  document.body.innerHTML = /<body[^>]*>([\s\S]*)<\/body>/i.exec(html)![1]!;
+  const root = document.querySelector<HTMLElement>('[data-ui="logistics"]')!, items = createDefaultItemRegistry(), player = new Inventory(items, 5);
+  const buildings = new BuildingSystem(createDefaultBuildingRegistry(items), player, terrain, [], 1, 19); buildings.setCreativeMode(true);
+  const logistics = new LogisticsManager(buildings, new MachineManager(buildings, items, () => []), items);
+  const far = { x: 8, z: 8, radius: .4 }, first = buildings.place('splitter', 0, 0, 0, far).building!, second = buildings.place('splitter', 4, 0, 0, far).building!;
+  logistics.sync(); const ui = new LogisticsUI(root, logistics, player, vi.fn()); ui.open(first.id);
+  const mode = root.querySelector<HTMLSelectElement>('[data-splitter-mode]')!, priority = root.querySelector<HTMLSelectElement>('[data-splitter-priority]')!;
+  const box = root.querySelector<HTMLElement>('[data-splitter-filters]')!, selects = [...root.querySelectorAll<HTMLSelectElement>('[data-splitter-filter]')];
+  expect(box.hidden).toBe(true); expect(selects).toHaveLength(3); expect(selects[0]!.options.length).toBe(items.all().length + 1);
+  mode.value = 'filtered'; mode.dispatchEvent(new Event('change')); expect(box.hidden).toBe(false); expect(priority.disabled).toBe(true);
+  selects[0]!.value = 'coal'; selects[0]!.dispatchEvent(new Event('change')); selects[1]!.value = 'iron-ore'; selects[1]!.dispatchEvent(new Event('change'));
+  expect(logistics.splitter(first.id)!.filters).toEqual(['coal','iron-ore',null]);
+  mode.value = 'overflow'; mode.dispatchEvent(new Event('change')); expect(box.hidden).toBe(true); expect(priority.disabled).toBe(false);
+  mode.value = 'filtered'; mode.dispatchEvent(new Event('change')); expect(selects.map((s) => s.value)).toEqual(['coal','iron-ore','']);
+  ui.open(second.id); expect(box.hidden).toBe(true); expect(mode.value).toBe('balanced');
+  ui.open(first.id); expect(box.hidden).toBe(false); expect(selects.map((s) => s.value)).toEqual(['coal','iron-ore','']);
+  ui.closePanel(); selects[0]!.value = 'wood'; selects[0]!.dispatchEvent(new Event('change'));
+  expect(logistics.splitter(first.id)!.filters[0]).toBe('coal'); ui.dispose();
+});
