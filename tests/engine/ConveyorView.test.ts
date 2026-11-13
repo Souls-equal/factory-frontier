@@ -89,3 +89,16 @@ it('renders coal distinctly from iron ingots on belts and on the ground', () => 
   mesh.getColorAt(0, coal); mesh.getColorAt(1, ingot);
   expect(coal.getHex()).toBe(0x303a3c); expect(ingot.getHex()).toBe(0xaac5ce); view.dispose();
 });
+
+it('renders constructor controls and directional ports in previews and scene', () => {
+  const registry = createDefaultBuildingRegistry(createDefaultItemRegistry()), view = new BuildingView(registry, 1);
+  const transform = snapFootprint(registry.get('constructor'), 0, 0, 0, 1);
+  view.sync([{ id: 'press', typeId: 'constructor', transform }]);
+  expect(view.group.getObjectByName('constructor-press')).toBeDefined();
+  expect(view.group.getObjectByName('machine-input-port')).toBeDefined();
+  expect(view.group.getObjectByName('machine-output-port')).toBeDefined();
+  expect(view.group.getObjectByName('conveyor-surface')).toBeUndefined();
+  view.setMachineStates([{ id: 'press', state: 'RUNNING' }]);
+  view.setPreview('constructor', { reason: 'valid', transform });
+  expect(view.group.getObjectByName('building-preview')).toBeDefined(); view.dispose();
+});

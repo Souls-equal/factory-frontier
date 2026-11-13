@@ -66,6 +66,10 @@ export function createDefaultBuildingRegistry(items: ItemRegistry): BuildingRegi
     description: 'Smelts iron ore with coal. Cyan: input at rear; yellow: output at front.',
     cost: [{ itemId: 'stone', quantity: 15 }, { itemId: 'wood', quantity: 10 }], widthCells: 2, depthCells: 2,
     height: 2.2, maxSlope: .58, maxGroundVariation: .8, color: 0x7b7370, placement: 'logistics' });
+  registry.register({ id: 'constructor', name: 'Constructor', category: 'Production',
+    description: 'Presses iron ingots into plates. Cyan: input at rear; yellow: output at front.',
+    cost: [{ itemId: 'stone', quantity: 15 }, { itemId: 'wood', quantity: 10 }], widthCells: 2, depthCells: 2,
+    height: 2.2, maxSlope: .58, maxGroundVariation: .8, color: 0x56777e, placement: 'logistics' });
   registry.register({ id: 'conveyor-cell', name: 'Conveyor', description: 'One cell. Faces your view and transfers to the belt ahead.', category: 'Logistics', placement: 'logistics', cost: [{ itemId: 'stone', quantity: 4 }, { itemId: 'wood', quantity: 2 }], widthCells: 1, depthCells: 1, height: .55, maxSlope: .58, maxGroundVariation: .8, color: 0x697f83 });
   for (const [id, name, description, height] of [
     ['conveyor-auto', 'Conveyor', 'Automatically connects and turns toward adjacent conveyors.', .55],

@@ -1,5 +1,5 @@
 import type { BuildingInstance } from '../buildings/BuildingSystem';
-import { BELT_HEIGHT, machinePort, pathForBuilding } from './ConveyorDefinitions';
+import { BELT_HEIGHT, machinePort, pathForBuilding, isProcessorBuilding } from './ConveyorDefinitions';
 
 const epsilon = 1e-7;
 /** Whether a machine's 2-cell-wide port touches a particular one-cell lane. */
@@ -13,7 +13,7 @@ export function cellTouchesMachine(cell: BuildingInstance, machine: BuildingInst
     const d = path.direction('output'), p = path.point(path.length), f = machine.transform.footprint;
     const acrossX = d.x !== 0 && Math.abs(p.x - (d.x > 0 ? f.minX : f.maxX)) < epsilon && p.z > f.minZ + epsilon && p.z < f.maxZ - epsilon;
     const acrossZ = d.z !== 0 && Math.abs(p.z - (d.z > 0 ? f.minZ : f.maxZ)) < epsilon && p.x > f.minX + epsilon && p.x < f.maxX - epsilon;
-    const directional = machine.typeId !== 'smelter' || (d.x === port.direction.x && d.z === port.direction.z);
+    const directional = !isProcessorBuilding(machine.typeId) || (d.x === port.direction.x && d.z === port.direction.z);
     return directional && (acrossX || acrossZ) && (ignoreHeight || Math.abs(p.y - (machine.transform.y + BELT_HEIGHT)) < epsilon);
   }
   const dx = cell.transform.x - port.position.x, dz = cell.transform.z - port.position.z;
@@ -76,7 +76,7 @@ export function resolveCellConveyors(buildings: readonly BuildingInstance[], cel
   // sloped deck. Retain the existing centre-entry solution for junctions or a
   // tile that must also climb: they cannot share one straight descending deck.
   const offsets = new Map(cells.map((b) => [b.id, 0]));
-  const sourceMachines = buildings.filter((b) => (b.typeId === 'miner-mk1' || b.typeId === 'smelter'));
+  const sourceMachines = buildings.filter((b) => (b.typeId === 'miner-mk1' || isProcessorBuilding(b.typeId)));
   for (const to of cells) {
     const incoming = cells.filter((from) => next.get(from.id)?.id === to.id);
     if (incoming.length !== 1 || rise.get(to.id)! > epsilon ||
@@ -100,7 +100,7 @@ export function resolveCellConveyors(buildings: readonly BuildingInstance[], cel
       startHeight: from.transform.y + offsets.get(from.id)! + rise.get(from.id)! - to.transform.y });
   }
   // A sideways Miner output also enters through a tile edge, not its rear inlet.
-  for (const machine of buildings.filter((b) => (b.typeId === 'miner-mk1' || b.typeId === 'smelter'))) {
+  for (const machine of buildings.filter((b) => (b.typeId === 'miner-mk1' || isProcessorBuilding(b.typeId)))) {
     const cell = cells.find((b) => cellTouchesMachine(b, machine, cellSize, 'source'));
     if (!cell) continue;
     const port = machinePort(machine, cellSize, 'source'), direction = pathForBuilding(cell, cellSize)!.direction('input');

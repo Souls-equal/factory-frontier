@@ -14,19 +14,19 @@
 ## PROGRESS TRACKER
 
 **Last updated:** 2026-11-11
-**Current phase:** Phase 6 first smelter slice in progress; Phase 5 acceptance incomplete
+**Current phase:** Phase 6 production chain implemented; user acceptance pending; Phase 5 acceptance incomplete
 
 The user explicitly authorized the next step after confirming in-game miner →
 conveyor → terminal transport, turns/slopes without item loss, and blockage/recovery.
 Other Phase 5 checklist scenarios were not explicitly confirmed. Starting the
 smelter slice before full Phase 5 acceptance is a user-directed exception to the
 existing Phase 5 gate below; it does not mark that phase accepted or complete.
-Phase 6 is not complete: constructor and iron plates remain to be implemented.
+Phase 6 is not accepted: the constructor and plate recipe are implemented, but the complete chain still requires user validation.
 At the user's request the smelter now directly consumes coal (1 per iron ingot);
 this is an early fuel exception, not the Phase 8 electrical power network. The
 user subsequently reported testing without specifying results. A user-requested,
 session-only creative construction toggle bypasses building costs but does not
-bypass placement rules or machine inputs; it is a testing aid, not a new phase.
+bypass placement rules or machine inputs; the user confirmed it works. It is a testing aid, not a new phase.
 
 The voxel transition is underway within Phase 5: finite starter resources and a
 no-iron first Miner and block-style models for current world objects are implemented;
@@ -44,7 +44,7 @@ detailed evidence and verification results live in `PROJECT_STATUS.md`.
 | 3 — Building and placement | 🟡 Acceptance pending | Construction menu, preview, validation, grid, rotation, registration and demolition implemented; real-browser acceptance pending |
 | 4 — First automated extractor | 🟡 User accepted | Browser verification remains pending |
 | 5 — Conveyor foundation | 🟡 Partially user-validated | User confirmed miner → terminal, turns/slopes, blockage and recovery; remaining checklist not confirmed |
-| 6 — First production chain | 🟡 First slice | Coal-fueled smelter and iron ingots implemented; constructor, plates and full acceptance pending |
+| 6 — First production chain | 🟡 User acceptance pending | Coal-fueled smelter, constructor and plates implemented and simulated; complete-chain play test pending |
 | 7 — Advanced logistics | ◻ Planned | — |
 | 8 — Electricity | ◻ Planned | — |
 | 9 — Advanced manufacturing | ◻ Planned | — |

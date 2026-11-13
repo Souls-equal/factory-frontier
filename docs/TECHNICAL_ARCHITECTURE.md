@@ -1264,7 +1264,8 @@ user-requested direct-fuel exception consumes 1 coal per completed recipe cycle;
 Fuel and ore are committed only on completion, and partial progress is retained
 across interruptions. The receiver routes ore and coal into independent bounded
 buffers, and demolition protects each buffer. This does not implement electrical
-power networks (Phase 8), recipe selection, constructors or plates. Legacy
+power networks (Phase 8) or recipe selection. The later constructor/plate slice
+is documented below. Legacy
 two-cell automatic conveyors do not route through the smelter; the currently
 selectable one-cell conveyor is supported.
 
@@ -1277,3 +1278,15 @@ on each building, preserved through topology replans, and governs demolition
 refunds independently of the current flag. All non-cost validation and demolition
 guards remain in force. No inventory items, machine fuel, recipes, power network
 or persistence are added by this mode.
+
+## Implementation note — constructor and iron plates
+
+`machines/Processor.ts` owns the shared fixed-recipe simulation, bounded
+input/output inventories, progress and preflight logic. Smelter extends it with
+the existing direct coal policy; `ConstructorMachine` uses the no-fuel base for
+its fixed 1 ingot → 1 plate / 2 s recipe. `MachineManager` owns lifecycle and
+demolition guards; `LogisticsManager` routes filtered input and conditional
+output for both processors through the existing one-cell conveyor network.
+The constructor has no electrical network requirement in this slice, and has
+no recipe selector because only one recipe is available. Legacy automatic
+two-cell conveyor topology remains unsupported for these processors.

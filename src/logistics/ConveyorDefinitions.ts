@@ -5,12 +5,13 @@ import type { PortPose } from './Ports';
 export const CONVEYOR_SHAPES: Readonly<Record<string, ConveyorShape>> = Object.freeze({
   'conveyor-cell': 'straight', 'conveyor-straight': 'straight', 'conveyor-curve': 'curve-right', 'conveyor-incline': 'incline',
 });
+export const isProcessorBuilding = (typeId: string): boolean => typeId === 'smelter' || typeId === 'constructor';
 export const RECEIVER_TYPE = 'receiving-terminal';
 export const BELT_HEIGHT = .5;
 export const DEFAULT_INCLINE_RISE = 1;
 
 export function pathForBuilding(building: BuildingInstance, cellSize: number): ConveyorPath | undefined {
-  const shape = building.typeId === 'conveyor-auto' ? (building.autoConveyor?.shape ?? 'straight') : building.typeId === 'conveyor-cell' && building.cellConveyor?.rise ? 'incline' : CONVEYOR_SHAPES[building.typeId];
+  const shape = building.typeId === 'conveyor-auto' ? (building.autoConveyor?.shape ?? 'straight') : building.typeId === 'conveyor-cell' && building.cellConveyor?.rise ? 'incline' : Object.hasOwn(CONVEYOR_SHAPES, building.typeId) ? CONVEYOR_SHAPES[building.typeId] : undefined;
   if (!shape) return undefined;
   return new ConveyorPath({ shape, x: building.transform.x, y: building.transform.y + BELT_HEIGHT + (building.typeId === 'conveyor-cell' ? building.cellConveyor?.offset ?? 0 : building.autoConveyor?.offset ?? 0),
     z: building.transform.z, rotation: building.autoConveyor?.rotation ?? building.transform.rotation, size: (building.typeId === 'conveyor-cell' ? 1 : 2) * cellSize,

@@ -43,3 +43,20 @@ it('inspects a smelter and safely feeds and retrieves both buffers', async () =>
   root.querySelector<HTMLButtonElement>('[data-machine-retrieve-fuel]')!.click(); expect(player.getItemCount('coal')).toBe(1);
   ui.dispose();
 });
+
+it('inspects a constructor, shows its recipe, and transfers input and plates', async () => {
+  const { ConstructorMachine } = await import('../../src/machines/ConstructorMachine');
+  const { createDefaultRecipeRegistry } = await import('../../src/production/Recipes');
+  document.body.innerHTML = '<section hidden><h2 data-machine-title></h2><div data-machine-details></div><button data-machine-close>Close</button><div><button data-machine-toggle></button><button data-machine-retrieve></button></div><p data-machine-notice></p></section>';
+  const root = document.querySelector('section')!, items = createDefaultItemRegistry(), player = new Inventory(items, 3);
+  const m = new ConstructorMachine('c', items, createDefaultRecipeRegistry(items).get('iron-plate'));
+  player.addItem('iron-ingot', 3); const ui = new MachineUI(root, player, vi.fn()); ui.open(m);
+  expect(root.querySelector('[data-machine-title]')!.textContent).toBe('Constructor');
+  expect(root.textContent).toContain('1 Iron Ingot → 1 Iron Plate');
+  expect(root.querySelector<HTMLButtonElement>('[data-machine-feed-fuel]')!.hidden).toBe(true);
+  expect(root.querySelector('[data-machine-feed]')!.textContent).toBe('Add Iron Ingot');
+  root.querySelector<HTMLButtonElement>('[data-machine-feed]')!.click(); m.fixedUpdate(2000); ui.update();
+  root.querySelector<HTMLButtonElement>('[data-machine-retrieve]')!.click(); expect(player.getItemCount('iron-plate')).toBe(1);
+  root.querySelector<HTMLButtonElement>('[data-machine-retrieve-input]')!.click(); expect(player.getItemCount('iron-ingot')).toBe(2);
+  ui.dispose();
+});
