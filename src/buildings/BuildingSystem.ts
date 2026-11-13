@@ -1,3 +1,4 @@
+import { directLiftInput, directLiftOutput } from '../logistics/DirectLiftConnections';
 import { cellAhead, cellTouchesMachine, cellTouchesSource, cellTouchesReceiver, mergerInputTouches, splitterOutputTouches, resolveCellConveyors, type CellConveyorShape } from '../logistics/CellConveyor';
 import { resolveAutoConveyors, type AutoConveyorShape } from '../logistics/AutoConveyor';
 import { BELT_HEIGHT, machinePort, pathForBuilding, isDirectionalMachine, isLiftBuilding, liftInputOffset, liftOutputOffset } from '../logistics/ConveyorDefinitions';
@@ -374,6 +375,9 @@ export class BuildingSystem {
           matchesPort(port, path.point(path.length), path.direction('output'));
       })) connection = 'connected';
     }
+    if (connection === 'disconnected' && planned.some((b) => b.id !== proposed.id &&
+      (directLiftInput(proposed, b, this.cellSize) || directLiftOutput(proposed, b, this.cellSize) ||
+       directLiftInput(b, proposed, this.cellSize) || directLiftOutput(b, proposed, this.cellSize)))) connection = 'connected';
     if (player.x > f.minX - player.radius && player.x < f.maxX + player.radius &&
         player.z > f.minZ - player.radius && player.z < f.maxZ + player.radius &&
         ((typeId !== 'foundation' && !supportingFoundation) || player.feetY === undefined || player.headY === undefined || intersectsHeight(player.feetY, player.headY))) return fail('player overlap', transform);

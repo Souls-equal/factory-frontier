@@ -57,8 +57,9 @@ additional platforms; the usual construction reach still applies.
 
 Limits: heights are selected from 1–8 grid metres before placement, not
 adjustable afterwards. Terrain and foundation support limits still apply, so
-some elevated layouts require a supported foundation. Connect via one-cell
-belts, not direct machine ports or legacy two-cell belts. The later route editor is described in `PHASE_7_ROUTE_CHECK.md`. Check previous Phase 5
+some elevated layouts require a supported foundation. Compatible machine ports can connect directly when aligned at the same height;
+connect splitters and mergers via one-cell belts. Legacy two-cell belts cannot
+connect to lifts or one-cell belts. The later route editor is described in `PHASE_7_ROUTE_CHECK.md`. Check previous Phase 5
 manual scenarios separately; report layout, rotation and any problems found.
 
 
@@ -85,3 +86,17 @@ manual scenarios separately; report layout, rotation and any problems found.
    item still completes its trip. Inputs and manual retrieval remain available.
 3. Choose Any item to restore first-occupied-slot output. A second container has
    its own setting. The selection resets after demolition or page reload.
+
+
+### Direct lift-to-machine connections
+
+1. Place a storage container and an upward lift directly adjacent: align the
+   yellow storage output with the cyan lift input, with the same rotation and
+   height. Place a supported receiving container directly at the lift's raised
+   output, matching the port height. Either placement order should work.
+2. Add items and verify the lift transfers them directly; inspect it with G.
+   Fill the destination and verify blockage and recovery. Change the source
+   storage's output filter and verify only the selected item leaves.
+3. Repeat with a downward lift, a machine input/output and a rotated terminal.
+   Wrong heights or directions must not connect. Direct links to splitters,
+   mergers and other lifts still need one-cell belts; legacy belts cannot connect.

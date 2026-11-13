@@ -3,11 +3,30 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 7 — Advanced logistics (integration and acceptance)
-**Phase Status:** 🟡 In progress — storage filtering and remaining advanced logistics acceptance
-**Next Recommended Task:** Play-test storage output filtering and the remaining route/lift/platform scenarios; compatible direct lift-to-machine connections and Phase 7 acceptance remain open.
+**Phase Status:** 🟡 In progress — direct lift connections and remaining advanced logistics acceptance
+**Next Recommended Task:** Play-test direct lift connections, storage filtering and remaining route/lift/platform scenarios; junction-to-lift direct connections and Phase 7 acceptance remain open.
 **Last Updated:** 2026-11-11
 
 ---
+
+## Direct lift-to-machine connections
+
+- A lift can connect directly to an aligned miner, smelter, constructor or storage
+  output, and its output can connect directly to aligned smelter, constructor,
+  storage or receiving-terminal inputs. Terminals accept any face. Ports must
+  touch exactly and be at the same height; existing support and placement rules
+  still apply, and the high machine may need a platform. No automatic new
+  foundation placement or height adjustment was added. Splitters, mergers, legacy
+  belts and lift-to-lift direct connections remain unsupported; splitter/merger
+  and lift-to-lift routes can use one-cell conveyors.
+- Existing belt priority, storage filtering, enabled machine output, accepted item
+  checks, backpressure, occupied demolition protection and open lift safety remain
+  intact. A connected direct port is reported in construction preview and lift G
+  inspection. Matching works in either construction order, with both lift directions.
+- Automated tests cover all rotations, direct input/output, actual construction
+  controller, elevated supports, up to 8 m, blocked/incompatible receivers,
+  delayed receiver placement, conservation and recovery. This slice awaits player
+  validation; Phase 7 remains open.
 
 ## Storage output filter
 
@@ -66,8 +85,8 @@
   resized. All heights cost 15 stone and 10 wood and preserve full refunds.
 - Above-ground conveyor cells can be aimed directly at nearby elevated foundation
   tops, including in route mode; the existing reach and support rules still apply.
-  High lines may need supported foundations, and must use one-cell belts rather
-  than direct machine connections or legacy two-cell belts. No foundation
+  High lines may need supported foundations. A later slice adds direct compatible
+  machine connections; legacy two-cell belts are not supported by lifts. No foundation
   placement rules were changed.
 - Automated coverage includes the actual input/menu wiring, all heights and
   orientations, rendering, costs, collisions, both placement orders and real item
