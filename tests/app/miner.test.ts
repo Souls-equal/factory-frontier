@@ -82,3 +82,30 @@ describe('miner through real bootstrap with mocked rendering', () => {
     key('KeyF'); frame(); expect(state.buildings).toHaveLength(0);
   });
 });
+
+describe('smelter through real bootstrap with mocked rendering', () => {
+  it('offers construction, places a smelter and opens its live controls', async () => {
+    vi.spyOn(console, 'info').mockImplementation(() => undefined);
+    await import('../../src/main'); await vi.waitFor(() => expect(state.init).toBe(1)); frame();
+    const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
+    canvas.dispatchEvent(new MouseEvent('mousedown', { button: 0, clientX: 5000, clientY: 5000 }));
+    window.dispatchEvent(new MouseEvent('mousemove', { clientX: 5000, clientY: 5200 }));
+    frame(); window.dispatchEvent(new MouseEvent('mouseup'));
+    key('KeyQ'); const menu = document.querySelector<HTMLElement>('[data-ui="construction"]')!;
+    const entry = menu.querySelector<HTMLButtonElement>('[data-building="smelter"]')!;
+    expect(entry).not.toBeNull(); expect(entry.disabled).toBe(false); entry.click(); frame();
+    expect(state.preview?.reason).toBe('valid');
+    canvas.dispatchEvent(new MouseEvent('mousedown', { button: 0, bubbles: true }));
+    canvas.dispatchEvent(new MouseEvent('mouseup', { button: 0, bubbles: true })); frame();
+    expect(state.buildings).toHaveLength(1); expect(state.buildings[0]?.typeId).toBe('smelter');
+    key('Escape'); frame(); key('KeyE'); frame();
+    const panel = document.querySelector<HTMLElement>('[data-ui="machine"]')!;
+    expect(panel.hidden).toBe(false); expect(panel.textContent).toContain('Smelter');
+    expect(panel.textContent).toContain('MISSING_INPUT');
+    panel.querySelector<HTMLButtonElement>('[data-machine-feed]')!.click();
+    expect(panel.textContent).toContain('Input: 30');
+    panel.querySelector<HTMLButtonElement>('[data-machine-close]')!.click();
+    for (let i = 0; i < 50; i++) frame();
+    key('KeyE'); frame(); expect(panel.textContent).toMatch(/Output: [1-9]/);
+  });
+});

@@ -14,14 +14,21 @@
 ## PROGRESS TRACKER
 
 **Last updated:** 2026-11-11
-**Current phase:** Phase 5 in progress; Phase 4 accepted by user with browser verification pending
+**Current phase:** Phase 6 first smelter slice in progress; Phase 5 acceptance incomplete
+
+The user explicitly authorized the next step after confirming in-game miner →
+conveyor → terminal transport, turns/slopes without item loss, and blockage/recovery.
+Other Phase 5 checklist scenarios were not explicitly confirmed. Starting the
+smelter slice before full Phase 5 acceptance is a user-directed exception to the
+existing Phase 5 gate below; it does not mark that phase accepted or complete.
+Phase 6 is not complete: constructor and iron plates remain to be implemented.
 
 The voxel transition is underway within Phase 5: finite starter resources and a
 no-iron first Miner and block-style models for current world objects are implemented;
 physical browser acceptance remains pending. This explicitly replaces the earlier
 direct deposit-gathering loop to avoid mining terrain blocks.
 
-The phase definitions below are authoritative. This tracker only records status;
+The phase definitions below are authoritative; earlier dated progress notes are historical and superseded by this tracker where they describe current status. This tracker only records status;
 detailed evidence and verification results live in `PROJECT_STATUS.md`.
 
 | Phase | Status | Notes |
@@ -31,8 +38,8 @@ detailed evidence and verification results live in `PROJECT_STATUS.md`.
 | 2 — Resources and inventory | 🟡 Acceptance pending | Registry, deposits and inventory implemented; user reports earlier browser checks passed overall; 2.1 drag/drop, pointer lock and full-inventory browser checks remain |
 | 3 — Building and placement | 🟡 Acceptance pending | Construction menu, preview, validation, grid, rotation, registration and demolition implemented; real-browser acceptance pending |
 | 4 — First automated extractor | 🟡 User accepted | Browser verification remains pending |
-| 5 — Conveyor foundation | 🟡 In progress | Integrated path verified in headless WebGL; physical/user acceptance pending |
-| 6 — First production chain | ◻ Planned | — |
+| 5 — Conveyor foundation | 🟡 Partially user-validated | User confirmed miner → terminal, turns/slopes, blockage and recovery; remaining checklist not confirmed |
+| 6 — First production chain | 🟡 First slice | Smelter and iron ingots implemented; constructor, plates and full acceptance pending |
 | 7 — Advanced logistics | ◻ Planned | — |
 | 8 — Electricity | ◻ Planned | — |
 | 9 — Advanced manufacturing | ◻ Planned | — |

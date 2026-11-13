@@ -1249,3 +1249,16 @@ corners as solid. Initial overlaps project away inward motion without a position
 push; natural/building collision composition and wall height filtering remain.
 The terrain contract advertises vertical voxel walls so `PlayerController` does
 not reject escape before the wall solver when already overlapping a column.
+
+## Implementation note — Phase 6 smelter slice (2026-11-11)
+
+`production/Recipes.ts` owns validated immutable recipe data, while
+`machines/Smelter.ts` simulates one fixed iron recipe on the fixed clock with
+separate bounded input and output inventories. `MachineManager` owns the
+smelter lifecycle and protects nonempty buffers from demolition. `LogisticsManager`
+connects filtered receiver and conditional source ports to the existing directed
+one-cell network; UI and rendering consume this state without driving simulation.
+The smelter supports manual input and recovery, pausing, and backpressure. It
+does not yet implement recipe selection, power, constructors or plates. Legacy
+two-cell automatic conveyors do not route through the smelter; the currently
+selectable one-cell conveyor is supported.

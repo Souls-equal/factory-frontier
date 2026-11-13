@@ -5,11 +5,12 @@ import { createDefaultItemRegistry, ItemRegistry } from '../../src/items/ItemReg
 function setup(size = 3) { const registry = createDefaultItemRegistry(); return new Inventory(registry, size); }
 
 describe('item registry', () => {
-  it('defines all six initial resources with unique ids and no water', () => {
+  it('defines six raw resources and the processed iron ingot with unique ids and no water', () => {
     const all = createDefaultItemRegistry().all();
-    expect(all.map((item) => item.id)).toEqual(['iron-ore', 'copper-ore', 'limestone', 'coal', 'stone', 'wood']);
+    expect(all.filter((item) => item.category === 'RAW_RESOURCE').map((item) => item.id)).toEqual(['iron-ore', 'copper-ore', 'limestone', 'coal', 'stone', 'wood']);
+    expect(all.find((item) => item.id === 'iron-ingot')?.category).toBe('PROCESSED_RESOURCE');
     expect(new Set(all.map((item) => item.id)).size).toBe(all.length);
-    expect(all.every((item) => item.category === 'RAW_RESOURCE' && item.maxStackSize > 0)).toBe(true);
+    expect(all.every((item) => item.maxStackSize > 0)).toBe(true);
   });
   it('rejects duplicate ids, invalid definitions, and unknown ids', () => {
     const registry = createDefaultItemRegistry();

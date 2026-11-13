@@ -24,3 +24,19 @@ describe('machine inspection UI', () => {
     ui.closePanel(); expect(miner.output.getItemCount('iron-ore')).toBe(5); expect(ui.isOpen).toBe(false); ui.dispose();
   });
 });
+
+it('inspects a smelter and safely feeds and retrieves both buffers', async () => {
+  const { Smelter } = await import('../../src/machines/Smelter');
+  const { createDefaultRecipeRegistry } = await import('../../src/production/Recipes');
+  document.body.innerHTML = '<section hidden><h2 data-machine-title></h2><div data-machine-details></div><button data-machine-close>Close</button><div><button data-machine-toggle></button><button data-machine-retrieve></button></div><p data-machine-notice></p></section>';
+  const root = document.querySelector('section')!, items = createDefaultItemRegistry(), player = new Inventory(items, 2);
+  const s = new Smelter('s', items, createDefaultRecipeRegistry(items).get('iron-ingot'));
+  player.addItem('iron-ore', 10); const ui = new MachineUI(root, player, vi.fn()); ui.open(s);
+  expect(root.querySelector('[data-machine-title]')!.textContent).toBe('Smelter');
+  expect(root.textContent).toContain('Iron Ore → 1 Iron Ingot');
+  root.querySelector<HTMLButtonElement>('[data-machine-feed]')!.click(); expect(s.input.getItemCount('iron-ore')).toBe(10);
+  s.fixedUpdate(2000); ui.update(); root.querySelector<HTMLButtonElement>('[data-machine-retrieve]')!.click();
+  expect(player.getItemCount('iron-ingot')).toBe(1);
+  root.querySelector<HTMLButtonElement>('[data-machine-retrieve-input]')!.click(); expect(player.getItemCount('iron-ore')).toBe(9);
+  ui.dispose();
+});
