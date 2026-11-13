@@ -3,11 +3,28 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 7 — Advanced logistics (integration and acceptance)
-**Phase Status:** 🟡 In progress — route and foundation corrections require follow-up play-testing
-**Next Recommended Task:** Play-test foundation gap filling and elevated platforms together with open-ended routes; remaining Phase 5 checks and Phase 7 scope/acceptance remain open.
+**Phase Status:** 🟡 In progress — configurable lift heights and route correction need play-testing
+**Next Recommended Task:** Play-test adjustable lifts together with open-ended routes; remaining Phase 5 checks and Phase 7 scope/acceptance remain open.
 **Last Updated:** 2026-11-11
 
 ---
+
+## Phase 7 — adjustable conveyor lift heights
+
+- Select Lift Up or Lift Down from Q, then use Page Up/Down to choose a height
+  from 1 to 8 m in 1 m increments before placing; the HUD shows the selection.
+  Rotation and height stay selected for repeat placement. Existing lifts are not
+  resized. All heights cost 15 stone and 10 wood and preserve full refunds.
+- Above-ground conveyor cells can be aimed directly at nearby elevated foundation
+  tops, including in route mode; the existing reach and support rules still apply.
+  High lines may need supported foundations, and must use one-cell belts rather
+  than direct machine connections or legacy two-cell belts. No foundation
+  placement rules were changed.
+- Automated coverage includes the actual input/menu wiring, all heights and
+  orientations, rendering, costs, collisions, both placement orders and real item
+  transport with blockage, recovery and conservation. Player validation of the
+  new height controls is still pending; arbitrary/fractional heights and resizing
+  after placement are not implemented.
 
 ## Foundation gap and elevation correction
 
@@ -21,8 +38,8 @@
   blocks placement. Non-foundation placement remains conservative. Foundation
   stacking at different heights in the same footprint is intentionally rejected.
 - Foundation aiming can project onto nearby elevated platform levels (within the
-  normal reach); it does not aim through terrain. This and the gap workflow have
-  automated coverage but have not yet been tested by the player in-game.
+  normal reach); it does not aim through terrain. The user subsequently reported
+  that the foundation placement is superb and requested no changes.
 
 ## Phase 7 — open-ended route correction
 
@@ -73,7 +90,7 @@
   bounded spacing, congestion, recovery and demolition protection. Height and
   direction are chosen before placement and cannot be edited afterwards.
 - The phase remains open for the newly implemented editor's player validation,
-  arbitrary lift heights and other outstanding requirements; do not declare the
+  heights beyond the new 1–8 m range and other outstanding requirements; do not declare the
   whole phase complete solely on the user's earlier report.
 
 ## Phase 7 — balanced splitter

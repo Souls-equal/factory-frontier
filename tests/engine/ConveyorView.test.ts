@@ -1,3 +1,4 @@
+import { pathForBuilding } from '../../src/logistics/ConveyorDefinitions';
 import { describe, expect, it, vi } from 'vitest';
 import { Color, Group, InstancedMesh, Vector3 } from 'three';
 import { BuildingView } from '../../src/engine/BuildingView';
@@ -150,4 +151,19 @@ it('renders, reuses, recolors and disposes multi-cell route previews', () => {
   view.setRoutePreview([], false); expect(view.group.getObjectByName('route-preview:1')).toBeUndefined();
   view.setRoutePreview([cell(.5)], true); const last = view.group.getObjectByName('route-preview:1') as import('three').Mesh;
   const lastDispose = vi.spyOn(last.geometry, 'dispose'); view.dispose(); expect(lastDispose).toHaveBeenCalledOnce();
+});
+
+it.each(['lift-up-8', 'lift-down-8'])('renders %s endpoint heights aligned with the logical path in every direction', (typeId) => {
+  const registry = createDefaultBuildingRegistry(createDefaultItemRegistry()), view = new BuildingView(registry, 1);
+  for (let rotation = 0; rotation < 4; rotation++) {
+    const transform = { ...snapFootprint(registry.get(typeId), 0, 0, rotation, 1), y: 1.25 };
+    const building = { id: 'lift', typeId, transform }, path = pathForBuilding(building, 1)!;
+    view.sync([building]); view.group.updateMatrixWorld(true);
+    for (const [name, distance] of [['machine-input-port', 0], ['machine-output-port', path.length]] as const) {
+      const actual = new Vector3(); view.group.getObjectByName(name)!.getWorldPosition(actual);
+      const expected = path.point(distance);
+      expect(actual.x).toBeCloseTo(expected.x, 8); expect(actual.y).toBeCloseTo(expected.y, 8); expect(actual.z).toBeCloseTo(expected.z, 8);
+    }
+  }
+  view.dispose();
 });

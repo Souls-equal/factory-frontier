@@ -2,6 +2,7 @@ import type { BuildingRegistry } from '../buildings/BuildingRegistry';
 import type { BuildingSystem } from '../buildings/BuildingSystem';
 import type { Inventory } from '../items/Inventory';
 import { createConstructionThumbnail } from '../engine/ConstructionThumbnail';
+import { liftRise } from '../logistics/LiftDefinitions';
 
 /** Accessible modal presentation; selection does not change inventory. */
 export class ConstructionUI {
@@ -46,6 +47,8 @@ export class ConstructionUI {
     const creative = !!this.buildings?.creativeMode;
     if (this.creative) this.creative.checked = creative;
     for (const definition of this.registry.all()) {
+      const rise = liftRise(definition.id);
+      if (rise !== null && Math.abs(rise) > 2) continue; // Adjust the selected lift in placement mode.
       if (['conveyor-auto', 'conveyor-straight', 'conveyor-curve', 'conveyor-incline'].includes(definition.id)) continue;
       const button = this.root.ownerDocument.createElement('button');
       button.type = 'button'; button.dataset.building = definition.id; button.className = 'construction__entry';

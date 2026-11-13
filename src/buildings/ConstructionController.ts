@@ -3,6 +3,7 @@ import { forwardVector } from '../interaction/raycast';
 import type { TerrainQuery } from '../world/terrain/TerrainHeightfield';
 import type { BuildingSystem, PlacementResult, PlayerFootprint } from './BuildingSystem';
 import { snapFootprint } from './Transform';
+import { liftRise, MAX_LIFT_HEIGHT } from '../logistics/LiftDefinitions';
 
 /** Aiming and mode state; logical placement remains owned by BuildingSystem. */
 export class ConstructionController {
@@ -16,23 +17,37 @@ export class ConstructionController {
   cancel(): void { this.typeId = null; }
   rotate(): void { if (this.active) this.rotation = (this.rotation + 1) % 4; }
   adjustFoundationHeight(direction: 1 | -1): void { if (this.typeId === 'foundation') this.foundationSteps += direction; }
+  /** Change the selected lift variant without mutating already placed lifts. */
+  adjustLiftHeight(direction: 1 | -1): void {
+    if (!this.typeId) return;
+    const rise = liftRise(this.typeId);
+    if (rise === null) return;
+    const height = Math.max(1, Math.min(MAX_LIFT_HEIGHT, Math.abs(rise) + direction));
+    const next = `lift-${rise > 0 ? 'up' : 'down'}-${height}`;
+    // Custom registries may expose only some lift sizes.
+    if (this.system.registry.all().some((definition) => definition.id === next)) this.typeId = next;
+  }
   get foundationHeightOffset(): number { return this.foundationSteps / 10; }
   aim(view: CameraView): { x: number; z: number } | null {
     const direction = forwardVector(view.yaw, view.pitch), origin = view.position;
     // Project onto nearby foundation surfaces before the ground ray so elevated
-    // platforms can be extended even where terrain is beyond construction reach.
+    // platforms can be extended and supported belts aimed at beyond ground reach.
     let best = Infinity, target: { x: number; z: number } | null = null;
-    if (this.typeId === 'foundation' && direction.y < -1e-8) {
+    if ((this.typeId === 'foundation' || this.typeId === 'conveyor-cell') && direction.y < -1e-8 &&
+        this.system.registry.all().some((definition) => definition.id === 'foundation')) {
       const definition = this.system.registry.get('foundation');
       for (const foundation of this.system.all().filter((b) => b.typeId === 'foundation')) {
         const t = (foundation.transform.y + definition.height - origin.y) / direction.y;
         if (t <= 0 || t > this.reach || t >= best) continue;
         const x = origin.x + direction.x * t, z = origin.z + direction.z * t;
         if (!this.terrain.contains(x, z) || foundation.transform.y <= this.terrain.heightAt(x, z) + .5) continue;
-        const f = snapFootprint(definition, x, z, this.rotation, this.system.cellSize).footprint;
         const n = foundation.transform.footprint, epsilon = 1e-7;
-        if (f.minX <= n.maxX + epsilon && f.maxX >= n.minX - epsilon &&
-            f.minZ <= n.maxZ + epsilon && f.maxZ >= n.minZ - epsilon) {
+        const f = snapFootprint(definition, x, z, this.rotation, this.system.cellSize).footprint;
+        const touches = f.minX <= n.maxX + epsilon && f.maxX >= n.minX - epsilon &&
+          f.minZ <= n.maxZ + epsilon && f.maxZ >= n.minZ - epsilon;
+        // A belt needs a real surface under the aimed point, not an infinite plane.
+        const onSurface = x >= n.minX && x <= n.maxX && z >= n.minZ && z <= n.maxZ;
+        if (this.typeId === 'foundation' ? touches : onSurface) {
           best = t; target = { x, z };
         }
       }

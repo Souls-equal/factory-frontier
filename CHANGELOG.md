@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — adjustable conveyor lifts
+
+- Choose up/down lift travel from 1 to 8 m before placement using Page Up/Down.
+- Aim one-cell conveyors at nearby elevated foundation surfaces; retain existing
+  support, collision and transport rules. Player acceptance is pending.
+- Record the user’s positive confirmation of the current foundation placement.
+
 ## Unreleased — foundation gaps and elevation
 
 - Allow partial coplanar foundation overlap to fill gaps while rejecting fully
