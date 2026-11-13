@@ -2,6 +2,7 @@ import type { CameraView } from '../engine/types';
 import { forwardVector } from '../interaction/raycast';
 import type { TerrainQuery } from '../world/terrain/TerrainHeightfield';
 import type { BuildingSystem, PlacementResult, PlayerFootprint } from './BuildingSystem';
+import { snapFootprint } from './Transform';
 
 /** Aiming and mode state; logical placement remains owned by BuildingSystem. */
 export class ConstructionController {
@@ -18,9 +19,28 @@ export class ConstructionController {
   get foundationHeightOffset(): number { return this.foundationSteps / 10; }
   aim(view: CameraView): { x: number; z: number } | null {
     const direction = forwardVector(view.yaw, view.pitch), origin = view.position;
+    // Project onto nearby foundation surfaces before the ground ray so elevated
+    // platforms can be extended even where terrain is beyond construction reach.
+    let best = Infinity, target: { x: number; z: number } | null = null;
+    if (this.typeId === 'foundation' && direction.y < -1e-8) {
+      const definition = this.system.registry.get('foundation');
+      for (const foundation of this.system.all().filter((b) => b.typeId === 'foundation')) {
+        const t = (foundation.transform.y + definition.height - origin.y) / direction.y;
+        if (t <= 0 || t > this.reach || t >= best) continue;
+        const x = origin.x + direction.x * t, z = origin.z + direction.z * t;
+        if (!this.terrain.contains(x, z) || foundation.transform.y <= this.terrain.heightAt(x, z) + .5) continue;
+        const f = snapFootprint(definition, x, z, this.rotation, this.system.cellSize).footprint;
+        const n = foundation.transform.footprint, epsilon = 1e-7;
+        if (f.minX <= n.maxX + epsilon && f.maxX >= n.minX - epsilon &&
+            f.minZ <= n.maxZ + epsilon && f.maxZ >= n.minZ - epsilon) {
+          best = t; target = { x, z };
+        }
+      }
+    }
     let prev = 0, prevHeight = origin.y - this.terrain.heightAt(origin.x, origin.z);
     for (let t = 0.1; t <= this.reach + 1e-8; t += 0.1) {
       const x = origin.x + direction.x * t, z = origin.z + direction.z * t;
+      if (t >= best) return target;
       if (!this.terrain.contains(x, z)) return null;
       const delta = origin.y + direction.y * t - this.terrain.heightAt(x, z);
       if (delta <= 0 && prevHeight > 0) {
@@ -33,7 +53,7 @@ export class ConstructionController {
       }
       prev = t; prevHeight = delta;
     }
-    return null;
+    return target;
   }
   facing(view: CameraView): number {
     return this.typeId === 'conveyor-cell' ? ((Math.round(view.yaw / (Math.PI / 2)) + this.rotation) % 4 + 4) % 4 : this.rotation;

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — foundation gaps and elevation
+
+- Allow partial coplanar foundation overlap to fill gaps while rejecting fully
+  covered footprints; render shared cells once and retain full costs and refunds.
+- Avoid false collisions below elevated foundations, adjust voxel ground reference
+  and enable aiming at nearby elevated platform levels. Player acceptance pending.
+
 ## Unreleased — open-ended conveyor routes
 
 - Allow a route to end in empty space and be extended with another route or

@@ -901,11 +901,24 @@ click from drag-look and requests pointer capture on right click. Modal suspensi
 focus loss and capture changes cancel incomplete gestures. C no longer places.
 Foundation mode passes a height offset to the same authoritative validator for
 preview and commit. It aligns unoccupied partial edge contacts to the nearest
-foundation on the grid, inheriting that neighbour's base height; otherwise the
-reference is the terrain minimum. Page Up/Down changes the offset by 0.1 m and
-successful placement resets it. The highest terrain point may cover at most 75%
-of the foundation height. Slope, footprint, player and material restrictions still
-apply even when floating. Aiming still uses the terrain ray, not a platform ray.
+foundation on the grid, inheriting that neighbour's base height; overlapping
+foundations also inherit the nearest neighbour's base. Otherwise the reference is
+the terrain minimum for heightfields and the maximum column top for voxel terrain.
+Page Up/Down changes the offset by 0.1 m and success resets it. The highest terrain
+point may cover at most 75% of the foundation height. Terrain slope/variation
+limits do not reject foundations above terrain or voxel foundation placement;
+other building rules remain unchanged. A 2×2 slab may overlap coplanar foundations
+only if at least one grid cell is not yet covered. Different-height foundation
+overlap remains forbidden because support selection is not multi-floor aware.
+Full costs and refunds apply per slab, including overlaps. Foundations use vertical
+intervals for collisions with other buildings, natural obstacles and the player;
+callers without player height retain conservative horizontal checks. Multiple
+coplanar slabs are ignored as collisions when a logistics building has a whole
+supporting slab; demolition remains conservative for overlapping logistics.
+The renderer emits each shared cell only once, suppressing overlapping slab details;
+it recomputes visibility on removal. For foundation mode the terrain ray is also
+projected onto neighbouring elevated platform levels within reach, without passing
+through nearer terrain; other construction aiming remains terrain-based.
 
 `BuildingCollision` composes existing natural sweeps with conservative expanded
 rectangle sweeps. `BuildingTerrain` exposes foundation tops to the player; both

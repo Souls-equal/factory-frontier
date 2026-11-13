@@ -22,6 +22,8 @@ export class BuildingView {
   constructor(private readonly registry: BuildingRegistry, private readonly cellSize: number) {}
 
   sync(buildings: readonly BuildingInstance[]): void {
+    // Draw each coplanar foundation cell once, even when paid slabs overlap.
+    const foundationOwners = new Map<string, number[]>();
     const present = new Set(buildings.map((building) => building.id));
     for (const [id, mesh] of this.meshes) {
       if (!present.has(id)) { this.release(mesh); this.meshes.delete(id); this.shapes.delete(id); }
@@ -38,6 +40,26 @@ export class BuildingView {
       const definition = this.registry.get(building.typeId);
       mesh.position.set(building.transform.x, building.transform.y + definition.height / 2, building.transform.z);
       mesh.rotation.y = (building.autoConveyor?.rotation ?? building.transform.rotation) * Math.PI / 2;
+      if (building.typeId === 'foundation') {
+        let shared = false;
+        const visible = new Map<string, boolean>();
+        for (const x of [-.5, .5]) for (const z of [-.5, .5]) {
+          const turn = ((building.transform.rotation % 4) + 4) % 4;
+          const cos = [1, 0, -1, 0][turn]!, sin = [0, 1, 0, -1][turn]!;
+          const wx = building.transform.x + (x * cos + z * sin) * this.cellSize;
+          const wz = building.transform.z + (-x * sin + z * cos) * this.cellSize;
+          const key = `${Math.round(wx / this.cellSize - .5)},${Math.round(wz / this.cellSize - .5)}`;
+          const heights = foundationOwners.get(key) ?? [];
+          const duplicate = heights.some((y) => Math.abs(y - building.transform.y) < 1e-7);
+          visible.set(`${x},${z}`, !duplicate); shared ||= duplicate;
+          if (!duplicate) { heights.push(building.transform.y); foundationOwners.set(key, heights); }
+        }
+        for (const part of mesh.children) {
+          const cell = part.userData.foundationCell as string | undefined;
+          if (cell) part.visible = visible.get(cell) ?? false;
+          else if (part.name.startsWith('foundation-') || part.name === 'orientation-marker') part.visible = !shared;
+        }
+      }
     }
   }
   setMachineStates(states: readonly { readonly id: string; readonly state: MachineState }[]): void {
@@ -338,13 +360,22 @@ export class BuildingView {
       }
     }
     if (typeId === 'foundation') {
-      // Shallow inset blocks retain the logical footprint while making the slab legible.
+      // Split the shell into four grid cells, so overlapping slabs render only
+      // the cells not already drawn by an earlier coplanar foundation.
+      material.transparent = true; material.opacity = 0; material.depthWrite = false; mesh.castShadow = false;
+      const shellGeometry = new BoxGeometry(this.cellSize, def.height, this.cellSize);
+      const shellMaterial = new MeshStandardMaterial({ color: def.color, transparent: preview,
+        opacity: preview ? .5 : 1, depthWrite: !preview, roughness: .8 });
       const tileGeometry = new BoxGeometry(.88 * this.cellSize, .025, .88 * this.cellSize);
       const tileMaterial = new MeshStandardMaterial({ color: 0x94a5a2, transparent: preview,
         opacity: preview ? .55 : 1, depthWrite: !preview, roughness: .9 });
-      for (const x of [-.47 * this.cellSize, .47 * this.cellSize]) for (const z of [-.47 * this.cellSize, .47 * this.cellSize]) {
+      for (const x of [-.5, .5]) for (const z of [-.5, .5]) {
+        const cell = new Mesh(shellGeometry, shellMaterial); cell.name = 'foundation-cell';
+        cell.position.set(x * this.cellSize, 0, z * this.cellSize); cell.userData.foundationCell = `${x},${z}`;
+        cell.castShadow = !preview; cell.receiveShadow = !preview; mesh.add(cell);
         const tile = new Mesh(tileGeometry, tileMaterial); tile.name = 'foundation-tile';
-        tile.position.set(x, def.height / 2 + .013, z); tile.receiveShadow = !preview; mesh.add(tile);
+        tile.position.set(x * this.cellSize, def.height / 2 + .013, z * this.cellSize); tile.userData.foundationCell = `${x},${z}`;
+        tile.receiveShadow = !preview; mesh.add(tile);
       }
       addFoundationDetails(mesh, this.cellSize, def.height, preview);
     }

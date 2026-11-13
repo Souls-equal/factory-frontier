@@ -10,6 +10,7 @@ import type { TerrainQuery } from '../world/terrain/TerrainHeightfield';
 import type { BuildingDefinition, BuildingRegistry } from './BuildingRegistry';
 import { snapFootprint, type BuildingTransform, type Footprint } from './Transform';
 import { terrainSupport } from './TerrainSupport';
+import { VoxelTerrain } from '../world/terrain/VoxelTerrain';
 import { expandRoute, type RoutePoint } from '../logistics/ConveyorRoute';
 
 export interface BuildingInstance {
@@ -40,7 +41,10 @@ export interface PlacementResult {
 export type RouteReason = PlacementReason | 'invalid route' | 'missing source' | 'output blocked';
 export type RouteEndConnection = 'connected' | 'open' | 'blocked';
 export interface RouteResult { readonly reason: RouteReason; readonly cells: readonly BuildingInstance[]; readonly changed: readonly BuildingInstance[]; readonly cost: readonly { readonly itemId: string; readonly quantity: number }[]; readonly endConnection: RouteEndConnection | null }
-export interface PlayerFootprint { readonly x: number; readonly z: number; readonly radius: number }
+export interface PlayerFootprint { readonly x: number; readonly z: number; readonly radius: number;
+  /** Optional body interval. Without it, retain conservative horizontal collision. */
+  readonly feetY?: number; readonly headY?: number }
+
 
 const intersects = (a: Footprint, b: Footprint): boolean =>
   a.minX < b.maxX && a.maxX > b.minX && a.minZ < b.maxZ && a.maxZ > b.minZ;
@@ -113,7 +117,11 @@ export class BuildingSystem {
   /** Align a neighbouring tile edge to edge without shifting an occupied preview. */
   private alignFoundation(base: BuildingTransform, definition: BuildingDefinition, x: number, z: number): { transform: BuildingTransform; neighbour?: BuildingInstance } {
     const foundations = this.all().filter((b) => b.typeId === 'foundation');
-    if (foundations.some((b) => intersects(base.footprint, b.transform.footprint))) return { transform: base };
+    const overlapping = foundations.filter((b) => intersects(base.footprint, b.transform.footprint));
+    if (overlapping.length) {
+      overlapping.sort((a, b) => Math.hypot(x - a.transform.x, z - a.transform.z) - Math.hypot(x - b.transform.x, z - b.transform.z) || a.id.localeCompare(b.id));
+      return { transform: base, neighbour: overlapping[0] };
+    }
     const span = 2 * this.cellSize, epsilon = 1e-7;
     const candidates: { transform: BuildingTransform; neighbour: BuildingInstance; distance: number }[] = [];
     for (const neighbour of foundations) {
@@ -131,7 +139,9 @@ export class BuildingSystem {
   }
 
   validate(typeId: string, x: number, z: number, rotation: number, player: PlayerFootprint, foundationOffset?: number): PlacementResult {
-    if (![player.x, player.z, player.radius].every(Number.isFinite) || player.radius < 0) {
+    if (![player.x, player.z, player.radius].every(Number.isFinite) || player.radius < 0 ||
+        (player.feetY !== undefined && !Number.isFinite(player.feetY)) || (player.headY !== undefined && !Number.isFinite(player.headY)) ||
+        (player.feetY !== undefined && player.headY !== undefined && player.feetY > player.headY)) {
       throw new RangeError('Invalid player footprint.');
     }
     const definition = this.registry.get(typeId);
@@ -147,9 +157,11 @@ export class BuildingSystem {
 
     const support = terrainSupport(this.terrain, f);
     if (!support) return fail('invalid terrain support');
-    // Sink a limited amount into terrain rather than floating above its lowest edge.
-    let transform = { ...base, y: typeId === 'foundation' && foundationOffset !== undefined
-      ? (foundationSnap?.neighbour?.transform.y ?? support.low) + foundationOffset : support.low };
+    // Voxel foundations default to the highest supporting column so one raised
+    // block does not bury the entire slab. Existing neighbours remain the height reference.
+    const foundationGround = this.terrain instanceof VoxelTerrain ? support.high : support.low;
+    let transform = { ...base, y: typeId === 'foundation'
+      ? (foundationSnap?.neighbour?.transform.y ?? foundationGround) + (foundationOffset ?? 0) : support.low };
     if (typeId === 'foundation' && support.high - transform.y > definition.height * .75 + 1e-7) return fail('unsupported height', transform);
     const intersecting = this.all().filter((building) => intersects(f, building.transform.footprint));
     let supportingFoundation: BuildingInstance | undefined;
@@ -207,7 +219,9 @@ export class BuildingSystem {
       if (surface === null && (y < support.high - .12 || y > support.high + 2 * this.cellSize)) return fail('unsupported height', { ...base, y });
       transform = { ...base, y };
     }
-    if (support.slope > definition.maxSlope || support.high - support.low > definition.maxGroundVariation) return fail('terrain too steep', transform);
+    const foundationAboveTerrain = typeId === 'foundation' &&
+      (this.terrain instanceof VoxelTerrain || transform.y > support.high + 1e-7);
+    if (!foundationAboveTerrain && (support.slope > definition.maxSlope || support.high - support.low > definition.maxGroundVariation)) return fail('terrain too steep', transform);
     let deposit: ResourceDeposit | undefined;
     if (definition.placement === 'deposit') {
       const candidates = this.deposits.filter((d) => d.x >= f.minX && d.x <= f.maxX && d.z >= f.minZ && d.z <= f.maxZ);
@@ -217,8 +231,31 @@ export class BuildingSystem {
       try { this.inventory.registry.get(deposit.itemId); } catch { return fail('no compatible deposit', transform); }
       if (this.all().some((building) => building.depositId === deposit?.id)) return fail('occupied space', transform);
     }
-    if (intersecting.some((building) => building.id !== supportingFoundation?.id) ||
-        [...this.obstacles, ...this.dynamicObstacles()].some((obstacle) => (!deposit || obstacle.id !== `${deposit.id}-collider`) && circleIntersects(f, obstacle.x, obstacle.z, obstacle.radius))) return fail('occupied space', transform);
+    const foundations = intersecting.filter((building) => building.typeId === 'foundation');
+    if (typeId === 'foundation' && foundations.length) {
+      // Coplanar foundations may overlap only if at least one of the four grid
+      // cells is new. Do not stack layers at the same XZ until support selection
+      // is able to distinguish multiple floors.
+      if (foundations.some((b) => Math.abs(b.transform.y - transform.y) > 1e-7)) return fail('occupied space', transform);
+      let uncovered = false;
+      for (let x = f.minX + this.cellSize / 2; x < f.maxX; x += this.cellSize) {
+        for (let z = f.minZ + this.cellSize / 2; z < f.maxZ; z += this.cellSize) {
+          if (!foundations.some((b) => x > b.transform.footprint.minX && x < b.transform.footprint.maxX &&
+            z > b.transform.footprint.minZ && z < b.transform.footprint.maxZ)) uncovered = true;
+        }
+      }
+      if (!uncovered) return fail('occupied space', transform);
+    }
+    const intersectsHeight = (bottom: number, top: number) => transform.y < top - 1e-7 && transform.y + definition.height > bottom + 1e-7;
+    if (intersecting.some((building) => {
+      if (typeId === 'foundation') return building.typeId !== 'foundation' && intersectsHeight(building.transform.y, building.transform.y + this.registry.get(building.typeId).height);
+      // A machine or belt on a shared platform must not collide with other
+      // coplanar foundations that support the same surface.
+      if (supportingFoundation && building.typeId === 'foundation' && Math.abs(building.transform.y - supportingFoundation.transform.y) < 1e-7) return false;
+      return building.id !== supportingFoundation?.id;
+    }) || [...this.obstacles, ...this.dynamicObstacles()].some((obstacle) =>
+      (!deposit || obstacle.id !== `${deposit.id}-collider`) && circleIntersects(f, obstacle.x, obstacle.z, obstacle.radius) &&
+      (typeId !== 'foundation' || intersectsHeight(obstacle.y, obstacle.y + obstacle.height)))) return fail('occupied space', transform);
     let connection: 'connected' | 'disconnected' | undefined;
     if (definition.placement === 'logistics' || typeId === 'miner-mk1') {
       const result = typeId === 'conveyor-auto' || typeId === 'conveyor-cell' || isLiftBuilding(typeId) ? 'disconnected' : connectionStatus(typeId, transform, this.all().filter((b) => b.typeId !== 'conveyor-auto' && b.typeId !== 'conveyor-cell' && !isLiftBuilding(b.typeId)), this.cellSize);
@@ -288,7 +325,8 @@ export class BuildingSystem {
       })) connection = 'connected';
     }
     if (player.x > f.minX - player.radius && player.x < f.maxX + player.radius &&
-        player.z > f.minZ - player.radius && player.z < f.maxZ + player.radius) return fail('player overlap', transform);
+        player.z > f.minZ - player.radius && player.z < f.maxZ + player.radius &&
+        (typeId !== 'foundation' || player.feetY === undefined || player.headY === undefined || intersectsHeight(player.feetY, player.headY))) return fail('player overlap', transform);
     if (!this.creativeMode && definition.cost.some((entry) => !this.inventory.hasItem(entry.itemId, entry.quantity))) return fail('insufficient materials', transform);
     const byId = new Map(existing.map((b) => [b.id, b]));
     const conveyorPreviewChanges = planned.filter((b) => (b.typeId === 'conveyor-auto' || b.typeId === 'conveyor-cell') && byId.has(b.id) &&
