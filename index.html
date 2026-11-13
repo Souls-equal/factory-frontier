@@ -87,6 +87,10 @@
                 <label>Preferred output <select data-splitter-priority><option value="0">Front</option><option value="1">Left</option><option value="2">Right</option></select></label>
                 <p class="inventory__detail">Overflow uses other outputs when the preferred belt is full. Strict priority waits for it.</p>
               </div>
+              <div data-storage-settings hidden>
+                <label>Output filter <select data-storage-filter><option value="">Any item (first slot)</option></select></label>
+                <p class="inventory__detail">Only the selected item leaves; if absent, output waits. Inputs and manual transfers are unchanged. Items already on belts keep moving.</p>
+              </div>
               <div class="inventory__grid terminal__grid" data-logistics-grid aria-label="Storage slots" hidden></div>
               <p class="inventory__detail terminal__detail" data-logistics-slot-detail></p>
               <div class="terminal__actions"><button type="button" class="terminal__retrieve" data-logistics-deposit hidden>Store selected stack <span aria-hidden="true">←</span></button><button type="button" class="terminal__retrieve" data-logistics-retrieve>Retrieve contents <span aria-hidden="true">→</span></button></div>

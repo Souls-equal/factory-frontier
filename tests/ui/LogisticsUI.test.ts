@@ -1,5 +1,8 @@
 // @vitest-environment jsdom
 import { expect, it, vi } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
 import { BuildingSystem } from '../../src/buildings/BuildingSystem';
 import { createDefaultBuildingRegistry } from '../../src/buildings/BuildingRegistry';
 import { Inventory } from '../../src/items/Inventory';
@@ -158,4 +161,31 @@ it('shows lift flow, physical throughput cap, and resets the panel when reopenin
   expect(root.querySelector('[data-logistics-storage-badge]')!.textContent).toBe('FLOW');
   ui.open(storage.id); expect(root.querySelector('[data-logistics-storage-heading]')!.textContent).toBe('Container');
   expect(root.querySelector('[data-logistics-storage-badge]')!.textContent).not.toBe('FLOW'); ui.dispose();
+});
+
+
+it('configures a storage output filter through the actual page and preserves manual transfers', () => {
+  const html = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../../index.html'), 'utf8');
+  document.body.innerHTML = /<body[^>]*>([\s\S]*)<\/body>/i.exec(html)![1]!;
+  const root = document.querySelector<HTMLElement>('[data-ui="logistics"]')!, items = createDefaultItemRegistry(), player = new Inventory(items, 5);
+  const buildings = new BuildingSystem(createDefaultBuildingRegistry(items), player, terrain, [], 1, 19); buildings.setCreativeMode(true);
+  const machines = new MachineManager(buildings, items, () => []), logistics = new LogisticsManager(buildings, machines, items);
+  const far = { x: 8, z: 8, radius: .4 };
+  const storage = buildings.place('storage-container', 0, 3, 0, far).building!;
+  const belt = buildings.place('conveyor-cell', -.5, 1.5, 0, far).building!;
+  const sink = buildings.place('storage-container', 0, 0, 0, far).building!;
+  const terminal = buildings.place('receiving-terminal', 6, 0, 0, far).building!;
+  logistics.sync(); const contents = logistics.terminal(storage.id)!; contents.addItem('iron-ore', 3); contents.addItem('coal', 2);
+  const ui = new LogisticsUI(root, logistics, player, vi.fn()); ui.open(storage.id);
+  const settings = root.querySelector<HTMLElement>('[data-storage-settings]')!, filter = root.querySelector<HTMLSelectElement>('[data-storage-filter]')!;
+  expect(settings.hidden).toBe(false); expect(filter.value).toBe(''); expect(filter.options.length).toBe(items.all().length + 1);
+  filter.value = 'coal'; filter.dispatchEvent(new Event('change')); expect(logistics.storageOutputFilter(storage.id)).toBe('coal');
+  ui.closePanel(); for (let i = 0; i < 300; i++) logistics.fixedUpdate(50);
+  expect(logistics.terminal(sink.id)!.getItemCount('coal')).toBe(2); expect(contents.getItemCount('iron-ore')).toBe(3);
+  expect(logistics.network.get(belt.id)!.items).toHaveLength(0);
+  ui.open(storage.id); expect(filter.value).toBe('coal');
+  root.querySelector<HTMLButtonElement>('[data-logistics-retrieve]')!.click(); expect(player.getItemCount('iron-ore')).toBe(3);
+  filter.value = ''; filter.dispatchEvent(new Event('change')); expect(logistics.storageOutputFilter(storage.id)).toBeNull();
+  ui.open(terminal.id); expect(settings.hidden).toBe(true);
+  ui.open(sink.id); expect(settings.hidden).toBe(false); expect(filter.value).toBe(''); ui.dispose();
 });

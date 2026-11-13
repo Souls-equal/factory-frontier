@@ -3,11 +3,26 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 7 — Advanced logistics (integration and acceptance)
-**Phase Status:** 🟡 In progress — flow inspection, elevated platforms, configurable lifts and route correction need play-testing
-**Next Recommended Task:** Play-test flow inspection, upper-platform alignment, machine placement, adjustable lifts and open-ended routes; remaining Phase 5 checks and Phase 7 scope/acceptance remain open.
+**Phase Status:** 🟡 In progress — storage filtering and remaining advanced logistics acceptance
+**Next Recommended Task:** Play-test storage output filtering and the remaining route/lift/platform scenarios; compatible direct lift-to-machine connections and Phase 7 acceptance remain open.
 **Last Updated:** 2026-11-11
 
 ---
+
+## Storage output filter
+
+- The player confirmed the conveyor/lift flow inspection works and asked to
+  continue. Storage containers now offer an optional output item filter in their
+  E inspection panel. By default they retain first-occupied-slot behavior.
+- Selecting an item sends only that item to the connected output belt; if absent,
+  the output waits. Incoming belts and manual deposits/retrieval remain unchanged.
+  Other items remain stored; previously emitted items keep moving. Downstream
+  blockage still backpressures normally. Filters are per-container and session-only,
+  survive topology updates, and are discarded on demolition.
+- Automated tests cover real mixed-item networks, filtering, reconfiguration,
+  absence/refill, in-flight changes, full output/recovery, manual retrieval,
+  validation, lifecycle and the actual UI markup. Player validation of this new
+  slice is pending; Phase 7 is not complete.
 
 ## Conveyor and lift flow inspection
 
@@ -22,7 +37,7 @@
   a segment is dismantled. The physical limit is an upper bound, not a guarantee.
 - Automated coverage exercises blocked output, both transport modes, drops,
   pickups, expiration, pause, topology changes, lift targeting and G/modal wiring.
-  Inspection still needs player validation in-game; Phase 7 remains open.
+  The player subsequently confirmed that this inspection works in-game.
 
 ## Elevated platform and machine placement correction
 
@@ -158,8 +173,9 @@
   first occupied slot automatically. E opens storage inspection, allows deposit
   of the selected player stack and retrieval of all contents that fit. Nonempty
   containers cannot be demolished. No dropped-item collection is provided.
-- Mixed contents are not filtered or FIFO: first occupied slot wins and a
-  downstream incompatible/full receiver can block following items. A belt with
+- By default mixed contents are not FIFO: first occupied slot wins and a
+  downstream incompatible/full receiver can block following items. A later slice
+  adds an optional output filter, documented above. A belt with
   an open output can drop items onto the ground. Old two-cell conveyors are not
   connected to this container. For the original play-test procedure, see
   `docs/PHASE_7_STORAGE_CHECK.md`.

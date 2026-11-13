@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — storage output filter
+
+- Let each storage container optionally send only one chosen item type to its
+  output belt; preserve default behavior and all input and manual transfers.
+- Record the player confirmation that conveyor/lift flow inspection works.
+
 ## Unreleased — conveyor flow inspection
 
 - Inspect conveyors and lifts with G without displacing E interactions; display

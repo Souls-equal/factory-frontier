@@ -21,6 +21,8 @@ export class LogisticsUI {
   private readonly close: HTMLButtonElement;
   private readonly retrieve: HTMLButtonElement;
   private readonly deposit: HTMLButtonElement | null;
+  private readonly storageSettings: HTMLElement | null;
+  private readonly storageFilter: HTMLSelectElement | null;
   private readonly splitterSettings: HTMLElement | null;
   private readonly splitterMode: HTMLSelectElement | null;
   private readonly splitterPriority: HTMLSelectElement | null;
@@ -36,6 +38,17 @@ export class LogisticsUI {
     this.grid.addEventListener('click', this.handleGrid);
     this.details = find('[data-logistics-details]'); this.title = find('[data-logistics-title]'); this.notice = find('[data-logistics-notice]');
     this.close = find('[data-logistics-close]'); this.retrieve = find('[data-logistics-retrieve]');
+    this.storageSettings = root.querySelector<HTMLElement>('[data-storage-settings]');
+    this.storageFilter = root.querySelector<HTMLSelectElement>('[data-storage-filter]');
+    if (this.storageFilter) {
+      const any = root.ownerDocument.createElement('option'); any.value = ''; any.textContent = 'Any item (first occupied slot)';
+      this.storageFilter.replaceChildren(any);
+      for (const item of this.player.registry.all()) {
+        const option = root.ownerDocument.createElement('option'); option.value = item.id; option.textContent = item.name;
+        this.storageFilter.append(option);
+      }
+      this.storageFilter.addEventListener('change', this.handleStorageFilter);
+    }
     this.splitterSettings = root.querySelector<HTMLElement>('[data-splitter-settings]');
     this.splitterMode = root.querySelector<HTMLSelectElement>('[data-splitter-mode]');
     this.splitterPriority = root.querySelector<HTMLSelectElement>('[data-splitter-priority]');
@@ -52,6 +65,9 @@ export class LogisticsUI {
     if (!this.active || !this.isOpen) return;
     const segment = this.logistics.network.get(this.active), receiver = this.logistics.terminal(this.active), splitter = this.logistics.splitter(this.active), merger = this.logistics.merger(this.active);
     if (this.splitterSettings) this.splitterSettings.hidden = !splitter;
+    const isStorage = !!receiver && this.logistics.isStorage(this.active);
+    if (this.storageSettings) this.storageSettings.hidden = !isStorage;
+    if (this.storageFilter && isStorage) this.storageFilter.value = this.logistics.storageOutputFilter(this.active) ?? '';
     if (segment) {
       this.title.textContent = `Conveyor: ${segment.path.spec.shape}`;
       const heading = this.root.querySelector('[data-logistics-storage-heading]'), badge = this.root.querySelector('[data-logistics-storage-badge]');
@@ -85,7 +101,6 @@ export class LogisticsUI {
       if (this.deposit) this.deposit.hidden = true;
       this.retrieve.hidden = false; this.retrieve.disabled = !merger.occupied;
     } else if (receiver) {
-      const isStorage = this.logistics.isStorage(this.active);
       this.title.textContent = isStorage ? 'Storage Container' : 'Receiving Terminal';
       const heading = this.root.querySelector('[data-logistics-storage-heading]'), badge = this.root.querySelector('[data-logistics-storage-badge]');
       if (heading) heading.textContent = isStorage ? 'Container' : 'Terminal';
@@ -98,7 +113,7 @@ export class LogisticsUI {
       this.retrieve.hidden = false; this.retrieve.disabled = receiver.usedSlots === 0;
     }
   }
-  dispose(): void { this.splitterMode?.removeEventListener('change', this.handleSplitterConfig); this.splitterPriority?.removeEventListener('change', this.handleSplitterConfig); this.deposit?.removeEventListener('click', this.handleDeposit); this.playerGrid.removeEventListener('click', this.handlePlayerGrid); this.grid.removeEventListener('click', this.handleGrid); this.close.removeEventListener('click', this.onClose); this.retrieve.removeEventListener('click', this.handleRetrieve); }
+  dispose(): void { this.storageFilter?.removeEventListener('change', this.handleStorageFilter); this.splitterMode?.removeEventListener('change', this.handleSplitterConfig); this.splitterPriority?.removeEventListener('change', this.handleSplitterConfig); this.deposit?.removeEventListener('click', this.handleDeposit); this.playerGrid.removeEventListener('click', this.handlePlayerGrid); this.grid.removeEventListener('click', this.handleGrid); this.close.removeEventListener('click', this.onClose); this.retrieve.removeEventListener('click', this.handleRetrieve); }
   private renderPlayer(): void {
     const slots = this.player.snapshot();
     this.playerGrid.replaceChildren();
@@ -149,6 +164,10 @@ export class LogisticsUI {
     const index = Number(button.dataset.slot);
     this.selected = receiver.snapshot()[index] && this.selected !== index ? index : null;
     this.renderSlots(receiver);
+  };
+  private readonly handleStorageFilter = (): void => {
+    if (!this.active || !this.isOpen || !this.storageFilter || !this.logistics.isStorage(this.active)) return;
+    this.logistics.setStorageOutputFilter(this.active, this.storageFilter.value || null); this.update();
   };
   private readonly handleSplitterConfig = (): void => {
     if (!this.active || !this.splitterMode || !this.splitterPriority) return;

@@ -18,6 +18,7 @@ export class LogisticsManager implements SimulationSystem {
   readonly id = 'logistics';
   readonly network: ConveyorNetwork;
   private readonly terminals = new Map<string, Inventory>();
+  private readonly storageOutputFilters = new Map<string, string>();
   private readonly splitters = new Map<string, Splitter>();
   private readonly mergers = new Map<string, Merger>();
   private seenRevision = -1;
@@ -52,6 +53,17 @@ export class LogisticsManager implements SimulationSystem {
   splitter(id: string): Splitter | undefined { return this.splitters.get(id); }
   terminal(id: string): Inventory | undefined { return this.terminals.get(id); }
   isStorage(id: string): boolean { return this.buildings.get(id)?.typeId === 'storage-container'; }
+  /** A null filter preserves the original first-occupied-slot behavior. */
+  storageOutputFilter(id: string): string | null {
+    if (!this.isStorage(id)) throw new RangeError('Unknown storage container');
+    return this.storageOutputFilters.get(id) ?? null;
+  }
+  setStorageOutputFilter(id: string, itemId: string | null): void {
+    if (!this.isStorage(id)) throw new RangeError('Unknown storage container');
+    if (itemId !== null) this.items.get(itemId);
+    if (itemId === null) this.storageOutputFilters.delete(id);
+    else this.storageOutputFilters.set(id, itemId);
+  }
   retrieve(id: string, destination: Inventory): QuantityResult {
     const splitter = this.splitters.get(id), merger = this.mergers.get(id);
     if (splitter) return splitter.retrieve(destination);
@@ -76,9 +88,10 @@ export class LogisticsManager implements SimulationSystem {
     for (const [id, inventory] of this.terminals) {
       if (!byId.has(id)) {
         if (inventory.usedSlots) throw new Error('Cannot discard a non-empty receiving terminal');
-        this.terminals.delete(id);
+        this.terminals.delete(id); this.storageOutputFilters.delete(id);
       }
     }
+    for (const id of this.storageOutputFilters.keys()) if (!this.isStorage(id)) this.storageOutputFilters.delete(id);
     for (const [id, splitter] of this.splitters) if (!byId.has(id)) {
       if (splitter.pending) throw new Error('Cannot discard a non-empty splitter');
       this.splitters.delete(id);
@@ -187,9 +200,13 @@ export class LogisticsManager implements SimulationSystem {
       if (terminal) {
         if (building.typeId === 'storage-container') {
           const pose = machinePort(building, this.buildings.cellSize, 'source');
-          const source = { id: building.id, pose,
-            peek: () => terminal.snapshot().find((slot) => slot !== null)?.itemId ?? null,
-            take: (itemId: string) => terminal.removeItem(itemId, 1).moved === 1 };
+          const selected = (): string | null => {
+            const filter = this.storageOutputFilters.get(building.id);
+            if (filter) return terminal.getItemCount(filter) > 0 ? filter : null;
+            return terminal.snapshot().find((slot) => slot !== null)?.itemId ?? null;
+          };
+          const source = { id: building.id, pose, peek: selected,
+            take: (itemId: string) => selected() === itemId && terminal.removeItem(itemId, 1).moved === 1 };
           const cell = cells.find((b) => cellTouchesMachine(b, building, this.buildings.cellSize, 'source'));
           if (cell) {
             const path = pathForBuilding(cell, this.buildings.cellSize)!, d = path.direction('input'), port = pose.direction;
