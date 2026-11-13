@@ -68,13 +68,12 @@ describe('direct machine to lift connections', () => {
     expect(from.getItemCount('coal') + segment.items.length).toBe(15);
     to.removeItem('stone', 800); tick(800); expect(to.getItemCount('coal')).toBe(15); expect(segment.items.length).toBe(0);
   });
-  it('does not connect misaligned direction, height or unimplemented junction ports', () => {
+  it('does not connect misaligned direction or height', () => {
     const { logistics, buildings, place } = setup();
     const lift = place('lift-up-1', 0, 0), wrong = place('storage-container', 0, 2, 2), low = place('storage-container', 0, -2, 0);
     logistics.sync(); expect(logistics.network.get(lift.id)!.source).toBeNull(); expect(logistics.network.get(lift.id)!.receiver).toBeNull();
     expect(logistics.network.isOutputBlocked(lift.id)).toBe(true); expect(wrong.transform.y).toBe(0); expect(low.transform.y).toBe(0);
-    expect(buildings.demolish(wrong.id)).toBe('removed'); place('splitter', 0, 2); logistics.sync();
-    expect(logistics.network.get(lift.id)!.source).toBeNull();
+    expect(buildings.demolish(wrong.id)).toBe('removed');
   });
   it('connects a miner directly and respects enabled state', () => {
     const { machines, logistics, place, tick } = setup([deposit]);

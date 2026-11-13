@@ -58,8 +58,8 @@ additional platforms; the usual construction reach still applies.
 Limits: heights are selected from 1–8 grid metres before placement, not
 adjustable afterwards. Terrain and foundation support limits still apply, so
 some elevated layouts require a supported foundation. Compatible machine ports can connect directly when aligned at the same height;
-connect splitters and mergers via one-cell belts. Legacy two-cell belts cannot
-connect to lifts or one-cell belts. The later route editor is described in `PHASE_7_ROUTE_CHECK.md`. Check previous Phase 5
+splitters and mergers also accept directly aligned lift ports. Legacy two-cell
+belts cannot connect to lifts or one-cell belts. The later route editor is described in `PHASE_7_ROUTE_CHECK.md`. Check previous Phase 5
 manual scenarios separately; report layout, rotation and any problems found.
 
 
@@ -99,4 +99,18 @@ manual scenarios separately; report layout, rotation and any problems found.
    storage's output filter and verify only the selected item leaves.
 3. Repeat with a downward lift, a machine input/output and a rotated terminal.
    Wrong heights or directions must not connect. Direct links to splitters,
-   mergers and other lifts still need one-cell belts; legacy belts cannot connect.
+   other lifts still need one-cell belts; legacy belts cannot connect directly.
+
+
+### Direct lift-to-splitter and merger connections
+
+1. Connect a splitter's front and side output ports directly to correctly oriented
+   upward lifts at the same height, and put supported receivers at their outputs.
+   Feed the splitter and check balanced distribution. Fill one receiver: check
+   overflow and strict-priority modes, then free it and verify recovery.
+2. Feed a merger using direct downward lifts at its three input ports, then attach
+   a direct upward lift to its output. Check that all inputs progress and no items
+   disappear when the output is full or after it is emptied.
+3. Try placing lifts and junctions in either order and at a supported upper level.
+   Wrong height/direction must not connect. Each port permits one lane; direct
+   lift-to-lift and legacy belt connections remain unsupported.

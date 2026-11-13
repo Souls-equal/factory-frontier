@@ -7,10 +7,10 @@ import type { MachineManager } from '../machines/MachineManager';
 import { Smelter, SMELTER_FUEL } from '../machines/Smelter';
 import { ConveyorNetwork, type ConveyorSettings, DEFAULT_CONVEYOR_SETTINGS } from './ConveyorNetwork';
 import type { GroundItems } from './GroundItems';
-import { InventoryReceiver, InventorySource } from './Ports';
+import { InventoryReceiver, InventorySource, matchesPort } from './Ports';
 import { Splitter } from './Splitter';
 import { Merger } from './Merger';
-import { directLiftInput, directLiftOutput } from './DirectLiftConnections';
+import { directLiftInput, directLiftOutput, directLiftMergerInput } from './DirectLiftConnections';
 import type { ItemSource, ItemReceiver } from './Ports';
 
 import { pathForBuilding, machinePort, splitterPort, mergerPort, isLiftBuilding, RECEIVER_TYPE } from './ConveyorDefinitions';
@@ -121,7 +121,11 @@ export class LogisticsManager implements SimulationSystem {
     const cells = buildings.filter((b) => b.typeId === 'conveyor-cell');
     const lifts = buildings.filter((b) => isLiftBuilding(b.typeId));
     const attachLiftSource = (building: BuildingInstance, source: ItemSource): boolean => {
-      const lift = lifts.find((entry) => directLiftInput(entry, building, this.buildings.cellSize));
+      const lift = lifts.find((entry) => {
+        if (!directLiftInput(entry, building, this.buildings.cellSize)) return false;
+        const path = pathForBuilding(entry, this.buildings.cellSize)!;
+        return matchesPort(source.pose, path.point(0), path.direction('input'));
+      });
       return !!lift && !this.network.get(lift.id)!.input && this.network.attachCellSource(lift.id, source, 0);
     };
     const attachLiftReceivers = (building: BuildingInstance, receiver: ItemReceiver): void => {
@@ -185,7 +189,9 @@ export class LogisticsManager implements SimulationSystem {
       if (merger) {
         for (let i = 0; i < 3; i++) {
           const input = cells.find((cell) => mergerInputTouches(cell, building, this.buildings.cellSize, i));
-          if (input) this.network.attachCellReceiver(input.id, merger.receiver(i, mergerPort(building, this.buildings.cellSize, i)));
+          const receiver = merger.receiver(i, mergerPort(building, this.buildings.cellSize, i));
+          if (input) this.network.attachCellReceiver(input.id, receiver);
+          for (const lift of lifts) if (directLiftMergerInput(lift, building, this.buildings.cellSize, i)) this.network.attachCellReceiver(lift.id, receiver);
         }
         const cell = cells.find((b) => cellTouchesMachine(b, building, this.buildings.cellSize, 'source'));
         if (cell) {
@@ -193,17 +199,19 @@ export class LogisticsManager implements SimulationSystem {
           const d = path.direction('input'), distance = d.x === pose.direction.x && d.z === pose.direction.z ? 0 : path.length / 2;
           this.network.attachCellSource(cell.id, merger.source(pose), distance, { x: cell.transform.x - pose.direction.x * this.buildings.cellSize / 2,
             y: pose.position.y, z: cell.transform.z - pose.direction.z * this.buildings.cellSize / 2 });
-        }
+        } else attachLiftSource(building, merger.source(machinePort(building, this.buildings.cellSize, 'source')));
       }
       const splitter = this.splitters.get(building.id);
       if (splitter) {
         const input = cells.find((cell) => cellTouchesMachine(cell, building, this.buildings.cellSize, 'receiver'));
-        if (input) this.network.attachCellReceiver(input.id, splitter.receiver(machinePort(building, this.buildings.cellSize, 'receiver')));
+        const receiver = splitter.receiver(machinePort(building, this.buildings.cellSize, 'receiver'));
+        if (input) this.network.attachCellReceiver(input.id, receiver);
+        attachLiftReceivers(building, receiver);
         for (let i = 0; i < 3; i++) {
           const cell = cells.find((entry) => splitterOutputTouches(entry, building, this.buildings.cellSize, i));
-          if (!cell) continue;
-          const pose = splitterPort(building, this.buildings.cellSize, i);
-          this.network.attachCellSource(cell.id, splitter.source(i, pose), 0);
+          const pose = splitterPort(building, this.buildings.cellSize, i), source = splitter.source(i, pose);
+          if (cell) this.network.attachCellSource(cell.id, source, 0);
+          else attachLiftSource(building, source);
         }
       }
       const terminal = this.terminals.get(building.id);
