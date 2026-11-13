@@ -3,11 +3,27 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 6 — First production chain (first smelter slice in progress)
-**Phase Status:** 🟡 In progress — coal-fueled smelter implemented; player validation pending
-**Next Recommended Task:** Validate the smelter slice in game, then implement the constructor and iron plates. Complete remaining Phase 5 manual checks as appropriate.
+**Phase Status:** 🟡 In progress — coal-fueled smelter implemented; user reported testing, details not specified
+**Next Recommended Task:** Check the new creative toggle in game, clarify any smelter issues if reported, then implement the constructor and iron plates. Complete remaining Phase 5 manual checks as appropriate.
 **Last Updated:** 2026-11-11
 
 ---
+
+## Creative construction — user-requested testing aid
+
+- Q → Creative mode makes buildings free to select, preview and place; it is off
+  by default and lasts for the current session only. Toggling back restores
+  material costs; inventory is never replenished by the toggle. The HUD marks
+  creative placement and the menu explains the distinction.
+- Creative changes only construction costs. Terrain, collision, deposit,
+  transport topology and demolition checks remain active; machines still need
+  their real inputs and coal. Buildings placed for free never refund materials,
+  even if the mode is later turned off. Paid buildings retain their full refund
+  and inventory-space requirements in either mode.
+- The user said they tested the previous smelter step, without specifying
+  individual results; this is not evidence of every smelter or Phase 5 checklist
+  scenario passing. Manual validation of the new creative toggle remains pending.
+  The constructor and iron plates are still the next Phase 6 production slice.
 
 ## Phase 6 — direct coal fuel for the smelter
 
@@ -25,7 +41,7 @@
 - Automated tests cover coal exhaustion/refill, exact consumption, blocked and
   disabled states, independent buffer capacity, two mined conveyor supplies,
   item conservation, UI and the generated world's coal Miner. Manual play-testing
-  of this change remains pending; the constructor and plates are not implemented.
+  of this change was later reported by the user without detailed results; the constructor and plates are not implemented.
 
 ## Phase 6 — iron smelter first slice (2026-11-11)
 
@@ -45,7 +61,7 @@
   Tests cover simulation, filter/backpressure, rotation, placement ordering,
   conservation across miner → smelter → terminal, and mocked-render bootstrap/UI.
 - This is **not** the complete Phase 6 chain: constructor, iron plates, recipe
-  selection, electrical power, and user play-testing of the smelter are still outstanding.
+  selection, electrical power, and detailed smelter acceptance are still outstanding.
   Legacy automatic two-cell conveyors are not supported by the new smelter; use
   the one-cell conveyor offered in the construction menu.
 

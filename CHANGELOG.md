@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — creative construction
+
+- Add a session-only Creative mode checkbox to the Q menu to construct without
+  material costs. Placement and machine requirements stay unchanged.
+- Record whether a building was free so demolition cannot create materials after
+  changing modes; paid buildings still refund normally.
+
 ## Unreleased — coal-fueled smelter
 
 - Require one coal and one iron ore per ingot. Fuel is consumed only when a

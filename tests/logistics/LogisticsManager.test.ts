@@ -834,3 +834,12 @@ it('independently backpressures coal and ore at the same inlet', () => {
   s.input.addItem('iron-ore', 99); s.fuel.removeItem('coal', 1);
   expect(second.canAccept('iron-ore')).toBe(false); expect(second.canAccept('coal')).toBe(true);
 });
+
+it('protects a creative smelter and its contents even after switching to survival mode', () => {
+  const { buildings, machines, logistics, items } = setup(); buildings.setCreativeMode(true);
+  const building = place(buildings, 'smelter', 0, -3); logistics.sync();
+  const s = machines.smelter(building.id)!; s.fuel.addItem('coal', 1);
+  buildings.setCreativeMode(false); expect(buildings.demolish(building.id)).toBe('output not empty');
+  const inventory = new Inventory(items, 1); expect(s.retrieveFuel(inventory).moved).toBe(1);
+  expect(buildings.demolish(building.id)).toBe('removed'); expect(inventory.getItemCount('stone')).toBe(0);
+});

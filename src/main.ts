@@ -188,7 +188,7 @@ async function boot(): Promise<void> {
   constructionUI = new ConstructionUI(constructionRoot, buildingRegistry, inventory, (id) => {
     construction.select(id); closeConstruction();
     interactionPrompt.showFeedback('Aim at nearby ground. R rotates · Left click places repeatedly · Esc cancels.');
-  }, closeConstruction, buildings.cellSize);
+  }, closeConstruction, buildings.cellSize, buildings);
   createdInput = new InputManager(canvas as HTMLCanvasElement, {
     onPointerLockChange: (locked) => controlsHint.setPointerLocked(locked),
     onInventoryToggle: () => {
@@ -336,8 +336,9 @@ async function boot(): Promise<void> {
         const target = construction.target(player.view);
         if (!target) interactionPrompt.showFeedback('Aim at a placed building to demolish.');
         else {
+          const free = buildings.get(target)?.freePlacement === true;
           const result = buildings.demolish(target);
-          interactionPrompt.showFeedback(result === 'removed' ? 'Building demolished; materials refunded.' : `Cannot demolish: ${result}.`);
+          interactionPrompt.showFeedback(result === 'removed' ? (free ? 'Free building demolished; no materials to refund.' : 'Building demolished; materials refunded.') : `Cannot demolish: ${result}.`);
         }
       }
       syncMachines(); syncLogistics(); syncBeltItems(); syncGroundItems();
@@ -383,9 +384,9 @@ async function boot(): Promise<void> {
       engine.setMachineStates?.([...machines.all(), ...machines.allSmelters()].map((machine) => ({ id: machine.id, state: machine.state })));
       engine.setBuildingPreview?.(construction.selected, preview ?? undefined);
       constructionStatus.hidden = !construction.active;
-      if (construction.active) constructionStatus.textContent = preview
+      if (construction.active) constructionStatus.textContent = (buildings.creativeMode ? 'Creative · ' : '') + (preview
         ? `${preview.reason === 'valid' ? 'Valid placement' : `Cannot place: ${preview.reason}`} · R rotate · Left click place · Esc cancel${preview.connection ? ` · ${preview.connection} port` : ''}${construction.selected?.startsWith('conveyor-') ? ' · direction follows view; yellow = output · R rotates' : ''}${preview.snappedToConveyor || preview.snappedToFoundation ? ' · aligned to neighbour' : ''}${construction.selected === 'foundation' ? ` · Page Up/Down height (${construction.foundationHeightOffset >= 0 ? '+' : ''}${construction.foundationHeightOffset.toFixed(1)} m) · base ${preview.transform.y.toFixed(1)} m` : ''}${preview.conveyorPreviewChanges?.length ? ' · green preview shows belt after placement' : ''}${!createdInput.isPointerLocked ? ' · drag to look · right click to capture mouse' : ''}`
-        : `Aim at ground within ${config.construction.reach} m · R rotate · Left click place · Esc cancel${!createdInput.isPointerLocked ? ' · drag to look · right click to capture mouse' : ''}`;
+        : `Aim at ground within ${config.construction.reach} m · R rotate · Left click place · Esc cancel${!createdInput.isPointerLocked ? ' · drag to look · right click to capture mouse' : ''}`);
       const target = inventoryUI?.isOpen || constructionUI?.isOpen || machineUI?.isOpen || logisticsUI?.isOpen || construction.active ? null : interaction.target;
       engine.setHighlight?.(target?.id ?? null);
 
