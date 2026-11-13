@@ -37,8 +37,9 @@ export interface PlacementResult {
   readonly snappedToConveyor?: boolean;
   readonly snappedToFoundation?: boolean;
 }
-export type RouteReason = PlacementReason | 'invalid route' | 'missing source' | 'missing destination';
-export interface RouteResult { readonly reason: RouteReason; readonly cells: readonly BuildingInstance[]; readonly changed: readonly BuildingInstance[]; readonly cost: readonly { readonly itemId: string; readonly quantity: number }[] }
+export type RouteReason = PlacementReason | 'invalid route' | 'missing source' | 'output blocked';
+export type RouteEndConnection = 'connected' | 'open' | 'blocked';
+export interface RouteResult { readonly reason: RouteReason; readonly cells: readonly BuildingInstance[]; readonly changed: readonly BuildingInstance[]; readonly cost: readonly { readonly itemId: string; readonly quantity: number }[]; readonly endConnection: RouteEndConnection | null }
 export interface PlayerFootprint { readonly x: number; readonly z: number; readonly radius: number }
 
 const intersects = (a: Footprint, b: Footprint): boolean =>
@@ -318,7 +319,7 @@ export class BuildingSystem {
   previewConveyorRoute(points: readonly RoutePoint[], player: PlayerFootprint, xFirst = false, defaultRotation = 0): RouteResult {
     const definition = this.registry.get('conveyor-cell');
     const expanded = expandRoute(points, definition, this.cellSize, xFirst, defaultRotation);
-    const empty = (reason: RouteReason): RouteResult => ({ reason, cells: [], changed: [], cost: [] });
+    const empty = (reason: RouteReason): RouteResult => ({ reason, cells: [], changed: [], cost: [], endConnection: null });
     if (!expanded) return empty('invalid route');
     const shadow = new BuildingSystem(this.registry, this.inventory, this.terrain, this.obstacles, this.cellSize,
       this.playAreaRadius, this.deposits, this.dynamicObstacles);
@@ -353,12 +354,20 @@ export class BuildingSystem {
       if (b.typeId === 'splitter' || isLiftBuilding(b.typeId)) return selected((cell) => cellTouchesReceiver(cell, b, this.cellSize), last);
       return cellTouchesReceiver(last, b, this.cellSize);
     });
+    // Match the network's obstruction rule: a non-accepting building directly
+    // ahead blocks the output. An empty cell ahead is a valid open route end.
+    const direction = pathForBuilding(last, this.cellSize)!.direction('output');
+    const x = last.transform.x + direction.x * this.cellSize, z = last.transform.z + direction.z * this.cellSize;
+    const blocked = !hasDestination && before.some((b) => b.typeId !== 'foundation' &&
+      x > b.transform.footprint.minX && x < b.transform.footprint.maxX &&
+      z > b.transform.footprint.minZ && z < b.transform.footprint.maxZ);
+    const endConnection: RouteEndConnection = hasDestination ? 'connected' : blocked ? 'blocked' : 'open';
     const cost = definition.cost.map((entry) => ({ itemId: entry.itemId, quantity: entry.quantity * route.length }));
     const changed = after.filter((b) => !ids.includes(b.id) && (b.typeId === 'conveyor-cell' || b.typeId === 'conveyor-auto') &&
       JSON.stringify([before.find((old) => old.id === b.id)?.cellConveyor, before.find((old) => old.id === b.id)?.autoConveyor]) !== JSON.stringify([b.cellConveyor, b.autoConveyor]));
-    const result = (reason: RouteReason): RouteResult => ({ reason, cells: route, changed, cost });
+    const result = (reason: RouteReason): RouteResult => ({ reason, cells: route, changed, cost, endConnection });
     if (!hasSource) return result('missing source');
-    if (!hasDestination) return result('missing destination');
+    if (blocked) return result('output blocked');
     if (!this.creativeMode && cost.some((entry) => !this.inventory.hasItem(entry.itemId, entry.quantity))) return result('insufficient materials');
     if (!this.safePlan(before, after)) return result('conveyor occupied');
     return result('valid');

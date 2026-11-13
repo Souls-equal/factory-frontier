@@ -21,7 +21,7 @@ conveyor → terminal transport, turns/slopes without item loss, and blockage/re
 Other Phase 5 checklist scenarios were not explicitly confirmed. Starting the
 smelter slice before full Phase 5 acceptance is a user-directed exception to the
 existing Phase 5 gate below; it does not mark that phase accepted or complete.
-The user reported everything works after the Phase 6 complete-chain play-test was requested, and explicitly asked to proceed. The Phase 6 chain is user-validated; this does not establish acceptance of every Phase 5 scenario. Phase 7 includes storage, splitter modes, a fair merger and bounded upward/downward lifts. The user reports that all previously playable additions work after testing; this is a global report, not individual scenario evidence. The new bounded control-point route editor was added afterwards and still requires player validation. Arbitrary lift heights remain unimplemented, so Phase 7 acceptance remains pending.
+The user reported everything works after the Phase 6 complete-chain play-test was requested, and explicitly asked to proceed. The Phase 6 chain is user-validated; this does not establish acceptance of every Phase 5 scenario. Phase 7 includes storage, splitter modes, a fair merger and bounded upward/downward lifts. The user reports that all previously playable additions work after testing; this is a global report, not individual scenario evidence. The new bounded control-point route editor was added afterwards. The user reported that requiring an existing destination prevented incremental construction; open-ended routes and continuation have now been added and still require player retesting. Arbitrary lift heights remain unimplemented, so Phase 7 acceptance remains pending.
 At the user's request the smelter now directly consumes coal (1 per iron ingot);
 this is an early fuel exception, not the Phase 8 electrical power network. The
 user subsequently reported testing without specifying results. A user-requested,
@@ -45,7 +45,7 @@ detailed evidence and verification results live in `PROJECT_STATUS.md`.
 | 4 — First automated extractor | 🟡 User accepted | Browser verification remains pending |
 | 5 — Conveyor foundation | 🟡 Partially user-validated | User confirmed miner → terminal, turns/slopes, blockage and recovery; remaining checklist not confirmed |
 | 6 — First production chain | ✅ User validated | Coal-fueled smelter, constructor and plates implemented; user reports everything works after complete-chain test request |
-| 7 — Advanced logistics | 🟡 Acceptance pending | Previous playable logistics additions user-validated globally; bounded route editor implemented, awaiting player test; arbitrary lift heights remain unimplemented |
+| 7 — Advanced logistics | 🟡 Acceptance pending | Previous playable logistics additions user-validated globally; bounded route editor supports open ends and continuation after feedback; retest pending; arbitrary lift heights remain unimplemented |
 | 8 — Electricity | ◻ Planned | — |
 | 9 — Advanced manufacturing | ◻ Planned | — |
 | 10 — World expansion | ◻ Planned | — |

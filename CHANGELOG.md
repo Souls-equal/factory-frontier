@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — open-ended conveyor routes
+
+- Allow a route to end in empty space and be extended with another route or
+  connected to a later machine, responding to player feedback.
+- Show connected/open/blocked status and warn when items can fall from an open end;
+  preserve source, cost, terrain and live topology validation.
+
 ## Unreleased — conveyor route editor
 
 - Wire control-point route editing to construction input, previews, cost and

@@ -3,11 +3,23 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 7 — Advanced logistics (integration and acceptance)
-**Phase Status:** 🟡 In progress — previous playable additions user-validated; route editor implemented, awaiting play-test
-**Next Recommended Task:** Play-test the new route editor and address any issues; remaining Phase 5 checks and Phase 7 scope/acceptance remain open.
+**Phase Status:** 🟡 In progress — route editor adjusted after user feedback; follow-up play-test pending
+**Next Recommended Task:** Retest open-ended routes, continuation and later attachment; remaining Phase 5 checks and Phase 7 scope/acceptance remain open.
 **Last Updated:** 2026-11-11
 
 ---
+
+## Phase 7 — open-ended route correction
+
+- The user reported that requiring a destination prevented placing the receiving
+  machine afterwards or continuing with another 24-cell route. A valid starting
+  output is still required, but an empty endpoint is now valid and can be
+  extended from the last belt. The editor distinguishes open, connected and
+  obstructed ends, and warns that items can fall from an open end. A non-input
+  building directly ahead still blocks confirmation rather than looking connected.
+- Automated coverage builds two consecutive 24-cell paths, attaches a terminal
+  later, and checks live-item conservation, ground drops, costs, guard rejection
+  and the actual editor wiring. The user has not yet retested this correction.
 
 ## Phase 7 — conveyor route editor
 
@@ -15,17 +27,17 @@
   works; this confirms the previous playable Phase 7 additions globally, without
   a scenario-by-scenario report. The route editor was not yet available then.
 - Select Conveyor from Q and press T for route mode. Click the first free cell
-  touching an output, then optional intermediate points; aim at the last free
-  cell touching an input and press Enter. The multi-cell preview shows validity,
-  proposed belt shapes and aggregate cost. R toggles orthogonal bend order for
+  touching an output, then optional intermediate points; aim at the final free
+  cell and press Enter. An input may be connected now or placed later. The
+  multi-cell preview shows validity, proposed belt shapes and aggregate cost. R toggles orthogonal bend order for
   the whole route; Backspace undoes a point; T returns to individual placement;
   Esc/Q cancel. Confirmation revalidates and pays/commits all cells or none.
 - Automated coverage includes editor input, caching and live revalidation,
   visual cleanup, bootstrap wiring, real transport and resource conservation.
   In-game usability and acceptance are pending: see `docs/PHASE_7_ROUTE_CHECK.md`.
-- Routes are limited to 24 one-cell belts, start/end at existing compatible
-  ports or one-cell belts, use orthogonal grid legs, and inherit placement reach,
-  terrain and support constraints. Incremental staging can reject some otherwise
+- Routes are limited to 24 one-cell belts per confirmation, start at an existing
+  compatible output or one-cell belt and may end in empty space. They use
+  orthogonal grid legs and inherit placement reach, terrain and support constraints. Incremental staging can reject some otherwise
   possible layouts. Legacy two-cell endpoints and arbitrary lift heights remain
   unsupported. Preview is advisory and refreshes at least every 250 ms while
   active; confirmation always revalidates. No state is saved.

@@ -31,17 +31,22 @@ export class ConveyorRouteEditor {
     return last && last.x === end.x && last.z === end.z ? [...this.waypoints] : [...this.waypoints, end];
   }
   private sourceOK(reason: RouteReason): boolean {
-    return reason === 'valid' || reason === 'missing destination' || reason === 'insufficient materials' || reason === 'conveyor occupied';
+    return reason === 'valid' || reason === 'output blocked' || reason === 'insufficient materials' || reason === 'conveyor occupied';
   }
   private plan(point: RoutePoint, player: PlayerFootprint, rotation: number): RouteEditorPreview {
     const starting = !this.waypoints.length, points = this.route(point);
     let selectedRotation = starting ? rotation : this.startRotation;
     let result = this.system.previewConveyorRoute(points, player, this.xFirst, selectedRotation);
-    if (starting && !this.sourceOK(result.reason)) {
+    // Prefer an unblocked starting direction when a one-cell route can face
+    // several ways (e.g. sideways entry from a machine).
+    const rank = (reason: RouteReason): number => reason === 'valid' ? 0 : reason === 'insufficient materials' ? 1 :
+      reason === 'conveyor occupied' ? 2 : reason === 'output blocked' ? 3 : 4;
+    if (starting && rank(result.reason) > 0) {
       for (let i = 1; i < 4; i++) {
         const candidateRotation = (rotation + i) % 4;
         const candidate = this.system.previewConveyorRoute(points, player, this.xFirst, candidateRotation);
-        if (this.sourceOK(candidate.reason)) { result = candidate; selectedRotation = candidateRotation; break; }
+        if (rank(candidate.reason) < rank(result.reason)) { result = candidate; selectedRotation = candidateRotation; }
+        if (rank(result.reason) === 0) break;
       }
     }
     const expanded = expandRoute(points, this.system.registry.get('conveyor-cell'), this.system.cellSize, this.xFirst, selectedRotation);

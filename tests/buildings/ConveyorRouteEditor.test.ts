@@ -47,10 +47,27 @@ describe('route editor', () => {
     expect(system.place('receiving-terminal', 4, -6, 0, player).reason).toBe('valid');
     expect(editor.addPoint(start, player, 0)).toBe('point added');
     const target = { x: 3.5, z: -4.5 };
-    expect(editor.preview(target, player, 0, 0, 0).reason).toBe('missing destination');
+    expect(editor.preview(target, player, 0, 0, 0)).toMatchObject({ reason: 'valid', endConnection: 'open' });
     editor.toggleAxis(); expect(editor.horizontalFirst).toBe(true);
-    expect(editor.preview(target, player, 0, 0, 0).reason).toBe('valid');
+    expect(editor.preview(target, player, 0, 0, 0)).toMatchObject({ reason: 'valid', endConnection: 'connected' });
     expect(editor.confirm(target, player)?.reason).toBe('valid');
+  });
+  it('permits an open end but still rechecks cost and live guards at commit', () => {
+    const { editor, inventory, system } = setup(), openEnd = { x: -.5, z: -2.5 };
+    expect(editor.addPoint(start, player, 2)).toBe('point added');
+    const preview = editor.preview(openEnd, player, 0, inventory.revision, 0);
+    expect(preview).toMatchObject({ reason: 'valid', endConnection: 'open' });
+    inventory.removeItem('stone', 40); const before = system.all(), stock = inventory.snapshot();
+    expect(editor.confirm(openEnd, player)?.reason).toBe('insufficient materials');
+    expect(system.all()).toEqual(before); expect(inventory.snapshot()).toEqual(stock);
+    inventory.addItem('stone', 40); system.addTopologyGuard(() => false);
+    expect(editor.confirm(openEnd, player)?.reason).toBe('conveyor occupied');
+    expect(system.all()).toEqual(before); expect(editor.pointCount).toBe(1);
+  });
+  it('chooses a usable single-cell start even when the camera initially faces the source', () => {
+    const { editor } = setup();
+    expect(editor.addPoint(start, player, 2)).toBe('point added');
+    expect(editor.confirm(start, player)).toMatchObject({ reason: 'valid', endConnection: 'open' });
   });
   it('rechecks materials, world, and live guards at confirmation, leaving points for correction', () => {
     const { editor, inventory, system } = setup();
