@@ -171,7 +171,7 @@ async function boot(): Promise<void> {
   const routeEditor = new ConveyorRouteEditor(buildings, world.terrain);
   let routeMode = false;
   const clearRoute = (): void => { routeMode = false; routeEditor.reset(); };
-  let pendingConstruction: 'place' | 'demolish' | 'route-confirm' | null = null;
+  let pendingConstruction: 'place' | 'demolish' | 'route-confirm' | 'inspect-conveyor' | null = null;
   let createdInput: InputManager;
   const closeInventory = (): void => {
     if (!inventoryUI?.isOpen) return;
@@ -232,6 +232,7 @@ async function boot(): Promise<void> {
       if (routeMode && code === 'Enter') { pendingConstruction = 'route-confirm'; return true; }
       if (code === 'KeyR' && construction.active) { if (routeMode) routeEditor.toggleAxis(); else construction.rotate(); return true; }
       if (code === 'KeyF' && !construction.active) { pendingConstruction = 'demolish'; return true; }
+      if (code === 'KeyG' && !construction.active) { pendingConstruction = 'inspect-conveyor'; return true; }
       return false;
     },
   });
@@ -363,6 +364,11 @@ async function boot(): Promise<void> {
       } else if (action === 'place' && construction.active && !constructionUI?.isOpen && !inventoryUI?.isOpen) {
         const result = construction.confirm(player.view, playerFootprint());
         interactionPrompt.showFeedback(result ? (result.reason === 'valid' ? `${buildings.registry.get(result.building!.typeId).name} placed.` : `Cannot place: ${result.reason}.`) : 'Aim at nearby ground.');
+      } else if (action === 'inspect-conveyor' && !construction.active && !constructionUI?.isOpen && !inventoryUI?.isOpen && !machineUI?.isOpen && !logisticsUI?.isOpen) {
+        const target = construction.target(player.view);
+        logistics.sync();
+        if (!target || !logistics.network.get(target)) interactionPrompt.showFeedback('Aim at a conveyor or lift to inspect.');
+        else { player.stopHorizontalMotion(); createdInput.suspendForModal(); logisticsUI?.open(target); }
       } else if (action === 'demolish' && !construction.active && !constructionUI?.isOpen && !inventoryUI?.isOpen) {
         const target = construction.target(player.view);
         if (!target) interactionPrompt.showFeedback('Aim at a placed building to demolish.');

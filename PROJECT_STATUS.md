@@ -3,11 +3,26 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 7 — Advanced logistics (integration and acceptance)
-**Phase Status:** 🟡 In progress — elevated platform alignment, configurable lifts and route correction need play-testing
-**Next Recommended Task:** Play-test upper-platform alignment, machine placement, adjustable lifts and open-ended routes; remaining Phase 5 checks and Phase 7 scope/acceptance remain open.
+**Phase Status:** 🟡 In progress — flow inspection, elevated platforms, configurable lifts and route correction need play-testing
+**Next Recommended Task:** Play-test flow inspection, upper-platform alignment, machine placement, adjustable lifts and open-ended routes; remaining Phase 5 checks and Phase 7 scope/acceptance remain open.
 **Last Updated:** 2026-11-11
 
 ---
+
+## Conveyor and lift flow inspection
+
+- Aim at a placed conveyor or lift and press G to inspect its state, output,
+  configured and theoretical upper limits, recent completed outputs and lifetime
+  total. E remains available for normal interaction and manual item pickup.
+- Recent flow counts successful handoffs and open-end drops in the latest 60
+  one-second simulation-time buckets, not manual pickups; near a bucket boundary
+  the effective window is approximately 59–60 s. Immediately after construction
+  it contains less than 60 s of history and is not extrapolated. The panel pauses
+  simulation; close it to let flow resume. Counts are session-only and reset when
+  a segment is dismantled. The physical limit is an upper bound, not a guarantee.
+- Automated coverage exercises blocked output, both transport modes, drops,
+  pickups, expiration, pause, topology changes, lift targeting and G/modal wiring.
+  Inspection still needs player validation in-game; Phase 7 remains open.
 
 ## Elevated platform and machine placement correction
 

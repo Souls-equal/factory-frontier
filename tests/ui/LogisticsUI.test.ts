@@ -144,3 +144,18 @@ it('configures splitter routing and inspects the merger buffer', () => {
   root.querySelector<HTMLButtonElement>('[data-logistics-retrieve]')!.click();
   expect(player.getItemCount('coal')).toBe(1); expect(logistics.merger(merger.id)!.occupied).toBe(false); ui.dispose();
 });
+
+it('shows lift flow, physical throughput cap, and resets the panel when reopening storage', () => {
+  document.body.innerHTML = '<section hidden><h2 data-logistics-title></h2><span data-logistics-storage-heading></span><span data-logistics-storage-badge></span><button data-logistics-close>close</button><p data-logistics-details></p><div data-logistics-grid hidden></div><p data-logistics-slot-detail></p><div data-logistics-player-pane><div data-logistics-player-grid></div><p data-logistics-player-capacity></p><p data-logistics-player-detail></p></div><button data-logistics-deposit>store</button><button data-logistics-retrieve>retrieve</button><p data-logistics-notice></p></section>';
+  const root = document.querySelector('section')!, items = createDefaultItemRegistry(), inventory = new Inventory(items, 10);
+  const buildings = new BuildingSystem(createDefaultBuildingRegistry(items), inventory, terrain, [], 1, 19); buildings.setCreativeMode(true);
+  const machines = new MachineManager(buildings, items, () => []), logistics = new LogisticsManager(buildings, machines, items, () => false, 1, { speed: .5, spacing: .5, throughputPerMinute: 100 });
+  const lift = buildings.place('lift-up-3', 0, 0, 0, { x: 8, z: 8, radius: .4 }).building!;
+  const storage = buildings.place('storage-container', 5, 5, 0, { x: 8, z: 8, radius: .4 }).building!;
+  logistics.sync(); const ui = new LogisticsUI(root, logistics, inventory, vi.fn()); ui.open(lift.id);
+  expect(root.textContent).toContain('Maximum throughput: 100 items/min'); expect(root.textContent).toContain('Theoretical limit: 60 items/min');
+  expect(root.textContent).toContain('Observed outputs (up to 60 s, 1 s bins): 0 items / 60 s'); expect(root.textContent).toContain('Total sent: 0');
+  expect(root.querySelector('[data-logistics-storage-badge]')!.textContent).toBe('FLOW');
+  ui.open(storage.id); expect(root.querySelector('[data-logistics-storage-heading]')!.textContent).toBe('Container');
+  expect(root.querySelector('[data-logistics-storage-badge]')!.textContent).not.toBe('FLOW'); ui.dispose();
+});

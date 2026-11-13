@@ -1466,3 +1466,20 @@ still require their deposit and use their existing ground-based rules. Stacked
 foundations at different heights remain unsupported; this is not multi-floor
 support selection. Automated integration transports real items from storage via
 a lift to a raised receiver straddling two slabs; in-game acceptance is pending.
+
+
+## Implementation note — conveyor flow inspection
+
+`ConveyorNetwork` records successful output handoffs and ground drops per segment
+in bounded one-second simulation-time buckets and an accumulated session total.
+`flowStats` reports up to 60 buckets (approximately 59–60 s at bucket edges);
+startup history is partial, not extrapolated. Manual pickups and failed transfers
+are excluded. Topology reconfiguration retains statistics; removing a segment
+clears them. No per-frame rendering or wall clock drives the measurement.
+
+G queues inspection using the existing construction ray target and opens
+`LogisticsUI` only for an existing network segment, including lifts. Modal input
+suppression and simulation pause remain in force; E and existing interactions
+are unchanged. The displayed theoretical limit is the smaller of configured
+throughput and `60 * speed / spacing`, an upper bound independent of supply,
+blockages and fixed-step effects. Statistics are not persisted across sessions.

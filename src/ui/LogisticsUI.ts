@@ -54,9 +54,14 @@ export class LogisticsUI {
     if (this.splitterSettings) this.splitterSettings.hidden = !splitter;
     if (segment) {
       this.title.textContent = `Conveyor: ${segment.path.spec.shape}`;
+      const heading = this.root.querySelector('[data-logistics-storage-heading]'), badge = this.root.querySelector('[data-logistics-storage-badge]');
+      if (heading) heading.textContent = 'Conveyor';
+      if (badge) badge.textContent = 'FLOW';
+      const flow = this.logistics.network.flowStats(segment.id)!;
+      const theoretical = Math.min(segment.settings.throughputPerMinute, 60 * segment.settings.speed / segment.settings.spacing);
       const d = segment.path.direction('output');
       const direction = d.x > 0 ? 'east' : d.x < 0 ? 'west' : d.z > 0 ? 'south' : 'north';
-      this.details.textContent = `State: ${segment.state} · Direction: ${direction} · Input: ${segment.input ?? segment.source?.id ?? 'not connected'} · Output: ${segment.output ?? segment.receiver?.id ?? 'not connected'} · Items: ${segment.items.length} · Maximum throughput: ${segment.settings.throughputPerMinute} items/min · ${segment.state === 'BLOCKED' ? (segment.output || segment.receiver || this.logistics.network.isCell(segment.id) ? 'Downstream is full or occupied.' : 'Open end: connect another belt or a receiver.') : segment.state === 'DISCONNECTED' ? 'Connect the input to a source.' : !segment.output && !segment.receiver ? (this.logistics.network.dropsOpenEnds ? 'Open end: items fall off.' : 'Open end: items will stop here.') : ''}`;
+      this.details.textContent = `State: ${segment.state} · Direction: ${direction} · Input: ${segment.input ?? segment.source?.id ?? 'not connected'} · Output: ${segment.output ?? segment.receiver?.id ?? 'not connected'} · Items: ${segment.items.length} · Maximum throughput: ${segment.settings.throughputPerMinute} items/min · Theoretical limit: ${Number(theoretical.toFixed(1))} items/min · Observed outputs (up to 60 s, 1 s bins): ${flow.lastMinute} items / 60 s · Total sent: ${flow.total} · Simulation paused while inspecting · ${segment.state === 'BLOCKED' ? (segment.output || segment.receiver || this.logistics.network.isCell(segment.id) ? 'Downstream is full or occupied.' : 'Open end: connect another belt or a receiver.') : segment.state === 'DISCONNECTED' ? 'Connect the input to a source.' : !segment.output && !segment.receiver ? (this.logistics.network.isOutputBlocked(segment.id) ? 'Output obstructed or disconnected: items will stop here.' : this.logistics.network.dropsOpenEnds ? 'Open end: items fall off.' : 'Open end: items will stop here.') : ''}`;
       if (this.deposit) this.deposit.hidden = true;
       this.grid.hidden = true; this.playerPane.hidden = true; this.slotDetail.textContent = ''; this.retrieve.hidden = true;
     } else if (splitter) {

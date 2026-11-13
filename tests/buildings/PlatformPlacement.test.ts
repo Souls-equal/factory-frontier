@@ -145,3 +145,10 @@ it('ignores players and obstacles below a supported machine but rejects actual v
   obstacles = [tallRock];
   expect(dynamic.validate('smelter', 0, 0, 0, far).reason).toBe('occupied space');
 });
+
+it.each(['lift-up-3', 'lift-down-3'])('targets the %s body for logistics inspection', (type) => {
+  const { system, controller } = setup();
+  const lift = place(system, type, 0, 0);
+  const view = { position: { x: lift.transform.x + 3, y: lift.transform.y + 1.5, z: lift.transform.z }, yaw: Math.PI / 2, pitch: 0 };
+  expect(controller.target(view)).toBe(lift.id);
+});

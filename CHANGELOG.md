@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — conveyor flow inspection
+
+- Inspect conveyors and lifts with G without displacing E interactions; display
+  status, theoretical throughput and observed successful outputs.
+- Count flow in simulation-time buckets, exclude manual pickups, and retain
+  statistics across topology changes until a segment is dismantled.
+
 ## Unreleased — raised platform alignment
 
 - Align interactive foundation placement to raised lift ports or nearby flat
