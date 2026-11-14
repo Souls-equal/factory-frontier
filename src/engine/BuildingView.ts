@@ -120,7 +120,7 @@ export class BuildingView {
     const mesh = this.preview!; const definition = this.registry.get(typeId);
     mesh.position.set(placement.transform.x, placement.transform.y + definition.height / 2, placement.transform.z);
     mesh.rotation.y = (placement.autoConveyor?.rotation ?? placement.transform.rotation) * Math.PI / 2;
-    this.tintPreview(mesh, placement.reason === 'valid', (typeId === 'conveyor-auto' || typeId === 'conveyor-cell' || typeId === 'smelter' || typeId === 'constructor' || typeId === 'storage-container' || typeId === 'splitter' || typeId === 'merger' || isLiftBuilding(typeId)));
+    this.tintPreview(mesh, placement.reason === 'valid', (typeId === 'conveyor-auto' || typeId === 'conveyor-cell' || typeId === 'smelter' || typeId === 'constructor' || typeId === 'biomass-generator' || typeId === 'storage-container' || typeId === 'splitter' || typeId === 'merger' || isLiftBuilding(typeId)));
   }
   /** Additional cells after the first, which uses the normal placement preview. */
   setRoutePreview(cells: readonly BuildingInstance[], valid: boolean): void {
@@ -180,6 +180,8 @@ export class BuildingView {
       part(.8 * this.cellSize, .17, .2 * this.cellSize, 2.45, 0xe2b64e);
     }
     if (typeId === 'biomass-generator') {
+      const inlet = new Mesh(new BoxGeometry(.65 * this.cellSize, .24, .04), new MeshStandardMaterial({ color: 0x59dce1, transparent: preview, opacity: preview ? .5 : 1, depthWrite: !preview }));
+      inlet.position.set(0, .5 - def.height / 2, this.cellSize + .025); inlet.name = 'machine-input-port'; mesh.add(inlet);
       const vent = new Mesh(new BoxGeometry(.9 * this.cellSize, .35, .05), new MeshStandardMaterial({ color: 0x343f3b, transparent: preview, opacity: preview ? .5 : 1, depthWrite: !preview }));
       vent.position.set(0, .25, -this.cellSize - .03); mesh.add(vent);
       const cap = new Mesh(new BoxGeometry(.7 * this.cellSize, .2, .7 * this.cellSize), new MeshStandardMaterial({ color: 0xd0a35a, transparent: preview, opacity: preview ? .5 : 1, depthWrite: !preview }));

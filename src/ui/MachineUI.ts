@@ -81,7 +81,7 @@ export class MachineUI {
         this.feedFuel.disabled = !this.player.getItemCount('wood') || generator.fuel.getAvailableSpace('wood') === 0;
         this.retrieveFuel.disabled = !generator.fuel.getItemCount('wood');
         this.toggle.textContent = generator.enabled ? 'Disable' : 'Enable';
-        this.details.textContent = `Generator: ${generator.enabled ? 'enabled' : 'disabled'} · Wood: ${generator.fuel.getItemCount('wood')} · Active fuel: ${(generator.remainingMs / 1000).toFixed(1)} s · 1 wood = 30 s · Capacity: 30 kW · Demolition discards active burn time${this.networkText(power.id)}`;
+        this.details.textContent = `Generator: ${generator.enabled ? 'enabled' : 'disabled'} · Wood: ${generator.fuel.getItemCount('wood')} · Active fuel: ${(generator.remainingMs / 1000).toFixed(1)} s · 1 wood = 30 s · Capacity: 30 kW · Cyan rear input accepts wood · Demolition discards active burn time${this.networkText(power.id)}`;
       } else this.details.textContent = `Automatic links within 10 m; endpoints attach to their nearest pole.${this.networkText(power.id)}`;
       return;
     }
@@ -113,7 +113,10 @@ export class MachineUI {
       this.retrieve.disabled = miner.output.getItemCount(miner.itemId) === 0;
     }
     this.details.textContent += network;
-    if (miner instanceof Processor) this.feed.textContent = `Add ${this.player.registry.get(miner.recipe.input.itemId).name}`;
+    if (miner instanceof Processor) {
+      this.details.textContent += ` · Produced by this machine (${this.player.registry.get(miner.recipe.output.itemId).name}): ${miner.produced(miner.recipe.output.itemId)}`;
+      this.feed.textContent = `Add ${this.player.registry.get(miner.recipe.input.itemId).name}`;
+    }
     this.toggle.textContent = miner.enabled ? 'Disable' : 'Enable';
   }
   dispose(): void { this.recipeSelect.removeEventListener('change', this.handleRecipe); this.recipeLabel.remove(); this.feedFuel.removeEventListener('click', this.handleFeedFuel); this.retrieveFuel.removeEventListener('click', this.handleRetrieveFuel); this.feedFuel.remove(); this.retrieveFuel.remove(); this.feed.removeEventListener('click', this.handleFeed); this.retrieveInput.removeEventListener('click', this.handleRetrieveInput); this.feed.remove(); this.retrieveInput.remove(); this.close.removeEventListener('click', this.onClose); this.toggle.removeEventListener('click', this.handleToggle); this.retrieve.removeEventListener('click', this.handleRetrieve); }

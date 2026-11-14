@@ -4,6 +4,8 @@ import type { SimulationSystem } from '../core/Game';
 import { Inventory, type QuantityResult } from '../items/Inventory';
 import type { ItemRegistry } from '../items/ItemRegistry';
 import type { MachineManager } from '../machines/MachineManager';
+import type { PowerManager } from '../power/PowerManager';
+import { BIOMASS } from '../power/BiomassGenerator';
 import { Smelter, SMELTER_FUEL } from '../machines/Smelter';
 import { ConveyorNetwork, type ConveyorSettings, DEFAULT_CONVEYOR_SETTINGS } from './ConveyorNetwork';
 import type { GroundItems } from './GroundItems';
@@ -27,11 +29,11 @@ export class LogisticsManager implements SimulationSystem {
   constructor(private readonly buildings: BuildingSystem, private readonly machines: MachineManager,
     private readonly items: ItemRegistry, private readonly paused: () => boolean = () => false,
     private readonly terminalSlots = 1, private readonly settings: ConveyorSettings = DEFAULT_CONVEYOR_SETTINGS,
-    private readonly groundItems?: GroundItems) {
+    private readonly groundItems?: GroundItems, private readonly power?: PowerManager) {
     if (!Number.isSafeInteger(terminalSlots) || terminalSlots < 1) throw new RangeError('Invalid receiver capacity');
     this.network = new ConveyorNetwork(() => false, groundItems ? (item, position) => groundItems.drop(item.id, item.itemId, position) : undefined);
     buildings.addTopologyGuard((before, after) => {
-      const relevant = (entries: typeof before) => entries.filter((b) => b.typeId.startsWith('conveyor-') || b.typeId === 'miner-mk1' || (b.typeId === 'smelter' || b.typeId === 'constructor') || b.typeId === RECEIVER_TYPE || b.typeId === 'storage-container' || b.typeId === 'splitter' || b.typeId === 'merger' || isLiftBuilding(b.typeId))
+      const relevant = (entries: typeof before) => entries.filter((b) => b.typeId.startsWith('conveyor-') || b.typeId === 'miner-mk1' || (b.typeId === 'smelter' || b.typeId === 'constructor' || b.typeId === 'biomass-generator') || b.typeId === RECEIVER_TYPE || b.typeId === 'storage-container' || b.typeId === 'splitter' || b.typeId === 'merger' || isLiftBuilding(b.typeId))
         .map((b) => [b.id, b.typeId, b.transform.x, b.transform.y, b.transform.z, b.transform.rotation, b.autoConveyor, b.cellConveyor]);
       if (JSON.stringify(relevant(before)) === JSON.stringify(relevant(after))) return true;
       this.sync();
@@ -82,7 +84,7 @@ export class LogisticsManager implements SimulationSystem {
   }
   sync(): void {
     if (this.seenRevision === this.buildings.revision) return;
-    this.machines.sync();
+    this.machines.sync(); this.power?.sync();
     const buildings = this.buildings.all(), byId = new Map(buildings.map((building) => [building.id, building]));
     for (const segment of this.network.all()) {
       if (!byId.has(segment.id) && !this.network.remove(segment.id)) throw new Error('Cannot discard an occupied conveyor');
@@ -187,6 +189,17 @@ export class LogisticsManager implements SimulationSystem {
         const receiver = { id: building.id, pose,
           canAccept: (itemId: string) => destination(itemId)?.canAccept(itemId) ?? false,
           accept: (itemId: string) => destination(itemId)?.accept(itemId) ?? false };
+        for (const cell of cells) if (cellTouchesMachine(cell, building, this.buildings.cellSize, 'receiver')) this.network.attachCellReceiver(cell.id, receiver);
+        attachLiftReceivers(building, receiver);
+        for (const segment of legacy) if (this.network.attachReceiver(segment.id, receiver)) break;
+      }
+      const generator = this.power?.generator(building.id);
+      if (generator) {
+        const pose = machinePort(building, this.buildings.cellSize, 'receiver');
+        const target = new InventoryReceiver(building.id, pose, generator.fuel);
+        const receiver = { id: building.id, pose,
+          canAccept: (itemId: string) => itemId === BIOMASS.fuel && target.canAccept(itemId),
+          accept: (itemId: string) => itemId === BIOMASS.fuel && target.accept(itemId) };
         for (const cell of cells) if (cellTouchesMachine(cell, building, this.buildings.cellSize, 'receiver')) this.network.attachCellReceiver(cell.id, receiver);
         attachLiftReceivers(building, receiver);
         for (const segment of legacy) if (this.network.attachReceiver(segment.id, receiver)) break;

@@ -24,8 +24,12 @@
   on completed cycles. The registered Iron Plate + Iron Rod → Reinforced
   Component recipe is tested in isolation with power loss and fuel exhaustion.
   Its item and icon exist, but no playable machine can select it yet.
+- Smelter and Constructor inspection now reports the completed output count for
+  the selected product, per machine, since construction. Counts survive buffer
+  retrieval and recipe changes, but are lost on demolition or session reset; they
+  do not include belt throughput, per-minute rates or miner production.
 - Phase 9 is **not complete**: buildable assembler and foundry, playable
-  multi-input logistics and inspection, production statistics and full acceptance
+  multi-input logistics and inspection, comprehensive production statistics and full acceptance
   testing remain. The new constructor recipe also awaits player validation.
 
 ## Phase 8 — playable electrical integration
@@ -45,7 +49,10 @@
   Smelters still require one coal per ingot as well as electricity.
 - Generators containing stored wood cannot be demolished. Partially burned wood
   cannot be recovered; demolishing an otherwise empty generator discards its
-  remaining burn time. Fuel is currently added by hand, not by conveyor.
+  remaining burn time. Fuel can be added by hand or automatically at the cyan
+  rear input via aligned one-cell conveyors, lifts or compatible legacy belts.
+  Only wood is accepted; a full buffer or wrong item blocks transport without
+  discarding it. The generator has no output port.
   Wires are automatic and free, cannot be individually placed or removed, and
   may merge nearby networks. No persistence is available.
 - Automated coverage exercises real building/machine lifecycles, fuel depletion,

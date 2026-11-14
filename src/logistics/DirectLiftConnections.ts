@@ -29,7 +29,7 @@ export function directLiftInput(lift: BuildingInstance, source: BuildingInstance
 
 export function directLiftOutput(lift: BuildingInstance, receiver: BuildingInstance, cellSize: number): boolean {
   if (receiver.typeId === 'merger') return [0, 1, 2].some((index) => directLiftMergerInput(lift, receiver, cellSize, index));
-  if (!isLiftBuilding(lift.typeId) || !(receiver.typeId === RECEIVER_TYPE || receiver.typeId === 'storage-container' || receiver.typeId === 'splitter' || isProcessorBuilding(receiver.typeId))) return false;
+  if (!isLiftBuilding(lift.typeId) || !(receiver.typeId === RECEIVER_TYPE || receiver.typeId === 'storage-container' || receiver.typeId === 'splitter' || receiver.typeId === 'biomass-generator' || isProcessorBuilding(receiver.typeId))) return false;
   const path = pathForBuilding(lift, cellSize)!;
   // Receiving terminals accept any face; use the lift's direction for their port.
   const target = receiver.typeId === RECEIVER_TYPE ? { ...receiver, transform: { ...receiver.transform, rotation: lift.transform.rotation } } : receiver;

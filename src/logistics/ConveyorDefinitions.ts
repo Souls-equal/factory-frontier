@@ -11,7 +11,7 @@ export const CONVEYOR_SHAPES: Readonly<Record<string, ConveyorShape>> = Object.f
 export const isProcessorBuilding = (typeId: string): boolean => typeId === 'smelter' || typeId === 'constructor';
 export const liftInputOffset = (typeId: string, cellSize: number): number => Math.max(0, -(liftRise(typeId) ?? 0)) * cellSize;
 export const liftOutputOffset = (typeId: string, cellSize: number): number => Math.max(0, liftRise(typeId) ?? 0) * cellSize;
-export const isDirectionalMachine = (typeId: string): boolean => isProcessorBuilding(typeId) || typeId === 'storage-container' || typeId === 'splitter' || typeId === 'merger' || isLiftBuilding(typeId);
+export const isDirectionalMachine = (typeId: string): boolean => isProcessorBuilding(typeId) || typeId === 'biomass-generator' || typeId === 'storage-container' || typeId === 'splitter' || typeId === 'merger' || isLiftBuilding(typeId);
 export const RECEIVER_TYPE = 'receiving-terminal';
 export const BELT_HEIGHT = .5;
 export const DEFAULT_INCLINE_RISE = 1;

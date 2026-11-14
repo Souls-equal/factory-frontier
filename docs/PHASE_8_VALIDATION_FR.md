@@ -45,3 +45,13 @@ Toute machine activée réserve sa puissance même si son entrée manque ou sa s
 est pleine. Tous les générateurs disponibles du réseau consomment du bois à
 plein régime dès que le réseau en ligne a une demande ; en surcharge, à vide ou
 isolés, ils n'en consomment pas. Les réglages et coûts pourront évoluer.
+
+### Ajout à vérifier : alimentation par convoyeur
+
+- [ ] Orienter un convoyeur vers l'entrée cyan à l'arrière du générateur et
+  y acheminer du bois ; vérifier que le réseau électrique redémarre.
+- [ ] Vérifier qu'un objet autre que le bois et un réservoir plein bloquent la
+  ligne sans perte, puis que le transport reprend après libération.
+- [ ] Vérifier l'entrée directe par lift et les rotations souhaitées.
+
+Ces nouveaux scénarios n'ont pas encore été validés par le joueur.

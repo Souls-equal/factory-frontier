@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased — Phase 9 processor production totals
+
+- Count completed processor output per item and show the selected product's
+  per-machine lifetime total in Smelter and Constructor inspection. Counts
+  survive recipe changes and retrieval but not demolition or session reset.
+- Per-minute, network-wide and miner statistics remain unimplemented.
+
+## Unreleased — conveyor-fed biomass generator
+
+- Add a cyan rear, wood-only generator inlet for one-cell conveyors, direct lifts
+  and matching legacy belt outputs, using the existing power fuel inventory.
+- Respect capacity and reject other cargo without loss; preserve pause, demolition
+  guards and single-direction placement. Add connection, conservation and power tests.
+- Phase 9 remains in progress; no foundation placement changes.
+
 ## Unreleased — Phase 9 manufacturing foundation
 
 - Record global player validation of Phase 8 and start Phase 9 at their request.
