@@ -21,6 +21,10 @@ export class LogisticsUI {
   private readonly close: HTMLButtonElement;
   private readonly retrieve: HTMLButtonElement;
   private readonly retrieveSelected: HTMLButtonElement | null;
+  private readonly retrieveQuantity: HTMLInputElement | null;
+  private readonly depositQuantity: HTMLInputElement | null;
+  private readonly retrieveQuantityGroup: HTMLElement | null;
+  private readonly depositQuantityGroup: HTMLElement | null;
   private readonly deposit: HTMLButtonElement | null;
   private readonly storageSettings: HTMLElement | null;
   private readonly storageFilter: HTMLSelectElement | null;
@@ -67,6 +71,12 @@ export class LogisticsUI {
     }
     this.splitterMode?.addEventListener('change', this.handleSplitterConfig);
     this.splitterPriority?.addEventListener('change', this.handleSplitterConfig);
+    this.retrieveQuantity = root.querySelector<HTMLInputElement>('[data-logistics-retrieve-quantity]');
+    this.depositQuantity = root.querySelector<HTMLInputElement>('[data-logistics-deposit-quantity]');
+    this.retrieveQuantityGroup = root.querySelector<HTMLElement>('[data-logistics-retrieve-quantity-group]');
+    this.depositQuantityGroup = root.querySelector<HTMLElement>('[data-logistics-deposit-quantity-group]');
+    this.retrieveQuantity?.addEventListener('keydown', this.handleQuantityKey);
+    this.depositQuantity?.addEventListener('keydown', this.handleQuantityKey);
     this.retrieveSelected = root.querySelector<HTMLButtonElement>('[data-logistics-retrieve-selected]');
     this.retrieveSelected?.addEventListener('click', this.handleRetrieveSelected);
     this.deposit = root.querySelector<HTMLButtonElement>('[data-logistics-deposit]');
@@ -74,7 +84,7 @@ export class LogisticsUI {
     this.close.addEventListener('click', this.onClose); this.retrieve.addEventListener('click', this.handleRetrieve);
   }
   get isOpen(): boolean { return !this.root.hidden; }
-  open(id: string): void { this.active = id; this.selected = null; this.playerSelected = null; this.shownRevision = -1; this.shownPlayerRevision = -1; this.root.hidden = false; this.notice.textContent = ''; this.update(); this.close.focus(); }
+  open(id: string): void { if (this.retrieveQuantity) this.retrieveQuantity.value = ''; if (this.depositQuantity) this.depositQuantity.value = ''; this.active = id; this.selected = null; this.playerSelected = null; this.shownRevision = -1; this.shownPlayerRevision = -1; this.root.hidden = false; this.notice.textContent = ''; this.update(); this.close.focus(); }
   closePanel(): void { this.active = null; this.selected = null; this.root.hidden = true; }
   update(): void {
     if (!this.active || !this.isOpen) return;
@@ -83,6 +93,8 @@ export class LogisticsUI {
     if (this.splitterFilters) this.splitterFilters.hidden = !splitter || splitter.mode !== 'filtered';
     const isStorage = !!receiver && this.logistics.isStorage(this.active);
     if (this.retrieveSelected) this.retrieveSelected.hidden = !receiver;
+    if (this.retrieveQuantityGroup) this.retrieveQuantityGroup.hidden = !receiver;
+    if (this.depositQuantityGroup) this.depositQuantityGroup.hidden = !isStorage;
     if (this.storageSettings) this.storageSettings.hidden = !isStorage;
     if (this.storageFilter && isStorage) this.storageFilter.value = this.logistics.storageOutputFilter(this.active) ?? '';
     if (segment) {
@@ -125,14 +137,16 @@ export class LogisticsUI {
       if (badge) badge.textContent = isStorage ? 'INPUT / OUTPUT' : 'INPUT';
       this.details.textContent = `Capacity: ${receiver.usedSlots} / ${receiver.capacity} slots`;
       this.grid.hidden = false; this.playerPane.hidden = false;
-      if (this.shownPlayerRevision !== this.player.revision) { this.playerSelected = null; this.renderPlayer(); }
-      if (this.shownRevision !== receiver.revision) { this.selected = null; this.renderSlots(receiver); }
+      if (this.shownPlayerRevision !== this.player.revision) { this.playerSelected = null; if (this.depositQuantity) this.depositQuantity.value = ''; this.renderPlayer(); }
+      if (this.shownRevision !== receiver.revision) { this.selected = null; if (this.retrieveQuantity) this.retrieveQuantity.value = ''; this.renderSlots(receiver); }
       if (this.deposit) { this.deposit.hidden = !isStorage; this.deposit.disabled = this.playerSelected === null || !this.player.snapshot()[this.playerSelected]; }
       if (this.retrieveSelected) this.retrieveSelected.disabled = this.selected === null || !receiver.snapshot()[this.selected];
+      if (this.retrieveQuantity) this.retrieveQuantity.disabled = this.selected === null;
+      if (this.depositQuantity) this.depositQuantity.disabled = !isStorage || this.playerSelected === null;
       this.retrieve.hidden = false; this.retrieve.disabled = receiver.usedSlots === 0;
     }
   }
-  dispose(): void { this.retrieveSelected?.removeEventListener('click', this.handleRetrieveSelected); for (const select of this.splitterFilterSelects) select.removeEventListener('change', this.handleSplitterFilter); this.storageFilter?.removeEventListener('change', this.handleStorageFilter); this.splitterMode?.removeEventListener('change', this.handleSplitterConfig); this.splitterPriority?.removeEventListener('change', this.handleSplitterConfig); this.deposit?.removeEventListener('click', this.handleDeposit); this.playerGrid.removeEventListener('click', this.handlePlayerGrid); this.grid.removeEventListener('click', this.handleGrid); this.close.removeEventListener('click', this.onClose); this.retrieve.removeEventListener('click', this.handleRetrieve); }
+  dispose(): void { this.retrieveQuantity?.removeEventListener('keydown', this.handleQuantityKey); this.depositQuantity?.removeEventListener('keydown', this.handleQuantityKey); this.retrieveSelected?.removeEventListener('click', this.handleRetrieveSelected); for (const select of this.splitterFilterSelects) select.removeEventListener('change', this.handleSplitterFilter); this.storageFilter?.removeEventListener('change', this.handleStorageFilter); this.splitterMode?.removeEventListener('change', this.handleSplitterConfig); this.splitterPriority?.removeEventListener('change', this.handleSplitterConfig); this.deposit?.removeEventListener('click', this.handleDeposit); this.playerGrid.removeEventListener('click', this.handlePlayerGrid); this.grid.removeEventListener('click', this.handleGrid); this.close.removeEventListener('click', this.onClose); this.retrieve.removeEventListener('click', this.handleRetrieve); }
   private renderPlayer(): void {
     const slots = this.player.snapshot();
     this.playerGrid.replaceChildren();
@@ -156,6 +170,7 @@ export class LogisticsUI {
     if (!button || !this.playerGrid.contains(button)) return;
     const index = Number(button.dataset.slot);
     this.playerSelected = this.player.snapshot()[index] && this.playerSelected !== index ? index : null;
+    if (this.depositQuantity) this.depositQuantity.value = '';
     this.renderPlayer(); this.update();
   };
   private renderSlots(inventory: Inventory): void {
@@ -184,6 +199,7 @@ export class LogisticsUI {
     if (this.shownRevision !== receiver.revision) { this.update(); return; }
     const index = Number(button.dataset.slot);
     this.selected = receiver.snapshot()[index] && this.selected !== index ? index : null;
+    if (this.retrieveQuantity) this.retrieveQuantity.value = '';
     this.renderSlots(receiver); this.update();
   };
   private readonly handleStorageFilter = (): void => {
@@ -200,20 +216,37 @@ export class LogisticsUI {
     const splitter = this.logistics.splitter(this.active); if (!splitter) return;
     splitter.setOutputFilter(Number(event.currentTarget.dataset.splitterFilter), event.currentTarget.value || null); this.update();
   };
+  private readonly handleQuantityKey = (event: KeyboardEvent): void => {
+    if (event.code === 'Escape' && this.isOpen) { event.preventDefault(); event.stopPropagation(); if (!event.repeat) this.onClose(); }
+  };
+  /** Null means invalid; undefined means the whole selected stack. */
+  private requestedQuantity(input: HTMLInputElement | null, max: number): number | null | undefined {
+    if (!input) return undefined;
+    if (input.validity.badInput) return null;
+    if (input.value === '') return undefined;
+    const value = input.valueAsNumber;
+    return Number.isSafeInteger(value) && value > 0 && value <= max ? value : null;
+  }
   private readonly handleDeposit = (): void => {
     if (!this.active || !this.isOpen || !this.logistics.isStorage(this.active) || this.playerSelected === null) return;
     const inventory = this.logistics.terminal(this.active);
     if (!inventory) return;
     if (this.shownPlayerRevision !== this.player.revision) { this.update(); this.notice.textContent = 'Inventory changed; select a stack again.'; return; }
-    const result = this.player.transferStack(inventory, this.playerSelected);
-    this.notice.textContent = `Stored ${result.moved}; ${result.remainder} remain in inventory.`; this.update();
+    const slot = this.player.snapshot()[this.playerSelected]; if (!slot) return;
+    const amount = this.requestedQuantity(this.depositQuantity, slot.quantity);
+    if (amount === null) { this.notice.textContent = `Choose a whole number from 1 to ${slot.quantity}, or leave blank for the whole stack.`; return; }
+    const result = this.player.transferStack(inventory, this.playerSelected, amount);
+    this.notice.textContent = `Stored ${result.moved}; ${slot.quantity - result.moved} remain in inventory.`; this.update();
   };
   private readonly handleRetrieveSelected = (): void => {
     if (!this.active || !this.isOpen || this.selected === null) return;
     const inventory = this.logistics.terminal(this.active); if (!inventory) return;
     if (this.shownRevision !== inventory.revision) { this.update(); this.notice.textContent = 'Storage changed; select a stack again.'; return; }
-    const result = inventory.transferStack(this.player, this.selected);
-    this.notice.textContent = `Transferred ${result.moved}; ${result.remainder} remain in the selected stack.`; this.update();
+    const slot = inventory.snapshot()[this.selected]; if (!slot) return;
+    const amount = this.requestedQuantity(this.retrieveQuantity, slot.quantity);
+    if (amount === null) { this.notice.textContent = `Choose a whole number from 1 to ${slot.quantity}, or leave blank for the whole stack.`; return; }
+    const result = inventory.transferStack(this.player, this.selected, amount);
+    this.notice.textContent = `Transferred ${result.moved}; ${slot.quantity - result.moved} remain in the selected stack.`; this.update();
   };
   private readonly handleRetrieve = (): void => {
     if (!this.active || !this.isOpen || (!this.logistics.terminal(this.active) && !this.logistics.splitter(this.active) && !this.logistics.merger(this.active))) return;

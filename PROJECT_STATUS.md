@@ -3,8 +3,8 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 7 — Advanced logistics (integration and acceptance)
-**Phase Status:** 🟡 In progress — selected stack transfers and remaining logistics acceptance
-**Next Recommended Task:** Play-test selected stack transfers, filtered splitter routing and remaining logistics scenarios; Phase 7 acceptance remains open.
+**Phase Status:** 🟡 In progress — quantity-limited stack transfers and remaining logistics acceptance
+**Next Recommended Task:** Play-test quantity-limited stack transfers, filtered splitter routing and remaining logistics scenarios; Phase 7 acceptance remains open.
 **Last Updated:** 2026-11-11
 
 ---
@@ -18,8 +18,13 @@
 - Transfers move only what fits and leave any remainder in the original slot;
   they do not affect other stacks, filters or in-flight conveyor items. Changing
   an inventory clears its selection before another action to prevent stale-slot
-  transfers. Splitter and merger buffer retrieval remain unchanged. Arbitrary
-  quantity entry is not included.
+  transfers. Splitter and merger buffer retrieval remain unchanged.
+- Each selected-stack action also accepts an optional positive whole quantity up
+  to the selected stack size. Blank transfers the entire stack by default; an
+  invalid value changes nothing. Destination capacity may limit what moves, and
+  the notice reports what remains in the source stack. Changing selection or
+  the source inventory clears the entered quantity. Terminal retrieval supports
+  quantities too; bulk retrieval is unchanged.
 - Automated tests cover exact slots, partial/full destinations, stale selections,
   terminal and storage UI, differing item stack limits, conservation and live
   conveyor recovery. Foundation placement is unchanged. In-game acceptance remains

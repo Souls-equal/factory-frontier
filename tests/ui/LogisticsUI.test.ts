@@ -297,3 +297,48 @@ it('resumes conveyor transport after selected retrieval without losing in-flight
   expect(output.getItemCount('coal')).toBe(1); expect(player.getItemCount('coal') + output.getItemCount('coal') + input.getItemCount('coal')).toBe(8);
   ui.dispose();
 });
+
+it('transfers chosen quantities in both directions, validates input and resets stale selection', () => {
+  const html = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../../index.html'), 'utf8');
+  document.body.innerHTML = /<body[^>]*>([\s\S]*)<\/body>/i.exec(html)![1]!;
+  const root = document.querySelector<HTMLElement>('[data-ui="logistics"]')!, items = createDefaultItemRegistry(), player = new Inventory(items, 2);
+  player.addItem('iron-ore', 150);
+  const buildings = new BuildingSystem(createDefaultBuildingRegistry(items), new Inventory(items, 5), terrain, [], 1, 19); buildings.setCreativeMode(true);
+  const logistics = new LogisticsManager(buildings, new MachineManager(buildings, items, () => []), items);
+  const storage = buildings.place('storage-container', 0, 0, 0, { x: 8, z: 8, radius: .4 }).building!;
+  const terminal = buildings.place('receiving-terminal', 5, 0, 0, { x: 8, z: 8, radius: .4 }).building!;
+  logistics.sync(); const contents = logistics.terminal(storage.id)!; contents.addItem('iron-ore', 790);
+  const close = vi.fn(), ui = new LogisticsUI(root, logistics, player, close); ui.open(storage.id);
+  const input = (direction: string) => root.querySelector<HTMLInputElement>(`[data-logistics-${direction}-quantity]`)!;
+  const group = (direction: string) => root.querySelector<HTMLElement>(`[data-logistics-${direction}-quantity-group]`)!;
+  const deposit = root.querySelector<HTMLButtonElement>('[data-logistics-deposit]')!;
+  const retrieve = root.querySelector<HTMLButtonElement>('[data-logistics-retrieve-selected]')!;
+  const playerSlot = (i: number) => root.querySelector<HTMLButtonElement>(`[data-logistics-player-grid] [data-slot="${i}"]`)!;
+  const storageSlot = (i: number) => root.querySelector<HTMLButtonElement>(`[data-logistics-grid] [data-slot="${i}"]`)!;
+  expect(group('deposit').hidden).toBe(false); expect(group('retrieve').hidden).toBe(false);
+  expect(input('deposit').disabled).toBe(true); playerSlot(1).click(); expect(input('deposit').disabled).toBe(false);
+  for (const invalid of ['0', '-1', '1.5', '51']) {
+    input('deposit').value = invalid; deposit.click();
+    expect(root.textContent).toContain('Choose a whole number from 1 to 50');
+    expect(player.snapshot()[1]?.quantity).toBe(50); expect(contents.getItemCount('iron-ore')).toBe(790);
+  }
+  input('deposit').value = '20'; deposit.click(); // only 10 fit
+  expect(player.snapshot()[0]?.quantity).toBe(100); expect(player.snapshot()[1]?.quantity).toBe(40);
+  expect(contents.getItemCount('iron-ore')).toBe(800); expect(root.textContent).toContain('Stored 10; 40 remain');
+  expect(input('deposit').disabled).toBe(true); expect(input('deposit').value).toBe('');
+  storageSlot(7).click(); input('retrieve').value = '12'; retrieve.click();
+  expect(contents.snapshot()[7]?.quantity).toBe(88); expect(player.snapshot()[1]?.quantity).toBe(52);
+  expect(root.textContent).toContain('Transferred 12; 88 remain');
+  storageSlot(7).click(); input('retrieve').value = '7'; contents.removeItem('iron-ore', 1); retrieve.click();
+  expect(root.textContent).toContain('Storage changed; select a stack again.'); expect(input('retrieve').value).toBe('');
+  playerSlot(1).click(); input('deposit').value = '3'; player.removeItem('iron-ore', 1); deposit.click();
+  expect(root.textContent).toContain('Inventory changed; select a stack again.'); expect(input('deposit').value).toBe('');
+  storageSlot(7).click(); input('retrieve').value = '1'; storageSlot(0).click(); expect(input('retrieve').value).toBe('');
+  ui.open(terminal.id); expect(group('deposit').hidden).toBe(true); expect(group('retrieve').hidden).toBe(false);
+  logistics.terminal(terminal.id)!.addItem('coal', 8); ui.update(); storageSlot(0).click(); input('retrieve').value = '3'; retrieve.click();
+  expect(logistics.terminal(terminal.id)!.getItemCount('coal')).toBe(8); // player has no free coal slot
+  player.removeItem('iron-ore', 100); ui.update(); expect(retrieve.disabled).toBe(false); input('retrieve').value = '3'; retrieve.click();
+  expect(logistics.terminal(terminal.id)!.getItemCount('coal')).toBe(5); expect(player.getItemCount('coal')).toBe(3);
+  storageSlot(0).click(); input('retrieve').dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true })); expect(close).toHaveBeenCalledOnce();
+  ui.closePanel(); ui.open(storage.id); expect(input('retrieve').value).toBe(''); expect(input('deposit').value).toBe(''); ui.dispose();
+});

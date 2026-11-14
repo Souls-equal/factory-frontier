@@ -512,6 +512,11 @@ body {
 :is([data-splitter-settings], [data-storage-settings]) p { margin: 0; }
 [data-splitter-filters] { display: grid; gap: 10px; }
 .terminal__detail { min-height: 2.7em; }
+.terminal__quantity { display: grid; gap: 5px; margin: 8px 0; color: #b9d8e4; font-size: 12px; }
+.terminal__quantity input { box-sizing: border-box; width: 100%; padding: 8px; color: #e3f4fb; background: #132832; border: 1px solid #376c7a; border-radius: 6px; }
+.terminal__quantity input:disabled { opacity: .5; }
+.terminal__quantity input:focus-visible { outline: 2px solid #80d5de; outline-offset: 2px; }
+.terminal__quantity small { color: #9eb9c3; }
 .terminal__actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .inventory .terminal__retrieve { flex: 1 1 160px; display: flex; justify-content: space-between; font-weight: 700; background: #1a5963; border-color: #58b8c2; }
 .terminal__notice { color: #91ddd6; font-size: 12px; min-height: 1.3em; }

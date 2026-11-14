@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — quantity-limited storage transfers
+
+- Choose an optional whole quantity from a selected storage or terminal stack,
+  or from a player stack when depositing into storage. Blank still transfers the
+  whole stack; invalid values and stale selections cannot move items.
+- Preserve partial-capacity behavior, bulk retrieval and the source-slot
+  remainder, with automated inventory and actual-markup UI coverage. Player
+  acceptance is pending.
+
 ## Unreleased — selected storage stack transfers
 
 - Retrieve a selected storage or terminal stack without withdrawing other items;
