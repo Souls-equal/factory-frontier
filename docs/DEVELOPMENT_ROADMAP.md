@@ -14,7 +14,13 @@
 ## PROGRESS TRACKER
 
 **Last updated:** 2026-11-11
-**Current phase:** Phase 7 integration and acceptance; implementation audit complete; player testing pending; Phase 5 acceptance incomplete
+**Current phase:** Phase 8 electricity foundation; Phase 7 player testing pending in parallel; Phase 5 acceptance incomplete
+
+The user explicitly requested beginning Phase 8 while they test Phase 7. This is
+an exception to the Phase 7 acceptance gate, not acceptance of Phase 7. The first
+Phase 8 slice is an isolated power-grid domain model; in-game electrical buildings,
+fuel, machine consumption and statistics are still to be implemented. Existing
+Phase 7 gameplay remains unaffected during testing.
 
 The user explicitly authorized the next step after confirming in-game miner →
 conveyor → terminal transport, turns/slopes without item loss, and blockage/recovery.
@@ -47,7 +53,7 @@ detailed evidence and verification results live in `PROJECT_STATUS.md`.
 | 5 — Conveyor foundation | 🟡 Partially user-validated | User confirmed miner → terminal, turns/slopes, blockage and recovery; remaining checklist not confirmed |
 | 6 — First production chain | ✅ User validated | Coal-fueled smelter, constructor and plates implemented; user reports everything works after complete-chain test request |
 | 7 — Advanced logistics | 🟡 Acceptance pending | Previous playable logistics additions user-validated globally; implementation and automated coverage audited; player testing pending (`PHASE_7_VALIDATION_FR.md`); lift range 1–8 m and other documented limits apply |
-| 8 — Electricity | ◻ Planned | — |
+| 8 — Electricity | 🟡 In progress | Isolated power-grid foundation only; generator, poles, wiring, machine consumption and UI remain |
 | 9 — Advanced manufacturing | ◻ Planned | — |
 | 10 — World expansion | ◻ Planned | — |
 | 11 — Progression | ◻ Planned | — |

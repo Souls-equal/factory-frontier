@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — Phase 8 power network foundation
+
+- Start Phase 8 at the user's request while Phase 7 play-testing remains pending.
+  Add an isolated electrical graph with poles, explicit range-limited wires,
+  generator and consumer endpoints, merging/splitting and power-balance snapshots.
+- Define all-or-nothing load shedding for shortages and add domain tests. No
+  playable electrical buildings, fuel system or machine power requirement is
+  added in this slice; existing Phase 7 gameplay remains unchanged.
+
 ## Unreleased — Phase 7 integration audit
 
 - Avoid false conveyor-output obstructions from buildings on other floors, in
