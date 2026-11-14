@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — Phase 10 initial biomes
+
+- Add reproducible grassland, forest, desert and highland biome regions and
+  corresponding voxel textures/tints, without altering terrain or foundation rules.
+- Add bounded, biome-biased collectable trees and stones outside the starter area.
+  Starter resource and ore deposit placement remain unchanged.
+- Chunk streaming, factory modification persistence, water and biome-driven ore
+  distribution remain future work; this first slice awaits in-game validation.
+- Record the user's global Phase 9 validation and request to begin Phase 10.
+
 ## Unreleased — Phase 9 factory dashboard
 
 - Add H factory dashboard with bounded rolling production/consumption/extraction,

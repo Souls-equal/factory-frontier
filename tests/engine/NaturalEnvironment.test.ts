@@ -30,9 +30,11 @@ describe('natural environment visuals', () => {
       const x = (data.positions[p]! + data.positions[p + 6]!) / 2 - nx * world.terrain.blockSize * .01;
       const z = (data.positions[p + 2]! + data.positions[p + 8]!) / 2 - nz * world.terrain.blockSize * .01;
       const top = Math.max(data.positions[p + 1]!, data.positions[p + 4]!);
-      const tile = ny === 1 ? 0 : Math.abs(top - world.terrain.heightAt(x, z)) < .001 * world.terrain.blockSize ? 1 : 2;
-      expect(Math.floor(uv.getX(face * 4) * 3)).toBe(tile);
-      if (tile === 0) tops++; else if (tile === 1) sides++; else dirt++;
+      const biome = world.biomes.at(x, z);
+      const tile = biome === 'desert' ? 4 : biome === 'highlands' ? 3
+        : ny === 1 ? 0 : Math.abs(top - world.terrain.heightAt(x, z)) < .001 * world.terrain.blockSize ? 1 : 2;
+      expect(Math.floor(uv.getX(face * 4) * 5)).toBe(tile);
+      if (tile === 0) tops++; else if (tile === 1) sides++; else if (tile === 2) dirt++;
     }
     expect(tops).toBeGreaterThan(0); expect(sides).toBeGreaterThan(0); expect(dirt).toBeGreaterThan(0);
     const disposed = vi.spyOn(texture, 'dispose'); view.dispose(); expect(disposed).toHaveBeenCalledOnce();

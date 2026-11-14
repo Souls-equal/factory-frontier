@@ -8,6 +8,7 @@ import type { GameConfig } from '../core/Configuration';
 import { GatherableField, generateGatherables } from '../resources/Gatherables';
 import { generateDeposits, type ResourceDeposit } from '../resources/ResourceDeposit';
 import { ObstacleField, type ObstacleDefinition } from './ObstacleField';
+import { BiomeField } from './Biomes';
 import { createRandom } from './rng';
 import { TerrainHeightfield, type TerrainQuery } from './terrain/TerrainHeightfield';
 import { VoxelTerrain } from './terrain/VoxelTerrain';
@@ -51,6 +52,7 @@ export interface WorldSpawn {
 
 export interface World {
   readonly terrain: VoxelTerrain;
+  readonly biomes: BiomeField;
   readonly buildings: BuildingSystem;
   readonly obstacles: ObstacleField;
   readonly obstacleDefinitions: readonly ObstacleDefinition[];
@@ -97,6 +99,7 @@ export function createWorld(config: GameConfig, inventory = new Inventory(create
     columns = Math.max(1, Math.floor(columns * .8));
   }
 
+  const biomes = new BiomeField(worldConfig.seed, { x: SPAWN_X, z: SPAWN_Z });
   const interactables = createInteractables(terrain, interaction.targetRadius);
   const original = createObstacles(terrain, worldConfig, interactables);
   const buildingRegistry = createDefaultBuildingRegistry(inventory.registry);
@@ -116,9 +119,10 @@ export function createWorld(config: GameConfig, inventory = new Inventory(create
   }))]);
 
   const gatherables = new GatherableField(generateGatherables(terrain, obstacles.definitions, deposits,
-    worldConfig.seed, { x: SPAWN_X, z: SPAWN_Z }, config.controls.playAreaRadius));
+    worldConfig.seed, { x: SPAWN_X, z: SPAWN_Z }, config.controls.playAreaRadius, biomes));
   return {
     terrain,
+    biomes,
     gatherables,
     buildings: new BuildingSystem(buildingRegistry, inventory, terrain,
       obstacles.definitions, config.construction.gridSize, config.controls.playAreaRadius, deposits, () => gatherables.placementObstacles()),

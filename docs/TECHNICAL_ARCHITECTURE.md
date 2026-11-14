@@ -1817,3 +1817,20 @@ Summing each network once avoids double-counting power; aggregate numbers do not
 imply energy can flow between isolated networks. The H and Escape paths release
 and restore input capture consistently with existing panels. No foundation logic
 changed. The game UI and new phase 9 scenarios remain unvalidated by the player.
+
+## Phase 10 — biome data and first environmental distribution
+
+`BiomeField` is a pure seeded coordinate query, independent of exploration order
+and rendering. Two smooth noise fields classify grassland, forest, desert and
+highlands, with a fixed grassland clearing around spawn. Classifications have
+discrete edges; not every finite world or seed guarantees every biome.
+
+The environment view samples the same query per exposed voxel face: forest
+grass is tinted, desert uses a sand tile and highlands use stone. Atlas changes
+do not alter voxel occupancy, collisions or placement. Starter resources and
+ore deposit generation remain unchanged. A separate random stream places at most
+24 extra removable trees/stones away from spawn and deposits, favouring trees in
+forests and stones in highlands, with sparse desert stones. Existing collision,
+interaction, inventory and gathering state handle these objects. They are not
+chunked, respawnable or persistent. The finite world and all resources still load
+as a whole; this slice is not chunk streaming or save/load.
