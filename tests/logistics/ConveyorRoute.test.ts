@@ -160,3 +160,33 @@ it('preserves real items as ground drops at a deliberately open route end', () =
   }
   expect(ground.all()).toHaveLength(3);
 });
+
+
+
+
+it.each([0, 1, 2, 3])('keeps a lower open route clear of a sideways upper container at rotation %i', (rotation) => {
+  const rotate = (x: number, z: number) => { for (let i = 0; i < rotation; i++) [x, z] = [z, -x]; return { x, z }; };
+  for (const routeFirst of [false, true]) {
+    const items = createDefaultItemRegistry(), inventory = new Inventory(items, 10);
+    const system = new BuildingSystem(createDefaultBuildingRegistry(items), inventory, terrain, [], 1, 29);
+    system.setCreativeMode(true);
+    const source = system.place('storage-container', 0, 0, rotation, player).building!;
+    const points = [rotate(-.5, -1.5), rotate(-.5, -2.5)], p = rotate(0, -4);
+    const buildRoute = () => {
+      expect(system.previewConveyorRoute(points, player, false, rotation)).toMatchObject({ reason: 'valid', endConnection: 'open' });
+      const result = system.placeConveyorRoute(points, player, false, rotation); expect(result.reason).toBe('valid'); return result;
+    };
+    const early = routeFirst ? buildRoute() : null;
+    expect(system.place('foundation', p.x, p.z, 0, player, 3).reason).toBe('valid');
+    const upper = system.place('storage-container', p.x, p.z, (rotation + 1) % 4, player);
+    expect(upper.reason).toBe('valid'); expect(upper.building!.transform.y).toBeCloseTo(3.4);
+    const route = early ?? buildRoute();
+    const ground = new GroundItems(() => 0);
+    const logistics = new LogisticsManager(system, new MachineManager(system, items, () => []), items, () => false, 1, undefined, ground);
+    logistics.sync(); expect(logistics.network.isOutputBlocked(route.cells.at(-1)!.id)).toBe(false);
+    logistics.terminal(source.id)!.addItem('coal', 3);
+    for (let i = 0; i < 300; i++) logistics.fixedUpdate(50);
+    expect(ground.all().map(item => item.itemId)).toEqual(['coal', 'coal', 'coal']);
+    expect(logistics.terminal(upper.building!.id)!.getItemCount('coal')).toBe(0);
+  }
+});

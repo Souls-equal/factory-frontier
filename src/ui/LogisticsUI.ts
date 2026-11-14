@@ -75,8 +75,7 @@ export class LogisticsUI {
     this.depositQuantity = root.querySelector<HTMLInputElement>('[data-logistics-deposit-quantity]');
     this.retrieveQuantityGroup = root.querySelector<HTMLElement>('[data-logistics-retrieve-quantity-group]');
     this.depositQuantityGroup = root.querySelector<HTMLElement>('[data-logistics-deposit-quantity-group]');
-    this.retrieveQuantity?.addEventListener('keydown', this.handleQuantityKey);
-    this.depositQuantity?.addEventListener('keydown', this.handleQuantityKey);
+    this.root.addEventListener('keydown', this.handleModalKey);
     this.retrieveSelected = root.querySelector<HTMLButtonElement>('[data-logistics-retrieve-selected]');
     this.retrieveSelected?.addEventListener('click', this.handleRetrieveSelected);
     this.deposit = root.querySelector<HTMLButtonElement>('[data-logistics-deposit]');
@@ -146,7 +145,7 @@ export class LogisticsUI {
       this.retrieve.hidden = false; this.retrieve.disabled = receiver.usedSlots === 0;
     }
   }
-  dispose(): void { this.retrieveQuantity?.removeEventListener('keydown', this.handleQuantityKey); this.depositQuantity?.removeEventListener('keydown', this.handleQuantityKey); this.retrieveSelected?.removeEventListener('click', this.handleRetrieveSelected); for (const select of this.splitterFilterSelects) select.removeEventListener('change', this.handleSplitterFilter); this.storageFilter?.removeEventListener('change', this.handleStorageFilter); this.splitterMode?.removeEventListener('change', this.handleSplitterConfig); this.splitterPriority?.removeEventListener('change', this.handleSplitterConfig); this.deposit?.removeEventListener('click', this.handleDeposit); this.playerGrid.removeEventListener('click', this.handlePlayerGrid); this.grid.removeEventListener('click', this.handleGrid); this.close.removeEventListener('click', this.onClose); this.retrieve.removeEventListener('click', this.handleRetrieve); }
+  dispose(): void { this.root.removeEventListener('keydown', this.handleModalKey); this.retrieveSelected?.removeEventListener('click', this.handleRetrieveSelected); for (const select of this.splitterFilterSelects) select.removeEventListener('change', this.handleSplitterFilter); this.storageFilter?.removeEventListener('change', this.handleStorageFilter); this.splitterMode?.removeEventListener('change', this.handleSplitterConfig); this.splitterPriority?.removeEventListener('change', this.handleSplitterConfig); this.deposit?.removeEventListener('click', this.handleDeposit); this.playerGrid.removeEventListener('click', this.handlePlayerGrid); this.grid.removeEventListener('click', this.handleGrid); this.close.removeEventListener('click', this.onClose); this.retrieve.removeEventListener('click', this.handleRetrieve); }
   private renderPlayer(): void {
     const slots = this.player.snapshot();
     this.playerGrid.replaceChildren();
@@ -216,7 +215,7 @@ export class LogisticsUI {
     const splitter = this.logistics.splitter(this.active); if (!splitter) return;
     splitter.setOutputFilter(Number(event.currentTarget.dataset.splitterFilter), event.currentTarget.value || null); this.update();
   };
-  private readonly handleQuantityKey = (event: KeyboardEvent): void => {
+  private readonly handleModalKey = (event: KeyboardEvent): void => {
     if (event.code === 'Escape' && this.isOpen) { event.preventDefault(); event.stopPropagation(); if (!event.repeat) this.onClose(); }
   };
   /** Null means invalid; undefined means the whole selected stack. */

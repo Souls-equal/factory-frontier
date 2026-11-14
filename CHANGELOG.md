@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — Phase 7 integration audit
+
+- Avoid false conveyor-output obstructions from buildings on other floors, in
+  both route preview and live transport; retain same-height blocking and the
+  existing foundation rules.
+- Refresh route previews for nearby player body movement and make Escape work
+  from logistics panel controls. Add regression tests and a French Phase 7
+  player-validation checklist. Acceptance still requires the player's test.
+
 ## Unreleased — combined production-network verification
 
 - Add an automated real-machine integration scenario combining two miners,

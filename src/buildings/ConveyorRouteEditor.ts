@@ -60,9 +60,14 @@ export class ConveyorRouteEditor {
    * Confirm and clicks always revalidate; moving logistics items can change guards. */
   preview(point: RoutePoint, player: PlayerFootprint, rotation: number, inventoryRevision: number, now: number): RouteEditorPreview {
     const snapped = this.snap(point);
+    // Revalidate exact body position near the planned route; farther away, keep
+    // the coarse cache so walking through a large factory does not plan every frame.
+    const cells = expandRoute(this.route(point), this.system.registry.get('conveyor-cell'), this.system.cellSize, this.xFirst, this.startRotation) ?? [];
+    const margin = this.system.cellSize / 2 + player.radius + .25;
+    const nearRoute = cells.some((cell) => Math.abs(player.x - cell.x) < margin && Math.abs(player.z - cell.z) < margin);
+    const body = nearRoute ? [player.x, player.z, player.feetY, player.headY] : [Math.round(player.x * 4), Math.round(player.z * 4)];
     const key = JSON.stringify([snapped, this.waypoints, this.startRotation, this.xFirst, rotation,
-      Math.round(player.x * 4), Math.round(player.z * 4), player.radius, this.system.revision,
-      inventoryRevision, this.system.creativeMode, Math.floor(now / 250)]);
+      nearRoute, body, player.radius, this.system.revision, inventoryRevision, this.system.creativeMode, Math.floor(now / 250)]);
     if (this.cached?.key !== key) this.cached = { key, preview: this.plan(point, player, rotation) };
     return this.cached.preview;
   }
