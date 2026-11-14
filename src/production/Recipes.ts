@@ -40,5 +40,9 @@ export function createDefaultRecipeRegistry(items: ItemRegistry): RecipeRegistry
     output: { itemId: 'iron-rod', quantity: 1 }, durationMs: 2000 });
   registry.register({ id: 'reinforced-component', name: 'Reinforced Component', input: { itemId: 'iron-plate', quantity: 1 },
     additionalInputs: [{ itemId: 'iron-rod', quantity: 1 }], output: { itemId: 'reinforced-component', quantity: 1 }, durationMs: 4000 });
+  registry.register({ id: 'steel-ingot', name: 'Steel Ingot', input: { itemId: 'iron-ore', quantity: 1 },
+    additionalInputs: [{ itemId: 'coal', quantity: 1 }], output: { itemId: 'steel-ingot', quantity: 1 }, durationMs: 4000 });
+  registry.register({ id: 'steel-plate', name: 'Steel Plate', input: { itemId: 'steel-ingot', quantity: 1 },
+    output: { itemId: 'steel-plate', quantity: 1 }, durationMs: 2000 });
   return registry;
 }

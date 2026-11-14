@@ -1774,3 +1774,25 @@ previous counts. Pauses, blocked cycles and partial progress add nothing. Counts
 are in-memory only, reset on demolition/session reset, and cover processors, not
 miners or network-wide rates. Comprehensive throughput/bottleneck analytics
 remain Phase 9 work.
+
+## Implementation note — playable Phase 9 multi-input manufacturing
+
+`AdvancedMachine` reuses `Processor`, with fixed two-ingredient Assembler and
+Foundry recipes. `MachineManager` owns instances and demolition guards;
+`PowerManager` supplies each at 10 kW. `LogisticsManager` resolves the current
+recipe at transfer time and reserves at most one stack for each ingredient.
+Both rear cell lanes, direct lift outputs and matching legacy belts share the
+receiver. Wrong items and full buffers exert backpressure; a mixed lane may
+block a needed ingredient behind an unwanted/excess item. Manual inspection
+provides independent feed and recovery. A Constructor can switch between
+single-input recipes with different item types only when both buffers are empty.
+
+Machines accumulate simulated elapsed and actual working time, completed
+production, and committed ingredient consumption (including Smelter coal).
+Inspection reports lifetime-average rates and utilization; menu pauses do not
+advance the denominator. `MachineManager.statistics` aggregates rates across
+currently placed machines and counts key blocked states. This sums per-machine
+lifetime averages, not a rolling window; demolition and session reset erase
+statistics, and there is no dedicated dashboard or persistence. Power data is
+still per network. See `PHASE_9_VALIDATION_FR.md`; no foundation placement logic
+was changed.

@@ -18,6 +18,7 @@ export class Smelter extends Processor {
   protected override get additionalCycles(): number { return Math.floor(this.fuel.getItemCount(SMELTER_FUEL.itemId) / SMELTER_FUEL.quantity); }
   protected override consumeAdditional(count: number): void {
     if (!this.fuel.exchange([{ itemId: SMELTER_FUEL.itemId, quantity: count * SMELTER_FUEL.quantity }], [])) throw new Error('Smelter fuel changed during production');
+    this.recordConsumed(SMELTER_FUEL.itemId, count * SMELTER_FUEL.quantity);
   }
   feedFuel(source: Inventory): QuantityResult { return this.transfer(source, this.fuel, SMELTER_FUEL.itemId); }
   retrieveFuel(destination: Inventory): QuantityResult { return this.transfer(this.fuel, destination, SMELTER_FUEL.itemId); }

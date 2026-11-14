@@ -3,34 +3,44 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 9 — Advanced manufacturing
-**Phase Status:** 🟡 In progress — constructor recipe selection and multi-input production foundation
-**Next Recommended Task:** Implement a playable powered assembler and integrate multi-input transfers, inspection and production statistics.
+**Phase Status:** 🟡 In progress — playable multi-input manufacturing and initial factory statistics
+**Next Recommended Task:** Player validation and further refine factory-wide bottleneck diagnostics and statistics.
 **Last Updated:** 2026-11-11
 
 ---
 
-## Phase 9 — initial manufacturing slice
+## Phase 9 — advanced manufacturing in progress
 
-- The user globally validated Phase 8 and authorized Phase 9 if no blocker was
-  found. Phase 8 criteria have automated coverage; individual player scenarios
-  were not reported, and its documented gameplay limits remain.
-- Constructors can choose Iron Plate or Iron Rod in E inspection: 1 iron ingot
-  produces 1 selected item in 2 s. Empty both machine buffers before changing
-  recipe; doing so resets any partial progress. The live output port tracks the
-  new recipe without rebuilding the conveyor network; old items already on belts
-  continue normally. Real power, pause and existing smelter rules still apply.
-- Recipes can define multiple distinct ingredients; the shared `Processor` tests
-  all inputs and output capacity, then atomically consumes the ingredients only
-  on completed cycles. The registered Iron Plate + Iron Rod → Reinforced
-  Component recipe is tested in isolation with power loss and fuel exhaustion.
-  Its item and icon exist, but no playable machine can select it yet.
-- Smelter and Constructor inspection now reports the completed output count for
-  the selected product, per machine, since construction. Counts survive buffer
-  retrieval and recipe changes, but are lost on demolition or session reset; they
-  do not include belt throughput, per-minute rates or miner production.
-- Phase 9 is **not complete**: buildable assembler and foundry, playable
-  multi-input logistics and inspection, comprehensive production statistics and full acceptance
-  testing remain. The new constructor recipe also awaits player validation.
+- Buildable powered Assembler and Foundry (20 stone + 15 wood each; 10 kW)
+  have a cyan shared rear input and yellow front output. Both rear conveyor
+  lanes, direct lift outputs and compatible legacy belts can feed either input;
+  unsuitable items block safely. Each ingredient is limited to one stack, so
+  one ingredient cannot fill all slots. A mixed single lane can still suffer
+  head-of-line blocking: use separate lanes or balance the feed.
+- Assembler: 1 Iron Plate + 1 Iron Rod → 1 Reinforced Component in 4 s.
+  Foundry: 1 Iron Ore + 1 Coal → 1 Steel Ingot in 4 s. The Constructor can
+  select 1 Steel Ingot → 1 Steel Plate in 2 s, in addition to iron recipes.
+  These recipe numbers and starter-material building costs are implementation
+  choices, not an assertion that future game balance is final.
+- E inspection reports both ingredient quantities and allows separate manual
+  feed/recovery. A recipe change still requires empty input and output buffers,
+  resets partial progress and does not erase items already on conveyors. Pauses,
+  power shortage, full outputs and demolition protect inventories.
+- Machine inspection now shows lifetime average production and consumption per
+  minute, observed utilization, and counts for the selected item. Miner inspection
+  shows extraction totals/rate; Smelter consumption includes coal. The factory
+  summary aggregates **currently placed machines**: sum of their lifetime rates,
+  mean utilization and counts of output-full, missing-input, no-power and
+  smelter coal shortages.
+  These are not rolling rates, and removal or session reset erases that machine's
+  history; power statistics remain per electrical network.
+- Automated tests cover rotations, placement order, manual UI, powered multi-step
+  foundry → constructor chains, two-input assembler delivery, capacity,
+  conservation, blocking, pause, recovery, lift, recipe changes and statistics.
+  See `docs/PHASE_9_VALIDATION_FR.md` for outstanding player checks.
+- Phase 9 is **not yet accepted**: the new systems need player validation;
+  rolling/history statistics, a dedicated factory dashboard and more complete
+  bottleneck diagnostics remain to be assessed against the full GDD criteria.
 
 ## Phase 8 — playable electrical integration
 
@@ -42,7 +52,7 @@
   available and installed capacity, shortfall and member counts. E on a generator
   also adds/retrieves wood and enables/disables it; menus pause simulation.
 - A generator supplies 30 kW while fuel is available: one wood lasts 30 seconds.
-  Each enabled miner, smelter and constructor reserves 10 kW even if blocked or
+  Each enabled miner, smelter, constructor, assembler and foundry reserves 10 kW even if blocked or
   idle. All available generators burn at full rate on a loaded online network;
   idle, isolated and overloaded networks burn nothing. Shortage stops every
   machine until capacity is restored. Progress and inventories are retained.

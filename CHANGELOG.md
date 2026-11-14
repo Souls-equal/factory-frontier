@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — playable Phase 9 advanced manufacturing
+
+- Add powered Assembler and Foundry, bounded multi-ingredient logistics and
+  manual inspection, reinforced components, steel ingots and steel plates.
+- Add per-machine lifetime average production, consumption and utilization,
+  miner extraction statistics, and an aggregate snapshot of placed machines
+  with bottleneck-state counts. No persistence or rolling history yet.
+- Test power, conservation, multi-step production, two-lane transport, input
+  reservations, blocking, recovery, UI, placement and recipe switching.
+
 ## Unreleased — Phase 9 processor production totals
 
 - Count completed processor output per item and show the selected product's

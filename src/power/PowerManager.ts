@@ -7,7 +7,7 @@ import { PowerSimulation } from './PowerSimulation';
 import type { PowerNetwork, PowerPosition } from './PowerGrid';
 
 export const POWER_RANGE = 10;
-export const MACHINE_WATTS: Readonly<Record<string, number>> = Object.freeze({ 'miner-mk1': 10_000, smelter: 10_000, constructor: 10_000 });
+export const MACHINE_WATTS: Readonly<Record<string, number>> = Object.freeze({ 'miner-mk1': 10_000, smelter: 10_000, constructor: 10_000, assembler: 10_000, foundry: 10_000 });
 export interface PowerWire { readonly a: string; readonly b: string; readonly from: PowerPosition; readonly to: PowerPosition }
 
 /** Bridges building lifecycles to the simulation. Connections are automatic and deterministic. */
@@ -42,7 +42,7 @@ export class PowerManager implements SimulationSystem {
       const position = this.position(b);
       if (b.typeId === 'biomass-generator') sim.addGenerator(this.generators.get(b.id)!, position);
       else {
-        const machine = this.machines.get(b.id) ?? this.machines.smelter(b.id) ?? this.machines.constructorMachine(b.id);
+        const machine = this.machines.get(b.id) ?? this.machines.smelter(b.id) ?? this.machines.constructorMachine(b.id) ?? this.machines.advanced(b.id);
         if (!machine) throw new Error(`Missing machine ${b.id}`);
         sim.addConsumer(machine, position, MACHINE_WATTS[b.typeId]!);
       }

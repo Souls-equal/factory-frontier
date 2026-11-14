@@ -22,6 +22,9 @@ export class Miner implements Machine {
   private poweredValue = true;
   private started = false;
   private failed = false;
+  private observedMs = 0;
+  private workingMs = 0;
+  private producedCount = 0;
   constructor(readonly id: string, readonly depositId: string, readonly itemId: string,
     private readonly findDeposit: (id: string) => ResourceDeposit | undefined,
     items: ItemRegistry, readonly config: MinerConfig = DEFAULT_MINER_CONFIG) {
@@ -30,6 +33,10 @@ export class Miner implements Machine {
     items.get(itemId);
     this.output = new Inventory(items, config.outputSlots);
   }
+  get elapsedMs(): number { return this.observedMs; }
+  get produced(): number { return this.producedCount; }
+  get utilization(): number { return this.observedMs ? this.workingMs / this.observedMs : 0; }
+  get productionRate(): number { return this.observedMs ? this.producedCount * 60000 / this.observedMs : 0; }
   get enabled(): boolean { return this.enabledValue; }
   get powered(): boolean { return this.poweredValue; }
   setPowered(value: boolean): void { this.poweredValue = value; }
@@ -52,6 +59,7 @@ export class Miner implements Machine {
   }
   fixedUpdate(deltaMs: number): void {
     if (!Number.isFinite(deltaMs) || deltaMs < 0) throw new RangeError('Invalid simulation duration.');
+    this.observedMs += deltaMs;
     if (deltaMs === 0) return;
     this.started = true;
     if (this.state !== 'RUNNING') return;
@@ -59,11 +67,13 @@ export class Miner implements Machine {
     // Stop work at the exact moment the last output slot fills; no extra work
     // accumulates while blocked and any existing fractional work is preserved.
     const workNeeded = Math.max(0, available * 60000 - this.work);
-    this.work += Math.min(workNeeded, this.effectiveRate * deltaMs);
+    const work = Math.min(workNeeded, this.effectiveRate * deltaMs);
+    this.workingMs += work / this.effectiveRate; this.work += work;
     const whole = Math.min(available, Math.floor((this.work + 1e-7) / 60000));
     if (whole > 0) {
       const result = this.output.addItem(this.itemId, whole);
       if (result.moved !== whole) { this.failed = true; return; }
+      this.producedCount += whole;
       this.work = Math.max(0, this.work - whole * 60000);
     }
   }

@@ -105,3 +105,24 @@ it('changes constructor recipes only after buffers are empty, without discarding
   root.querySelector<HTMLButtonElement>('[data-machine-retrieve]')!.click(); expect(player.getItemCount('iron-rod')).toBe(1);
   ui.dispose();
 });
+
+it.each([['Assembler', 'reinforced-component', 'iron-plate', 'iron-rod'], ['Foundry', 'steel-ingot', 'iron-ore', 'coal']] as const)(
+  'inspects %s with separate bounded input controls and recovery', async (kind, recipeId, first, second) => {
+    const { AdvancedMachine } = await import('../../src/machines/AdvancedMachine');
+    const { createDefaultRecipeRegistry } = await import('../../src/production/Recipes');
+    document.body.innerHTML = '<section hidden><h2 data-machine-title></h2><div data-machine-details></div><button data-machine-close>Close</button><div><button data-machine-toggle></button><button data-machine-retrieve></button></div><p data-machine-notice></p></section>';
+    const root = document.querySelector('section')!, items = createDefaultItemRegistry(), player = new Inventory(items, 4);
+    player.addItem(first, 100); player.addItem(second, 3);
+    const machine = new AdvancedMachine('a', items, createDefaultRecipeRegistry(items).get(recipeId), kind);
+    const ui = new MachineUI(root, player, vi.fn()); ui.open(machine);
+    expect(root.querySelector('[data-machine-title]')!.textContent).toBe(kind);
+    expect(root.textContent).toContain(items.get(first).name); expect(root.textContent).toContain(items.get(second).name);
+    root.querySelector<HTMLButtonElement>('[data-machine-feed]')!.click();
+    root.querySelector<HTMLButtonElement>('[data-machine-feed-fuel]')!.click();
+    expect(machine.input.getItemCount(first)).toBe(100); expect(machine.input.getItemCount(second)).toBe(3);
+    machine.fixedUpdate(4000); ui.update(); expect(machine.output.getItemCount(recipeId)).toBe(1);
+    expect(root.textContent).toContain('Produced by this machine');
+    root.querySelector<HTMLButtonElement>('[data-machine-retrieve-fuel]')!.click(); expect(player.getItemCount(second)).toBe(2);
+    root.querySelector<HTMLButtonElement>('[data-machine-retrieve-input]')!.click(); expect(player.getItemCount(first)).toBe(99);
+    ui.dispose();
+  });
