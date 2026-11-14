@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — playable Phase 8 electricity
+
+- Add buildable poles and biomass generators, automatic visible range-limited
+  links and inspection of network statistics and generator wood fuel.
+- Integrate electrical demand and power loss into real miner, smelter and
+  constructor simulation, including pause, overload, fuel exhaustion, network
+  rebuilds and recovery. Smelters retain their direct coal cost.
+- Add lifecycle, UI, rendering and bootstrap regression tests. Player acceptance
+  remains pending; foundation placement is unchanged.
+
 ## Unreleased — Phase 8 biomass and machine simulation
 
 - Add an isolated wood-fueled generator and deterministic dispatch over the

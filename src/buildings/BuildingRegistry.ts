@@ -79,6 +79,14 @@ export function createDefaultBuildingRegistry(items: ItemRegistry): BuildingRegi
       cost: [{ itemId: 'stone', quantity: 15 }, { itemId: 'wood', quantity: 10 }], widthCells: 2, depthCells: 2,
       height: rise + .9, maxSlope: .58, maxGroundVariation: .8, color: 0x748c92, placement: 'logistics' });
   }
+  registry.register({ id: 'power-pole', name: 'Power Pole', category: 'Power',
+    description: 'Automatically connects nearby poles and machines within 10 m.',
+    cost: [{ itemId: 'stone', quantity: 5 }, { itemId: 'wood', quantity: 5 }], widthCells: 1, depthCells: 1,
+    height: 2.6, maxSlope: .58, maxGroundVariation: .8, color: 0x8c8c73, placement: 'logistics' });
+  registry.register({ id: 'biomass-generator', name: 'Biomass Generator', category: 'Power',
+    description: 'Add wood by hand; supplies 30 kW through a nearby pole.',
+    cost: [{ itemId: 'stone', quantity: 15 }, { itemId: 'wood', quantity: 10 }], widthCells: 2, depthCells: 2,
+    height: 2, maxSlope: .58, maxGroundVariation: .8, color: 0x8e754c, placement: 'logistics' });
   registry.register({ id: 'merger', name: 'Merger', category: 'Logistics',
     description: 'Fairly combines three rear and side inputs into one front output.',
     cost: [{ itemId: 'stone', quantity: 15 }, { itemId: 'wood', quantity: 10 }], widthCells: 2, depthCells: 2,

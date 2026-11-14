@@ -1,3 +1,5 @@
+import { PowerWireView } from './PowerWireView';
+import type { PowerWire } from '../power/PowerManager';
 import type { GroundItem } from '../logistics/GroundItems';
 import { ConveyorItemsView } from './ConveyorItemsView';
 import type { ConveyorSegment, ConveyorState } from '../logistics/ConveyorNetwork';
@@ -32,6 +34,7 @@ export class Engine implements GameEngine {
   private readonly lightingManager: LightingManager;
 
   private buildingView: BuildingView | undefined;
+  private powerWires: PowerWireView | undefined;
   private conveyorItems: ConveyorItemsView | undefined;
   private initialized = false;
   private disposed = false;
@@ -86,10 +89,12 @@ export class Engine implements GameEngine {
   initBuildings(registry: BuildingRegistry, cellSize: number): void {
     if (this.buildingView) throw new Error('Building renderer is already initialized.');
     this.buildingView = new BuildingView(registry, cellSize);
+    this.powerWires = new PowerWireView(); this.sceneManager.scene.add(this.powerWires.group);
     this.sceneManager.scene.add(this.buildingView.group);
     this.conveyorItems = new ConveyorItemsView((mesh) => this.sceneManager.scene.add(mesh), (mesh) => this.sceneManager.scene.remove(mesh));
   }
 
+  syncPowerWires(wires: readonly PowerWire[]): void { this.powerWires?.sync(wires); }
   syncBuildings(buildings: readonly BuildingInstance[]): void { this.buildingView?.sync(buildings); }
   setBuildingPreview(typeId: string | null, result?: PlacementResult): void { this.buildingView?.setPreview(typeId, result); }
   setRoutePreview(cells: readonly BuildingInstance[], valid: boolean): void { this.buildingView?.setRoutePreview(cells, valid); }
@@ -138,6 +143,7 @@ export class Engine implements GameEngine {
     this.initialized = false;
 
     this.conveyorItems?.dispose();
+    this.powerWires?.dispose();
     this.buildingView?.dispose();
     this.lightingManager.dispose();
     this.sceneManager.dispose();

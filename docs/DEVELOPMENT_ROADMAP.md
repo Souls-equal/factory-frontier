@@ -18,8 +18,8 @@
 
 The player now reports no apparent bugs in their Phase 7 tests and globally
 validates Phase 7; individual checklist results were not supplied. Phase 8 has
-isolated network, biomass fuel and powered-machine simulation, but none of those
-systems are yet connected to gameplay or player-facing controls.
+playable automatic pole connections, biomass generation, machine power and
+inspection; player validation of the Phase 8 criteria remains pending.
 
 The user explicitly authorized the next step after confirming in-game miner →
 conveyor → terminal transport, turns/slopes without item loss, and blockage/recovery.
@@ -52,7 +52,7 @@ detailed evidence and verification results live in `PROJECT_STATUS.md`.
 | 5 — Conveyor foundation | 🟡 Partially user-validated | User confirmed miner → terminal, turns/slopes, blockage and recovery; remaining checklist not confirmed |
 | 6 — First production chain | ✅ User validated | Coal-fueled smelter, constructor and plates implemented; user reports everything works after complete-chain test request |
 | 7 — Advanced logistics | ✅ Globally user-validated | Player reports no apparent bugs in their tests; individual checklist results not specified; documented limits apply |
-| 8 — Electricity | 🟡 In progress | Isolated network, biomass fuel and machine simulation; playable buildings, wiring, gameplay hookup and UI remain |
+| 8 — Electricity | 🟡 In progress | Automatic visible links, biomass generation, machine power and inspection implemented; player validation pending |
 | 9 — Advanced manufacturing | ◻ Planned | — |
 | 10 — World expansion | ◻ Planned | — |
 | 11 — Progression | ◻ Planned | — |

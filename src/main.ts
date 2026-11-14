@@ -11,6 +11,7 @@ import { LogisticsManager } from './logistics/LogisticsManager';
 import { LogisticsInteractable } from './logistics/LogisticsInteractable';
 import { LogisticsUI } from './ui/LogisticsUI';
 import { MachineManager } from './machines/MachineManager';
+import { PowerManager } from './power/PowerManager';
 import { MinerInteractable } from './machines/MinerInteractable';
 import { SmelterInteractable } from './machines/SmelterInteractable';
 import { ConstructorInteractable } from './machines/ConstructorInteractable';
@@ -166,6 +167,8 @@ async function boot(): Promise<void> {
     feetY: player.position.y, headY: player.position.y + config.player.height });
   const machines = new MachineManager(buildings, registry, () => world.deposits, config.miner,
     () => !!(machineUI?.isOpen || logisticsUI?.isOpen || constructionUI?.isOpen || inventoryUI?.isOpen));
+  const power = new PowerManager(buildings, machines, registry,
+    () => !!(machineUI?.isOpen || logisticsUI?.isOpen || constructionUI?.isOpen || inventoryUI?.isOpen));
   const logistics = new LogisticsManager(buildings, machines, registry,
     () => !!(machineUI?.isOpen || logisticsUI?.isOpen || constructionUI?.isOpen || inventoryUI?.isOpen), 1, undefined, groundItems);
   const routeEditor = new ConveyorRouteEditor(buildings, world.terrain);
@@ -190,7 +193,7 @@ async function boot(): Promise<void> {
     logisticsUI.closePanel(); createdInput.resumeFromModal();
   };
   logisticsUI = new LogisticsUI(logisticsRoot, logistics, inventory, closeLogistics);
-  machineUI = new MachineUI(machineRoot, inventory, closeMachine);
+  machineUI = new MachineUI(machineRoot, inventory, closeMachine, id => power.networkFor(id));
   inventoryUI = new InventoryUI(inventoryRoot, inventory, closeInventory);
   constructionUI = new ConstructionUI(constructionRoot, buildingRegistry, inventory, (id) => {
     clearRoute(); construction.select(id); closeConstruction();
@@ -286,6 +289,28 @@ async function boot(): Promise<void> {
     }
   };
 
+  const powerInteractions = new Map<string, () => void>();
+  const syncPower = (): void => {
+    power.sync();
+    const active = buildings.all().filter(b => b.typeId === 'power-pole' || b.typeId === 'biomass-generator');
+    const ids = new Set(active.map(b => b.id));
+    for (const [id, unregister] of powerInteractions) if (!ids.has(id)) { unregister(); powerInteractions.delete(id); }
+    for (const building of active) {
+      if (powerInteractions.has(building.id)) continue;
+      const generator = power.generator(building.id), name = generator ? 'Biomass Generator' : 'Power Pole';
+      powerInteractions.set(building.id, interaction.register({
+        descriptor: { id: building.id, displayName: name, hint: 'Inspect power',
+          position: { x: building.transform.x, y: building.transform.y + 1.2, z: building.transform.z },
+          targetRadius: generator ? 1.2 : .65, range: config.interaction.range },
+        isAvailable: () => !!buildings.get(building.id),
+        interact: () => {
+          pendingConstruction = null; player.stopHorizontalMotion(); createdInput.suspendForModal(); machineUI?.openPower(building.id, generator);
+          return { ok: true, message: `Inspecting ${name}.` };
+        },
+      }));
+    }
+  };
+
   const groundInteractions = new Map<string, () => void>();
   const syncGroundItems = (): void => {
     const active = new Set(groundItems.all().map((item) => item.id));
@@ -378,7 +403,7 @@ async function boot(): Promise<void> {
           interactionPrompt.showFeedback(result === 'removed' ? (free ? 'Free building demolished; no materials to refund.' : 'Building demolished; materials refunded.') : `Cannot demolish: ${result}.`);
         }
       }
-      syncMachines(); syncLogistics(); syncBeltItems(); syncGroundItems();
+      syncMachines(); syncPower(); syncLogistics(); syncBeltItems(); syncGroundItems();
       const interactPressed = createdInput.consumeInteract();
       if (interactPressed && action === null && !construction.active && !constructionUI?.isOpen && !inventoryUI?.isOpen && !machineUI?.isOpen && !logisticsUI?.isOpen) {
         interaction.requestInteraction();
@@ -386,7 +411,7 @@ async function boot(): Promise<void> {
     },
   });
   createdGame.registerSystem(interaction);
-  createdGame.registerSystem(machines);
+  createdGame.registerSystem(power);
   createdGame.registerSystem(logistics);
 
   // --- presentation stage --------------------------------------------------
@@ -419,6 +444,7 @@ async function boot(): Promise<void> {
       const routePoint = routeMode ? construction.aim(player.view) : null;
       const routePreview = routePoint ? routeEditor.preview(routePoint, playerFootprint(), construction.facing(player.view), inventory.revision, performance.now()) : null;
       engine.syncBuildings?.(buildings.all());
+      engine.syncPowerWires?.(power.wires());
       engine.syncConveyors?.(logistics.network.all(), machineUI?.isOpen || logisticsUI?.isOpen || constructionUI?.isOpen || inventoryUI?.isOpen ? 1 : createdGame.clock.alpha, groundItems.all());
       engine.setMachineStates?.([...machines.all(), ...machines.allSmelters(), ...machines.allConstructors()].map((machine) => ({ id: machine.id, state: machine.state })));
       const routeValid = !!routePreview && (routePreview.starting ? routePreview.startValid : routePreview.reason === 'valid');

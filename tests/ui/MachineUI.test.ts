@@ -60,3 +60,24 @@ it('inspects a constructor, shows its recipe, and transfers input and plates', a
   root.querySelector<HTMLButtonElement>('[data-machine-retrieve-input]')!.click(); expect(player.getItemCount('iron-ingot')).toBe(2);
   ui.dispose();
 });
+
+it('inspects a generator and pole, transfers wood and shows live network statistics', async () => {
+  const { BiomassGenerator } = await import('../../src/power/BiomassGenerator');
+  document.body.innerHTML = '<section hidden><h2 data-machine-title></h2><div data-machine-details></div><button data-machine-close>Close</button><div><button data-machine-toggle></button><button data-machine-retrieve></button></div><p data-machine-notice></p></section>';
+  const root = document.querySelector('section')!, items = createDefaultItemRegistry(), player = new Inventory(items, 2);
+  const generator = new BiomassGenerator('g', items); player.addItem('wood', 3);
+  const network = vi.fn(() => ({ id: 'p', poles: ['p'], generators: ['g'], consumers: ['m'], capacityWatts: 30000,
+    availableWatts: generator.ready ? 30000 : 0, demandWatts: 10000, suppliedWatts: generator.ready ? 10000 : 0,
+    shortfallWatts: generator.ready ? 0 : 10000, status: generator.ready ? 'online' as const : 'offline' as const }));
+  const ui = new MachineUI(root, player, vi.fn(), network); ui.openPower('g', generator);
+  expect(root.textContent).toContain('Biomass Generator'); expect(root.textContent).toContain('Network: offline');
+  root.querySelector<HTMLButtonElement>('[data-machine-feed-fuel]')!.click();
+  expect(generator.fuel.getItemCount('wood')).toBe(3); expect(root.textContent).toContain('Network: online');
+  expect(root.textContent).toContain('Supply: 10 kW'); expect(root.textContent).toContain('Demand: 10 kW');
+  root.querySelector<HTMLButtonElement>('[data-machine-toggle]')!.click(); expect(root.textContent).toContain('Network: offline');
+  root.querySelector<HTMLButtonElement>('[data-machine-retrieve-fuel]')!.click(); expect(player.getItemCount('wood')).toBe(3);
+  ui.openPower('p'); expect(root.textContent).toContain('Power Pole'); expect(root.textContent).toContain('nearest pole');
+  expect(root.querySelector<HTMLButtonElement>('[data-machine-feed-fuel]')!.hidden).toBe(true);
+  expect(root.querySelector<HTMLButtonElement>('[data-machine-toggle]')!.hidden).toBe(true);
+  ui.dispose();
+});

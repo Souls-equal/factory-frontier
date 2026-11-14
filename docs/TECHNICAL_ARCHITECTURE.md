@@ -1710,3 +1710,27 @@ current game. Building lifecycle, wiring controls/visuals, fuel interaction,
 player-facing statistics and safe demolition must be integrated and tested before
 Phase 8 can be accepted. The simulation adapter must replace, not duplicate,
 `MachineManager` stepping when integrated.
+
+## Implementation note — playable Phase 8 integration
+
+`PowerManager` is the authoritative fixed-step adapter between buildings, the
+existing `MachineManager` instances and `PowerSimulation`. It synchronizes
+building lifecycle and rebuilds the topology on a building revision, retaining
+generator inventories and partial burn time. In the app it replaces, rather
+than duplicates, the machine simulation step and runs before logistics. Menus
+pause both production and fuel consumption. Machine/UI and rendering layers read
+the same network snapshots; no Three.js object owns game state.
+
+The integration chooses automatic wiring: all poles with top anchors within
+10 m in 3D connect, and each endpoint connects to its nearest pole (ties ordered
+by ID). Adding a nearer pole can therefore reassign an endpoint; adding a pole
+can merge networks. `PowerWireView` renders those links. Wires have no costs or
+manual disconnect controls. Pole, generator and machine inspections show network
+capacity, available and supplied power, demand, shortfall, status and counts.
+Each miner, smelter and constructor reserves 10 kW while enabled; one fueled
+biomass generator supplies 30 kW. Shortage sheds the whole network and all
+available generators burn at full rate when a network is loaded and online.
+Fuel is manually transferred and stored wood prevents generator demolition;
+already-burning fuel is lost on demolition of an otherwise empty generator.
+Smelters still require coal separately. Persistence is outside this phase.
+Player testing remains required: see `PHASE_8_VALIDATION_FR.md`.

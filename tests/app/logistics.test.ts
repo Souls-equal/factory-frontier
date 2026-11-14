@@ -4,13 +4,22 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import type { World } from '../../src/world/World';
+import type { PowerManager } from '../../src/power/PowerManager';
+import type { BuildingInstance } from '../../src/buildings/BuildingSystem';
 import type { GroundItem } from '../../src/logistics/GroundItems';
 import { transportPosition, type ConveyorSegment } from '../../src/logistics/ConveyorNetwork';
 import type { InventoryReceiver } from '../../src/logistics/Ports';
 import type { CameraView } from '../../src/engine/types';
 import { createGameConfig } from '../../src/core/Configuration';
 
-const state = vi.hoisted(() => ({ world: null as World | null, segments: [] as readonly ConveyorSegment[], ground: [] as readonly GroundItem[], view: null as CameraView | null, init: 0, sawItem: false }));
+const state = vi.hoisted(() => ({ world: null as World | null, segments: [] as readonly ConveyorSegment[], ground: [] as readonly GroundItem[], view: null as CameraView | null, init: 0, sawItem: false, power: null as PowerManager | null }));
+vi.mock('../../src/power/PowerManager', async (load) => {
+  const actual = await load<typeof import('../../src/power/PowerManager')>();
+  class CapturedPower extends actual.PowerManager {
+    constructor(...args: ConstructorParameters<typeof actual.PowerManager>) { super(...args); state.power = this; }
+  }
+  return { ...actual, PowerManager: CapturedPower };
+});
 vi.mock('../../src/items/Inventory', async (load) => {
   const actual = await load<typeof import('../../src/items/Inventory')>();
   class Stocked extends actual.Inventory {
@@ -32,12 +41,29 @@ const html = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../.
 let frames: Array<(time: number) => void> = [], time = 0;
 function frame() { time += 50; const next = frames.shift(); if (!next) throw new Error('Missing scheduled frame'); next(time); }
 beforeEach(() => {
-  vi.resetModules(); state.world = null; state.segments = []; state.ground = []; state.view = null; state.init = 0; state.sawItem = false; frames = []; time = 0;
+  vi.resetModules(); state.world = null; state.power = null; state.segments = []; state.ground = []; state.view = null; state.init = 0; state.sawItem = false; frames = []; time = 0;
   document.body.innerHTML = /<body[^>]*>([\s\S]*)<\/body>/i.exec(html)?.[1] ?? '';
   vi.stubGlobal('requestAnimationFrame', vi.fn((callback: (time: number) => void) => { frames.push(callback); return frames.length; }));
   vi.stubGlobal('cancelAnimationFrame', vi.fn());
 });
 afterEach(() => { window.dispatchEvent(new Event('beforeunload')); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+// Build actual electrical infrastructure for transport tests; fuel is seeded in
+// the real manager so these tests still exercise the production clock.
+function supply(miner: BuildingInstance): void {
+  const buildings = state.world!.buildings, far = { x: 80, z: 80, radius: .4 };
+  const wasCreative = buildings.creativeMode; buildings.setCreativeMode(true);
+  const find = (type: string) => {
+    for (const dx of [3, 4, 5, -3, -4, -5, 6, -6]) for (const dz of [0, 2, 4, -2, -4]) {
+      const x = miner.transform.x + dx, z = miner.transform.z + dz;
+      const candidate = buildings.validate(type, x, z, 0, far);
+      if (candidate.reason === 'valid') return buildings.place(type, x, z, 0, far).building!;
+    }
+    throw new Error(`No valid ${type} near miner`);
+  };
+  find('power-pole'); const generator = find('biomass-generator'); buildings.setCreativeMode(wasCreative);
+  state.power!.sync(); state.power!.generator(generator.id)!.fuel.addItem('wood', 10);
+  expect(state.power!.networkFor(miner.id).status).toBe('online');
+}
 it('real bootstrap registers and runs the building-backed miner-to-receiver path (mock renderer)', async () => {
   vi.spyOn(console, 'info').mockImplementation(() => undefined);
   await import('../../src/main'); await vi.waitFor(() => expect(state.init).toBe(1)); frame();
@@ -49,6 +75,7 @@ it('real bootstrap registers and runs the building-backed miner-to-receiver path
   expect(belt.reason).toBe('valid');
   const terminal = world.buildings.place('receiving-terminal', x, z - 4, 0, player);
   expect(terminal.reason).toBe('valid');
+  supply(miner.building!);
   for (let i = 0; i < 400; i++) frame();
   expect(state.segments).toHaveLength(1); expect(state.sawItem).toBe(true);
   const receiver = state.segments[0]!.receiver as InventoryReceiver;
@@ -66,6 +93,7 @@ it('picks up moving belt items with E without opening a conveyor panel (mock ren
   const second = world.buildings.place('conveyor-cell', first.transform.x, first.transform.z - 1, 0, far);
   const belt = world.buildings.place('conveyor-cell', second.transform.x, second.transform.z - 1, 0, far);
   expect([miner.reason, first.reason, second.reason, belt.reason]).toEqual(['valid', 'valid', 'valid', 'valid']);
+  supply(miner.building!);
   const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!, sensitivity = createGameConfig().controls.lookSensitivity;
   const turn = (dx: number, dy: number) => {
     canvas.dispatchEvent(new MouseEvent('mousedown', { button: 0, clientX: 5000, clientY: 5000 }));
@@ -100,6 +128,7 @@ it('real bootstrap starts a Miner-to-belt line before a terminal exists (mock re
   const miner = world.buildings.place('miner-mk1', deposit.x, deposit.z, 0, far);
   const belt = world.buildings.place('conveyor-straight', miner.transform.x, miner.transform.z - 2, 0, far);
   expect(miner.reason).toBe('valid'); expect(belt.reason).toBe('valid'); expect(belt.connection).toBe('connected');
+  supply(miner.building!);
   for (let i = 0; i < 250; i++) frame();
   const segment = state.segments[0]!;
   expect(segment.source?.id).toBe(miner.building!.id); expect(segment.receiver).toBeNull();
@@ -129,6 +158,7 @@ it('connects the new one-cell menu belt to the generated Miner and renders dropp
   const candidate = candidates.find((result) => result.reason === 'valid')!; expect(candidate).toBeDefined();
   const placed = world.buildings.place('conveyor-cell', candidate.transform.x, candidate.transform.z, 0, far);
   expect(placed.reason).toBe('valid');
+  supply(miner);
   for (let i = 0; i < 250; i++) frame();
   expect(state.segments[0]!.source?.id).toBe(miner.id); expect(state.sawItem).toBe(true);
   expect(state.ground.length).toBeGreaterThan(0); expect(state.ground[0]!.itemId).toBe('iron-ore');
@@ -144,6 +174,7 @@ it('extends a live cell belt over its dropped items without duplicate interactio
   expect(candidate).toBeDefined();
   const first = world.buildings.place('conveyor-cell', candidate.transform.x, candidate.transform.z, 0, far);
   expect(first.reason).toBe('valid');
+  supply(miner);
   for (let i = 0; i < 300; i++) frame();
   const fallen = state.ground.map((item) => item.id); expect(fallen.length).toBeGreaterThan(0);
   const second = world.buildings.place('conveyor-cell', first.transform.x, first.transform.z - 1, 0, far);

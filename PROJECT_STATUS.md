@@ -3,31 +3,36 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 8 — Electricity
-**Phase Status:** 🟡 In progress — isolated network and fuel/machine simulation
-**Next Recommended Task:** Integrate the simulated generator, poles, wiring, machine power and inspection into gameplay; then validate Phase 8 in-game.
+**Phase Status:** 🟡 In progress — playable automatic power networks; player validation pending
+**Next Recommended Task:** Player-test Phase 8 networks, fuel, overload, outages and recovery using docs/PHASE_8_VALIDATION_FR.md.
 **Last Updated:** 2026-11-11
 
 ---
 
-## Phase 8 — power simulation (not yet playable)
+## Phase 8 — playable electrical integration
 
-- The player reports no apparent bugs in the Phase 7 features they tested and
-  globally validates Phase 7. This is not proof of each individual scenario or
-  of the remaining Phase 5 acceptance criteria.
-- `PowerGrid` models explicit, range-limited pole and endpoint connections,
-  component merge/split and watt statistics. Shortage disconnects all loads.
-- `BiomassGenerator` and `PowerSimulation` add an isolated wood-fueled generator
-  and deterministic dispatch with real miners and processors. One wood supplies
-  30 seconds at 30 kW. Enabled machines reserve rated power even while blocked;
-  every available generator in a loaded online network burns at full rate. Idle,
-  isolated and overloaded networks burn nothing. A tick is split at fuel exhaustion.
-- Miners and processors accept an external power signal and retain their work
-  across outages. The smelter still requires one coal per ingot in addition to
-  electric power when registered with the simulation. Machines default to powered
-  until integrated, preserving existing gameplay.
-- This is domain-level integration only: no buildable generator/pole, wire
-  controls or rendering, player fuel interaction, gameplay hookup or power UI
-  exists yet. Power is not required in the actual game. Phase 8 remains open.
+- Power poles and biomass generators can be built on the ground or platforms.
+  Automatic visible wires connect poles within 10 m (3D); each generator and
+  machine connects to its nearest pole in range. Ties use building IDs. Building
+  or demolishing infrastructure immediately rebuilds the graph.
+- E on a pole, generator or machine displays network status, supply, demand,
+  available and installed capacity, shortfall and member counts. E on a generator
+  also adds/retrieves wood and enables/disables it; menus pause simulation.
+- A generator supplies 30 kW while fuel is available: one wood lasts 30 seconds.
+  Each enabled miner, smelter and constructor reserves 10 kW even if blocked or
+  idle. All available generators burn at full rate on a loaded online network;
+  idle, isolated and overloaded networks burn nothing. Shortage stops every
+  machine until capacity is restored. Progress and inventories are retained.
+  Smelters still require one coal per ingot as well as electricity.
+- Generators containing stored wood cannot be demolished. Partially burned wood
+  cannot be recovered; demolishing an otherwise empty generator discards its
+  remaining burn time. Fuel is currently added by hand, not by conveyor.
+  Wires are automatic and free, cannot be individually placed or removed, and
+  may merge nearby networks. No persistence is available.
+- Automated coverage exercises real building/machine lifecycles, fuel depletion,
+  pauses, demolition, overload, network merge/split, UI and rendered links. The
+  previous bootstrap logistics tests now build and fuel real power infrastructure.
+  Actual browser/player acceptance is pending; Phase 8 is not yet complete.
 
 > The sections below are historical progress notes; the current status above
 > supersedes earlier statements that player validation was pending.
