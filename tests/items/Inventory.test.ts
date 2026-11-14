@@ -135,3 +135,47 @@ describe('atomic slot swaps', () => {
     expect(inventory.revision).toBe(revision);
   });
 });
+
+describe('selected stack transfers', () => {
+  it('moves only the chosen stack, even when an earlier stack holds the same item', () => {
+    const items = createDefaultItemRegistry(), source = new Inventory(items, 4), dest = new Inventory(items, 2);
+    source.addItem('iron-ore', 150); source.addItem('coal', 3); dest.addItem('iron-ore', 85); dest.addItem('stone', 100);
+    const s = source.revision, d = dest.revision;
+    expect(source.transferStack(dest, 1)).toEqual({ requested: 50, moved: 15, remainder: 35 });
+    expect(source.snapshot()).toEqual([{ itemId: 'iron-ore', quantity: 100 }, { itemId: 'iron-ore', quantity: 35 }, { itemId: 'coal', quantity: 3 }, null]);
+    expect(dest.getItemCount('iron-ore')).toBe(100); expect(source.revision).toBe(s + 1); expect(dest.revision).toBe(d + 1);
+    expect(source.transferStack(dest, 1)).toEqual({ requested: 35, moved: 0, remainder: 35 });
+    expect(source.revision).toBe(s + 1); expect(dest.revision).toBe(d + 1);
+    dest.removeItem('iron-ore', 100); expect(source.transferStack(dest, 1)).toEqual({ requested: 35, moved: 35, remainder: 0 });
+    expect(source.snapshot()[0]?.quantity).toBe(100); expect(source.snapshot()[1]).toBeNull();
+  });
+  it('handles empty, self-transfer, invalid indices and incompatible registries without mutations', () => {
+    const items = createDefaultItemRegistry(), source = new Inventory(items, 2), dest = new Inventory(new ItemRegistry(), 1);
+    source.addItem('wood', 5); const before = source.snapshot(), rev = source.revision;
+    expect(source.transferStack(dest, 1)).toEqual({ requested: 0, moved: 0, remainder: 0 });
+    expect(source.transferStack(source, 0)).toEqual({ requested: 5, moved: 0, remainder: 5 });
+    for (const index of [-1, 2, 1.5, NaN]) expect(() => source.transferStack(dest, index)).toThrow(RangeError);
+    expect(() => source.transferStack(dest, 0)).toThrow(RangeError);
+    expect(source.snapshot()).toEqual(before); expect(source.revision).toBe(rev); expect(dest.usedSlots).toBe(0); expect(dest.revision).toBe(0);
+  });
+  it('conserves items and respects differing destination stack limits', () => {
+    const srcItems = createDefaultItemRegistry(), dstItems = new ItemRegistry();
+    dstItems.register({ ...srcItems.get('coal'), maxStackSize: 7 });
+    const a = new Inventory(srcItems, 3), b = new Inventory(dstItems, 2); a.addItem('coal', 50);
+    expect(a.transferStack(b, 0)).toEqual({ requested: 50, moved: 14, remainder: 36 });
+    expect(a.getItemCount('coal') + b.getItemCount('coal')).toBe(50);
+    expect(b.snapshot().map((s) => s?.quantity)).toEqual([7,7]);
+  });
+  it('conserves all materials through repeated slot transfers in both directions', () => {
+    const items = createDefaultItemRegistry(), a = new Inventory(items, 5), b = new Inventory(items, 4);
+    a.addItem('iron-ore', 275); a.addItem('coal', 80); b.addItem('coal', 25);
+    let seed = 918273; const rand = () => seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    for (let i = 0; i < 1000; i++) {
+      const src = rand() % 2 ? a : b, dst = src === a ? b : a;
+      src.transferStack(dst, rand() % src.capacity);
+      expect(a.getItemCount('iron-ore') + b.getItemCount('iron-ore')).toBe(275);
+      expect(a.getItemCount('coal') + b.getItemCount('coal')).toBe(105);
+      for (const stack of [...a.snapshot(), ...b.snapshot()]) if (stack) expect(stack.quantity).toBeGreaterThan(0);
+    }
+  });
+});

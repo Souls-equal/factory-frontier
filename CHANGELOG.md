@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — selected storage stack transfers
+
+- Retrieve a selected storage or terminal stack without withdrawing other items;
+  preserve bulk retrieval and partial-capacity safety.
+- Deposit the selected player slot rather than an earlier same-item stack, and
+  invalidate stale selections when inventory contents change.
+
 ## Unreleased — filtered splitter routing
 
 - Add an optional per-output item-filtering mode with strict assigned routes,

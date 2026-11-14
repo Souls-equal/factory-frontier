@@ -70,6 +70,19 @@ export class Inventory {
     if (moved > 0) { this.removeItem(id, moved); destination.addItem(id, moved); }
     return { requested: amount, moved, remainder: amount - moved };
   }
+  /** Transfer just one selected stack; other stacks of the same item are untouched. */
+  transferStack(destination: Inventory, source: number): QuantityResult {
+    this.validSlot(source);
+    const slot = this.slots[source];
+    if (!slot) return { requested: 0, moved: 0, remainder: 0 };
+    if (destination === this) return { requested: slot.quantity, moved: 0, remainder: slot.quantity };
+    const result = destination.addItem(slot.itemId, slot.quantity);
+    if (result.moved) {
+      this.slots[source] = result.remainder ? { itemId: slot.itemId, quantity: result.remainder } : null;
+      this.revisionValue++;
+    }
+    return result;
+  }
   /** Apply a multi-item exchange all-or-nothing, including shared empty-slot capacity. */
   exchange(remove: readonly ItemStack[], add: readonly ItemStack[]): boolean {
     const next = this.snapshot().map((slot) => slot ? { ...slot } : null);

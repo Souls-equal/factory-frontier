@@ -1591,3 +1591,23 @@ foundations, inventory or transport. Tests exercise invalid configuration,
 fairness, late connections, blockage/recovery, live reconfiguration, mixed-item
 conservation, real merger/splitter networks, rotations and actual UI markup.
 Real-player acceptance remains pending; this does not complete Phase 7.
+
+
+## Implementation note — selected stack transfers
+
+`Inventory.transferStack` transfers only the source slot to another inventory,
+merging into compatible destination stacks first and moving only what fits. Any
+remainder stays in the same source slot; other stacks, including those holding
+the same item, are untouched. It validates the slot and destination item before
+source mutation, handles self/empty transfers, and updates revisions only when
+items move. Existing type-based `transferItem` remains unchanged.
+
+The logistics panel exposes selected-stack retrieval for storage and terminals
+and retains bulk retrieval. Its existing storage deposit action now uses the
+selected player slot rather than removing from earlier same-type stacks.
+Selections are invalidated when the relevant inventory revision changes and
+click handlers recheck revisions before transfer. Partial/full results report
+the exact remainder. Splitter/merger buffers, automated output filters and
+conveyor items remain on their existing paths; the modal pause is unchanged.
+Tests cover exact and stale selections, capacity, both directions, conservation
+and live conveyor recovery. In-game acceptance remains pending.

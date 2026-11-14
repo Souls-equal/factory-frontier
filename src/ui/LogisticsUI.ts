@@ -20,6 +20,7 @@ export class LogisticsUI {
   private readonly notice: HTMLElement;
   private readonly close: HTMLButtonElement;
   private readonly retrieve: HTMLButtonElement;
+  private readonly retrieveSelected: HTMLButtonElement | null;
   private readonly deposit: HTMLButtonElement | null;
   private readonly storageSettings: HTMLElement | null;
   private readonly storageFilter: HTMLSelectElement | null;
@@ -66,6 +67,8 @@ export class LogisticsUI {
     }
     this.splitterMode?.addEventListener('change', this.handleSplitterConfig);
     this.splitterPriority?.addEventListener('change', this.handleSplitterConfig);
+    this.retrieveSelected = root.querySelector<HTMLButtonElement>('[data-logistics-retrieve-selected]');
+    this.retrieveSelected?.addEventListener('click', this.handleRetrieveSelected);
     this.deposit = root.querySelector<HTMLButtonElement>('[data-logistics-deposit]');
     this.deposit?.addEventListener('click', this.handleDeposit);
     this.close.addEventListener('click', this.onClose); this.retrieve.addEventListener('click', this.handleRetrieve);
@@ -79,6 +82,7 @@ export class LogisticsUI {
     if (this.splitterSettings) this.splitterSettings.hidden = !splitter;
     if (this.splitterFilters) this.splitterFilters.hidden = !splitter || splitter.mode !== 'filtered';
     const isStorage = !!receiver && this.logistics.isStorage(this.active);
+    if (this.retrieveSelected) this.retrieveSelected.hidden = !receiver;
     if (this.storageSettings) this.storageSettings.hidden = !isStorage;
     if (this.storageFilter && isStorage) this.storageFilter.value = this.logistics.storageOutputFilter(this.active) ?? '';
     if (segment) {
@@ -119,15 +123,16 @@ export class LogisticsUI {
       const heading = this.root.querySelector('[data-logistics-storage-heading]'), badge = this.root.querySelector('[data-logistics-storage-badge]');
       if (heading) heading.textContent = isStorage ? 'Container' : 'Terminal';
       if (badge) badge.textContent = isStorage ? 'INPUT / OUTPUT' : 'INPUT';
-      if (this.deposit) { this.deposit.hidden = !isStorage; this.deposit.disabled = this.playerSelected === null || !this.player.snapshot()[this.playerSelected]; }
       this.details.textContent = `Capacity: ${receiver.usedSlots} / ${receiver.capacity} slots`;
       this.grid.hidden = false; this.playerPane.hidden = false;
-      if (this.shownPlayerRevision !== this.player.revision) this.renderPlayer();
-      if (this.shownRevision !== receiver.revision) this.renderSlots(receiver);
+      if (this.shownPlayerRevision !== this.player.revision) { this.playerSelected = null; this.renderPlayer(); }
+      if (this.shownRevision !== receiver.revision) { this.selected = null; this.renderSlots(receiver); }
+      if (this.deposit) { this.deposit.hidden = !isStorage; this.deposit.disabled = this.playerSelected === null || !this.player.snapshot()[this.playerSelected]; }
+      if (this.retrieveSelected) this.retrieveSelected.disabled = this.selected === null || !receiver.snapshot()[this.selected];
       this.retrieve.hidden = false; this.retrieve.disabled = receiver.usedSlots === 0;
     }
   }
-  dispose(): void { for (const select of this.splitterFilterSelects) select.removeEventListener('change', this.handleSplitterFilter); this.storageFilter?.removeEventListener('change', this.handleStorageFilter); this.splitterMode?.removeEventListener('change', this.handleSplitterConfig); this.splitterPriority?.removeEventListener('change', this.handleSplitterConfig); this.deposit?.removeEventListener('click', this.handleDeposit); this.playerGrid.removeEventListener('click', this.handlePlayerGrid); this.grid.removeEventListener('click', this.handleGrid); this.close.removeEventListener('click', this.onClose); this.retrieve.removeEventListener('click', this.handleRetrieve); }
+  dispose(): void { this.retrieveSelected?.removeEventListener('click', this.handleRetrieveSelected); for (const select of this.splitterFilterSelects) select.removeEventListener('change', this.handleSplitterFilter); this.storageFilter?.removeEventListener('change', this.handleStorageFilter); this.splitterMode?.removeEventListener('change', this.handleSplitterConfig); this.splitterPriority?.removeEventListener('change', this.handleSplitterConfig); this.deposit?.removeEventListener('click', this.handleDeposit); this.playerGrid.removeEventListener('click', this.handlePlayerGrid); this.grid.removeEventListener('click', this.handleGrid); this.close.removeEventListener('click', this.onClose); this.retrieve.removeEventListener('click', this.handleRetrieve); }
   private renderPlayer(): void {
     const slots = this.player.snapshot();
     this.playerGrid.replaceChildren();
@@ -146,6 +151,7 @@ export class LogisticsUI {
   }
   private readonly handlePlayerGrid = (event: Event): void => {
     if (!(event.target instanceof Element) || !this.isOpen || this.playerPane.hidden) return;
+    if (this.shownPlayerRevision !== this.player.revision) { this.update(); return; }
     const button = event.target.closest<HTMLButtonElement>('button[data-slot]');
     if (!button || !this.playerGrid.contains(button)) return;
     const index = Number(button.dataset.slot);
@@ -166,18 +172,19 @@ export class LogisticsUI {
       this.slotDetail.textContent = `${item.name} — ${item.description} Stack: ${selected.quantity} / ${item.maxStackSize}.`;
     } else {
       this.selected = null;
-      this.slotDetail.textContent = 'Select a slot to inspect. Retrieve contents transfers what fits to your inventory.';
+      this.slotDetail.textContent = 'Select a slot to retrieve its stack, or retrieve all contents. Only what fits is transferred.';
     }
     this.shownRevision = inventory.revision;
   }
   private readonly handleGrid = (event: Event): void => {
-    if (!(event.target instanceof Element) || !this.active) return;
+    if (!(event.target instanceof Element) || !this.active || !this.isOpen) return;
     const button = event.target.closest<HTMLButtonElement>('button[data-slot]');
     const receiver = this.logistics.terminal(this.active);
     if (!button || !this.grid.contains(button) || !receiver) return;
+    if (this.shownRevision !== receiver.revision) { this.update(); return; }
     const index = Number(button.dataset.slot);
     this.selected = receiver.snapshot()[index] && this.selected !== index ? index : null;
-    this.renderSlots(receiver);
+    this.renderSlots(receiver); this.update();
   };
   private readonly handleStorageFilter = (): void => {
     if (!this.active || !this.isOpen || !this.storageFilter || !this.logistics.isStorage(this.active)) return;
@@ -194,14 +201,22 @@ export class LogisticsUI {
     splitter.setOutputFilter(Number(event.currentTarget.dataset.splitterFilter), event.currentTarget.value || null); this.update();
   };
   private readonly handleDeposit = (): void => {
-    if (!this.active || !this.logistics.isStorage(this.active) || this.playerSelected === null) return;
-    const inventory = this.logistics.terminal(this.active), slot = this.player.snapshot()[this.playerSelected];
-    if (!inventory || !slot) return;
-    const result = this.player.transferItem(inventory, slot.itemId, slot.quantity);
+    if (!this.active || !this.isOpen || !this.logistics.isStorage(this.active) || this.playerSelected === null) return;
+    const inventory = this.logistics.terminal(this.active);
+    if (!inventory) return;
+    if (this.shownPlayerRevision !== this.player.revision) { this.update(); this.notice.textContent = 'Inventory changed; select a stack again.'; return; }
+    const result = this.player.transferStack(inventory, this.playerSelected);
     this.notice.textContent = `Stored ${result.moved}; ${result.remainder} remain in inventory.`; this.update();
   };
+  private readonly handleRetrieveSelected = (): void => {
+    if (!this.active || !this.isOpen || this.selected === null) return;
+    const inventory = this.logistics.terminal(this.active); if (!inventory) return;
+    if (this.shownRevision !== inventory.revision) { this.update(); this.notice.textContent = 'Storage changed; select a stack again.'; return; }
+    const result = inventory.transferStack(this.player, this.selected);
+    this.notice.textContent = `Transferred ${result.moved}; ${result.remainder} remain in the selected stack.`; this.update();
+  };
   private readonly handleRetrieve = (): void => {
-    if (!this.active || (!this.logistics.terminal(this.active) && !this.logistics.splitter(this.active) && !this.logistics.merger(this.active))) return;
+    if (!this.active || !this.isOpen || (!this.logistics.terminal(this.active) && !this.logistics.splitter(this.active) && !this.logistics.merger(this.active))) return;
     const result = this.logistics.retrieve(this.active, this.player);
     this.notice.textContent = `Transferred ${result.moved}; ${result.remainder} remain.`; this.update();
   };
