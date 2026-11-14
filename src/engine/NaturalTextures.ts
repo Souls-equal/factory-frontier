@@ -3,7 +3,7 @@ import { DataTexture, NearestFilter, RGBAFormat, SRGBColorSpace } from 'three';
 /** Small, deterministic pixel-art texture tiles. No DOM, network or runtime randomness. */
 const SIZE = 32;
 type RGB = readonly [number, number, number];
-type Pattern = 'grass' | 'grass-side' | 'dirt' | 'stone' | 'bark' | 'leaves';
+type Pattern = 'grass' | 'grass-side' | 'dirt' | 'stone' | 'sand' | 'bark' | 'leaves';
 
 function hash(x: number, y: number, salt: number): number {
   let value = Math.imul(x + salt * 19, 374761393) + Math.imul(y + salt * 7, 668265263);
@@ -19,6 +19,9 @@ function pixel(pattern: Pattern, x: number, y: number): RGB {
   }
   if (pattern === 'grass-side' || pattern === 'dirt') {
     return patch > .73 ? [141, 102, 65] : fine > .81 ? [157, 119, 76] : fine < .18 ? [105, 72, 48] : [124, 86, 55];
+  }
+  if (pattern === 'sand') {
+    return patch > .72 ? [226, 199, 139] : fine > .8 ? [239, 215, 160] : [211, 183, 125];
   }
   if (pattern === 'stone') {
     const crack = ((x + Math.floor(y / 4) * 2) % 17 === 0 && y % 12 < 8);
@@ -46,6 +49,6 @@ export function createNaturalTexture(patterns: readonly Pattern[]): DataTexture 
 }
 
 /** Atlas inset avoids sampling neighbouring tiles at quad edges. */
-export function terrainTileUv(tile: number): readonly [number, number, number, number] {
-  return [(tile * SIZE + .5) / (SIZE * 3), .5 / SIZE, ((tile + 1) * SIZE - .5) / (SIZE * 3), (SIZE - .5) / SIZE];
+export function terrainTileUv(tile: number, tileCount = 3): readonly [number, number, number, number] {
+  return [(tile * SIZE + .5) / (SIZE * tileCount), .5 / SIZE, ((tile + 1) * SIZE - .5) / (SIZE * tileCount), (SIZE - .5) / SIZE];
 }

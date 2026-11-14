@@ -2,6 +2,7 @@ import type { Interactable, InteractionOutcome } from '../interaction/Interactab
 import type { Inventory } from '../items/Inventory';
 import { ObstacleField, type CollisionQuery, type MovementResult, type ObstacleDefinition } from '../world/ObstacleField';
 import { createRandom } from '../world/rng';
+import type { BiomeField } from '../world/Biomes';
 import type { TerrainQuery } from '../world/terrain/TerrainHeightfield';
 import type { ResourceDeposit } from './ResourceDeposit';
 
@@ -35,7 +36,8 @@ const STARTERS: readonly { kind: GatherableKind; x: number; z: number }[] = [
 
 /** Seeded bounded layout; rejects collisions and never changes the terrain. */
 export function generateGatherables(terrain: TerrainQuery, obstacles: readonly ObstacleDefinition[],
-  deposits: readonly ResourceDeposit[], seed: number, spawn: { x: number; z: number }, playAreaRadius: number): readonly GatherableDefinition[] {
+  deposits: readonly ResourceDeposit[], seed: number, spawn: { x: number; z: number }, playAreaRadius: number,
+  biomes?: BiomeField): readonly GatherableDefinition[] {
   const rng = createRandom(seed ^ 0x2f813bf1);
   const result: GatherableDefinition[] = [];
   for (const [index, starter] of STARTERS.entries()) {
@@ -53,6 +55,32 @@ export function generateGatherables(terrain: TerrainQuery, obstacles: readonly O
         itemId: starter.kind === 'stone' ? 'stone' : 'wood', x, y: terrain.heightAt(x, z), z, radius,
         quantity: starter.kind === 'tree' ? 20 : 5 }));
       break;
+    }
+  }
+  // A separate stream and distant placement preserve the guaranteed starter area.
+  // Extra objects are bounded and removable, not an unbounded forest of colliders.
+  if (biomes) {
+    const extra = createRandom(seed ^ 0x3b42f5a1);
+    const limit = Math.min(playAreaRadius - 2, terrain.size * .46);
+    for (let attempt = 0, placed = 0; attempt < 180 && placed < 24; attempt++) {
+      const x = extra.range(-limit, limit), z = extra.range(-limit, limit);
+      if (!terrain.contains(x, z) || Math.hypot(x, z) >= limit || Math.hypot(x - spawn.x, z - spawn.z) < 30) continue;
+      const biome = biomes.at(x, z);
+      // Forests favour wood, highlands favour stone, deserts remain sparse.
+      const roll = extra.next();
+      const kind: GatherableKind | null = biome === 'forest' ? (roll < .65 ? 'tree' : roll < .78 ? 'stone' : null)
+        : biome === 'highlands' ? (roll < .55 ? 'stone' : roll < .65 ? 'tree' : null)
+        : biome === 'desert' ? (roll < .2 ? 'stone' : null)
+        : roll < .22 ? 'tree' : roll < .42 ? 'stone' : null;
+      if (!kind) continue;
+      const radius = kind === 'tree' ? .45 : .3;
+      if (obstacles.some(o => Math.hypot(x - o.x, z - o.z) < radius + o.radius + .8) ||
+          deposits.some(d => Math.hypot(x - d.x, z - d.z) < radius + d.radius + 4) ||
+          result.some(d => Math.hypot(x - d.x, z - d.z) < radius + d.radius + .8)) continue;
+      result.push(Object.freeze({ id: `gatherable-wild-${placed}`, kind,
+        itemId: kind === 'stone' ? 'stone' : 'wood', x, y: terrain.heightAt(x, z), z, radius,
+        quantity: kind === 'tree' ? 20 : 5 }));
+      placed++;
     }
   }
   return Object.freeze(result);

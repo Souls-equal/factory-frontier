@@ -189,11 +189,13 @@ export class EnvironmentView {
       const x = (data.positions[p]! + data.positions[p + 6]!) / 2 - nx * world.terrain.blockSize * .01;
       const z = (data.positions[p + 2]! + data.positions[p + 8]!) / 2 - nz * world.terrain.blockSize * .01;
       const topY = Math.max(data.positions[p + 1]!, data.positions[p + 4]!);
-      const tile = ny === 1 ? 0 : Math.abs(topY - world.terrain.heightAt(x, z)) < world.terrain.blockSize * .001 ? 1 : 2;
-      const [u0, v0, u1, v1] = terrainTileUv(tile);
+      const biome = world.biomes.at(x, z);
+      const tile = biome === 'desert' ? 4 : biome === 'highlands' ? 3
+        : ny === 1 ? 0 : Math.abs(topY - world.terrain.heightAt(x, z)) < world.terrain.blockSize * .001 ? 1 : 2;
+      const [u0, v0, u1, v1] = terrainTileUv(tile, 5);
       uv.set([u0, v0, u0, v1, u1, v1, u1, v0], face * 8);
       const shade = .91 + .09 * ((face * 2654435761) % 1000) / 1000;
-      for (let vertex = 0; vertex < 4; vertex++) colors.set([shade, shade, shade], p + vertex * 3);
+      for (let vertex = 0; vertex < 4; vertex++) colors.set(biome === 'forest' ? [shade * .78, shade, shade * .76] : [shade, shade, shade], p + vertex * 3);
     }
     geometry.setAttribute('color', new BufferAttribute(colors, 3));
     geometry.setAttribute('uv', new BufferAttribute(uv, 2));
@@ -201,7 +203,7 @@ export class EnvironmentView {
 
     const material = new MeshStandardMaterial({
       vertexColors: true,
-      map: this.naturalTexture(['grass', 'grass-side', 'dirt']),
+      map: this.naturalTexture(['grass', 'grass-side', 'dirt', 'stone', 'sand']),
       roughness: 0.96,
       metalness: 0.04,
     });

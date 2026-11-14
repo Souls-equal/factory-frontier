@@ -1,7 +1,8 @@
 # Phase 9 — vérifications en jeu
 
-Ces scénarios ne sont pas encore validés par le joueur. Les statistiques sont
-limitées à la partie actuelle.
+Le joueur a indiqué que tout fonctionne et demandé la phase suivante, sans
+compte rendu séparé pour chaque scénario. Les statistiques sont limitées à la
+partie actuelle.
 
 ## Assembleur et composant renforcé
 

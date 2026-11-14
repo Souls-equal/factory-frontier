@@ -4,47 +4,23 @@ A first-person, browser-based 3D factory automation game. The player lands on an
 unexplored planet, extracts its resources, and builds increasingly complex
 automated production chains.
 
-**Status:** Phase 3 construction implemented; browser acceptance pending · Version 0.3.0 (unreleased changes)
-**Next step:** Browser verification of construction and Phase 2.1 inventory UX
+**Status:** Phase 10 world expansion in progress · Version 0.3.0
 **Platform:** Desktop web browser (WebGL2) · **Stack:** TypeScript, Three.js, Vite
 
 ---
 
 ## Current state
 
-Phase 2 adds collectible resources and a slot inventory to the Phase 1 terrain,
-physics and interaction systems. Phase 3 adds structural foundation placement
-and demolition. Machines, power and saves are not yet implemented. Phase 3 and
-Phase 2.1 browser verification remain pending.
+Build a factory on a finite seeded voxel world: collect wood and stone, place
+foundations and machinery, route items on conveyors, and power production chains.
+The assembler and foundry support multiple inputs; H opens a factory dashboard.
+The user has globally validated Phases 7–9. Individual earlier acceptance
+scenarios remain outstanding; see `PROJECT_STATUS.md` for details.
 
-What exists and works today:
-
-- Strict TypeScript project built by Vite 8, with a production build configured
-  for GitHub Pages.
-- A central `Game` orchestrator with an explicit lifecycle state machine and a
-  dependency-injected rendering engine.
-- A deterministic fixed-timestep simulation clock (50 ms, 20 Hz) with bounded
-  catch-up, driven by a variable-rate render loop; camera interpolation between
-  steps keeps motion smooth without touching simulation state.
-- **Terrain:** a finite 240 m seeded heightfield (120×120 cells) with hills, a flat
-  outpost clearing and a raised boundary ridge. Gameplay queries read terrain data,
-  never mesh geometry, and the render mesh is generated from the same triangles.
-- **Physics:** gravity, ground detection, edge-triggered jumping, landing, slope
-  handling with a configurable walkable limit, sliding on steep ground, and
-  collision against terrain and solid obstacles.
-- **Interaction:** camera-ray targeting with closest-target selection, a reusable
-  `Interactable` contract, highlight + prompt + contextual hint, and `E` to use.
-- **Environment:** vertex-coloured terrain, sky dome, horizon fog, instanced
-  boulders and formations, player-following shadows, two interactable props.
-- A typed event bus, validated configuration, and a minimal boot/fatal/debug UI.
-- Seeded deposits, manual gathering, a slot inventory and an on-demand inventory UI.
-- Structural foundation construction, placement validation and demolition.
-- 335 automated tests plus build/serve verification scripts (see below).
-
-Deliberately **not** implemented yet: machines,
-conveyors, power, progression, persistence, audio. The survey beacon and relay mast
-are environment props that demonstrate the interaction contract — not gameplay
-systems.
+The first Phase 10 slice adds seeded grassland, forest, desert and rocky regions,
+with extra removable natural resources. Ore distribution and terrain height are
+unchanged. Chunk streaming, persistent saves and wetlands are not implemented.
+The world remains finite and factory state is lost on reload.
 
 ## Quick start
 

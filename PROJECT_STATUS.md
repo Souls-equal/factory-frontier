@@ -2,14 +2,30 @@
 
 **Project:** Factory Frontier
 **Version:** 0.3.0
-**Current Phase:** Phase 9 — Advanced manufacturing
-**Phase Status:** 🟡 In progress — playable multi-input manufacturing and factory dashboard
-**Next Recommended Task:** Validate Phase 9 in-game, then evaluate remaining diagnostics before starting Phase 10.
+**Current Phase:** Phase 10 — World expansion
+**Phase Status:** 🟡 In progress — initial seeded biome regions and natural resources
+**Next Recommended Task:** Validate biomes in-game and implement chunk streaming without losing factory state.
 **Last Updated:** 2026-11-11
 
 ---
 
-## Phase 9 — advanced manufacturing in progress
+## Phase 10 — initial biome regions
+
+- Four deterministic, coordinate-based regions: grassland around the starting
+  clearing, greener forest, sandy desert and rocky highlands. Seeded noise chooses
+  regions; the visible voxel surface uses corresponding textures/tints without
+  changing terrain heights, collisions or foundation placement.
+- Up to 24 additional removable trees and loose stones are generated outside the
+  starting area, biased towards forests and highlands. Desert is sparse; the
+  original guaranteed starter objects and ore deposit algorithm are unchanged.
+  Biomes do not yet affect ore, terrain shape, or water; they are sampled with
+  discrete boundaries and some seeds or small worlds may not show every region.
+- The world is still finite and generated/rendered in full: no chunk loading or
+  unloading, no factory modification persistence across reloads, no wetlands.
+  Existing factory state stays in memory only. Phase 10 remains in progress and
+  these changes have not yet been validated by the player.
+
+## Phase 9 — advanced manufacturing globally user-validated
 
 - Buildable powered Assembler and Foundry (20 stone + 15 wood each; 10 kW)
   have a cyan shared rear input and yellow front output. Both rear conveyor
@@ -37,7 +53,7 @@
 - Automated tests cover rotations, placement order, manual UI, powered multi-step
   foundry → constructor chains, two-input assembler delivery, capacity,
   conservation, blocking, pause, recovery, lift, recipe changes and statistics.
-  See `docs/PHASE_9_VALIDATION_FR.md` for outstanding player checks.
+  See `docs/PHASE_9_VALIDATION_FR.md` for scenario details.
 - H opens a read-only factory dashboard with rolling 60-second production,
   consumption and extraction rates, live power-network snapshots and a list of
   current missing-input, power/fuel and blocked-output/belt states with locations.
@@ -45,8 +61,8 @@
   values can differ by up to a bucket, and it scales rates during startup. It
   includes events from machines demolished within the window; history is lost
   when the session ends. Opening the dashboard pauses the simulation.
-- Phase 9 is **not yet accepted**: player validation of the new machines and
-  dashboard remains outstanding. Diagnostics describe observed states rather
+- The user now reports everything works and requested the next phase; this is
+  global validation without separate results for each scenario. Diagnostics describe observed states rather
   than automatically inferring root causes or line balancing; historical graphs
   and persistence are not implemented.
 
@@ -1125,10 +1141,10 @@ This task's merge is deployed by the same pipeline; the result is recorded below
 
 ## Next Recommended Task
 
-Continue Phase 7 integration and acceptance, including selected transfers, filtered
-routing, fine lift-height controls and the remaining route and logistics scenarios. Phase 5 and earlier
-physical acceptance items also remain outstanding; do not claim full acceptance
-without evidence. Follow CI, PR and deployment checks before completing each slice.
+Continue Phase 10: validate the first biome slice in the browser, then design and
+implement streaming and state preservation. Phase 5 and earlier individual
+physical acceptance items also remain outstanding. Follow CI, PR and deployment
+checks before completing each slice.
 
 ---
 
