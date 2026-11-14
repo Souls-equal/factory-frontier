@@ -2,34 +2,35 @@
 
 **Project:** Factory Frontier
 **Version:** 0.3.0
-**Current Phase:** Phase 8 — Electricity (first implementation slice)
-**Phase Status:** 🟡 In progress — isolated power-network simulation foundation
-**Next Recommended Task:** Implement and integrate a fueled biomass generator, power poles and inspection; the player is testing Phase 7 in parallel.
+**Current Phase:** Phase 8 — Electricity
+**Phase Status:** 🟡 In progress — isolated network and fuel/machine simulation
+**Next Recommended Task:** Integrate the simulated generator, poles, wiring, machine power and inspection into gameplay; then validate Phase 8 in-game.
 **Last Updated:** 2026-11-11
 
 ---
 
-## Phase 8 — power network foundation
+## Phase 8 — power simulation (not yet playable)
 
-- The user explicitly requested starting Phase 8 while they test Phase 7. This
-  is a user-directed exception to the earlier acceptance gate, **not** a Phase 7
-  acceptance report. Phase 7 stays open and its existing gameplay is unchanged.
-- Added an isolated `PowerGrid` domain model with explicit 3D range-limited
-  pole-to-pole and pole-to-endpoint wires. Consumers and generators attach to at
-  most one pole; topology updates immediately merge or split components. Node
-  removal cleans up incident wires. No building, renderer or machine owns it yet.
-- Per-network snapshots report installed and enabled generation capacity, enabled
-  demand, supplied watts, shortfall, status and membership. Power is represented
-  in safe integer watts. Disconnected endpoints are isolated; an inactive or
-  insufficient source leaves consumers unpowered. On overload the entire network
-  sheds its enabled demand; no partial allocation is claimed. These are domain
-  rules for the foundation, not yet active in the game.
-- Tests cover topology, 3D distance, cycles, merge/split, validation and safe sums,
-  overload/recovery, isolation, snapshot safety, deterministic ordering and
-  repeated graph changes. Biomass fuel, buildable poles/generators, wiring UI,
-  machine power requirements and player-facing statistics are **not implemented**.
-  Existing miners, smelters and constructors continue to operate as before so
-  Phase 7 remains testable. Phase 8 is not complete.
+- The player reports no apparent bugs in the Phase 7 features they tested and
+  globally validates Phase 7. This is not proof of each individual scenario or
+  of the remaining Phase 5 acceptance criteria.
+- `PowerGrid` models explicit, range-limited pole and endpoint connections,
+  component merge/split and watt statistics. Shortage disconnects all loads.
+- `BiomassGenerator` and `PowerSimulation` add an isolated wood-fueled generator
+  and deterministic dispatch with real miners and processors. One wood supplies
+  30 seconds at 30 kW. Enabled machines reserve rated power even while blocked;
+  every available generator in a loaded online network burns at full rate. Idle,
+  isolated and overloaded networks burn nothing. A tick is split at fuel exhaustion.
+- Miners and processors accept an external power signal and retain their work
+  across outages. The smelter still requires one coal per ingot in addition to
+  electric power when registered with the simulation. Machines default to powered
+  until integrated, preserving existing gameplay.
+- This is domain-level integration only: no buildable generator/pole, wire
+  controls or rendering, player fuel interaction, gameplay hookup or power UI
+  exists yet. Power is not required in the actual game. Phase 8 remains open.
+
+> The sections below are historical progress notes; the current status above
+> supersedes earlier statements that player validation was pending.
 
 ## Phase 7 final integration audit
 
@@ -37,7 +38,7 @@
   splitters (balanced, overflow, priority and filters), mergers, configurable
   up/down lifts, shared machine networks and the control-point route editor.
   The user requested completion of all Phase 7 details before testing; no Phase 8
-  work was started and player acceptance is not claimed.
+  work was started at that point; the player later reported global acceptance.
 - Fixed false obstruction by buildings on a different floor: route planning and
   live cell output now share a height-aware check. Same-height incompatible
   buildings still block. Existing foundation placement rules are unchanged.
@@ -49,8 +50,8 @@
 - A French player acceptance checklist and current limits are collected in
   `docs/PHASE_7_VALIDATION_FR.md`. Remaining documented restrictions include 1–8 m
   lift height, 24 cells per route, incremental placement rejections and no links
-  to legacy two-cell belts. Persistence and electricity remain future phases.
-  Player testing is still required before considering Phase 7 accepted.
+  to legacy two-cell belts. Persistence remains a future phase; electricity is in progress.
+  The player later reported global acceptance without individual scenario results.
 
 ## Shared production-network integration coverage
 
@@ -66,8 +67,8 @@
   Items already committed to a full branch remain there until it is emptied;
   opening the other branch does not reroute them.
 - This adds automated coverage, not gameplay features or in-game validation.
-  The combined scenario and the existing Phase 7 acceptance checklist still need
-  player testing. Foundations and earlier transport rules are unchanged.
+  The player later reported global testing without individual scenario results.
+  Foundations and earlier transport rules are unchanged.
 
 ## Selected storage stack transfers
 

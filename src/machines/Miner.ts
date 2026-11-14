@@ -19,6 +19,7 @@ export class Miner implements Machine {
   readonly output: Inventory;
   private work = 0; // item-milliseconds/minute, 60,000 = one whole item
   private enabledValue = true;
+  private poweredValue = true;
   private started = false;
   private failed = false;
   constructor(readonly id: string, readonly depositId: string, readonly itemId: string,
@@ -30,6 +31,8 @@ export class Miner implements Machine {
     this.output = new Inventory(items, config.outputSlots);
   }
   get enabled(): boolean { return this.enabledValue; }
+  get powered(): boolean { return this.poweredValue; }
+  setPowered(value: boolean): void { this.poweredValue = value; }
   setEnabled(enabled: boolean): void { this.enabledValue = enabled; }
   get deposit(): ResourceDeposit | undefined {
     const deposit = this.findDeposit(this.depositId);
@@ -42,6 +45,7 @@ export class Miner implements Machine {
   get state(): MachineState {
     if (this.failed) return 'ERROR';
     if (!this.enabledValue) return 'DISABLED';
+    if (!this.poweredValue) return 'NO_POWER';
     if (!this.deposit) return 'MISSING_INPUT';
     if (this.output.getAvailableSpace(this.itemId) === 0) return 'OUTPUT_FULL';
     return this.started ? 'RUNNING' : 'IDLE';

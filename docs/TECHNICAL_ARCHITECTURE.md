@@ -1681,8 +1681,8 @@ installed capacity, enabled capacity, enabled demand, supplied watts, shortfall
 and status. Unconnected endpoints are `isolated`, a pole network without online
 capacity is `offline`, excess demand is `overloaded`, otherwise it is `online`.
 An overloaded network supplies zero to all consumers; a disabled consumer or
-isolated endpoint is never powered. Actual fuel use, generation dispatch, stored
-energy, wire rendering, persistence and machine simulation are not implemented.
+isolated endpoint is never powered. At the time of this topology slice, fuel use,
+dispatch and machine simulation were not yet implemented; see the following note.
 The current coal-smelter and Phase 7 gameplay retain their existing behavior.
 
 Graph mutations are validated before changes and increase the revision only on
@@ -1690,4 +1690,23 @@ actual changes. Snapshots are rebuilt on query; future in-game integration shoul
 batch/cache them as needed and update the network before machines in the fixed
 timestep. Tests verify 3D range, merging, splitting, cycles, no phantom links,
 capacity/demand changes, overload recovery, validation and deterministic graph
-recomputation. Phase 7 acceptance remains pending; Phase 8 is only started.
+recomputation. Phase 7 was subsequently globally validated by the player; Phase 8 remains in progress.
+
+## Implementation note — isolated biomass dispatch and machine power
+
+`BiomassGenerator` owns one wood buffer and tracks partially consumed burn time.
+One wood provides 30 seconds at a rated 30 kW. `PowerSimulation` combines it
+with `PowerGrid` and registered consumer instances. It synchronizes availability
+and enabled demand, sets machine power, and runs the consumers in segments cut
+at fuel-exhaustion boundaries. Loaded online generators all burn at full rate;
+no fuel is used in idle, isolated or overloaded networks. Enabled consumers
+reserve their rating even when blocked or missing inputs. This provisional policy
+is explicit, not proportional dispatch or energy storage.
+
+Power loss preserves existing machine progress and buffers. Coal remains a direct
+smelter recipe requirement in addition to electricity when electrically managed.
+The adapter is not registered with `Game`: machines default to powered in the
+current game. Building lifecycle, wiring controls/visuals, fuel interaction,
+player-facing statistics and safe demolition must be integrated and tested before
+Phase 8 can be accepted. The simulation adapter must replace, not duplicate,
+`MachineManager` stepping when integrated.

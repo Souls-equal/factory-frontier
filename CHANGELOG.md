@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — Phase 8 biomass and machine simulation
+
+- Add an isolated wood-fueled generator and deterministic dispatch over the
+  electrical graph, including outage, overload and fuel exhaustion handling.
+- Allow real miners and processors to preserve progress during a power outage;
+  preserve the smelter coal requirement. Gameplay remains unchanged until the
+  new simulation is wired to buildings and player controls.
+- Record the player’s global Phase 7 validation, without inferring individual
+  checklist or Phase 5 results. Foundation placement is unchanged.
+
 ## Unreleased — Phase 8 power network foundation
 
 - Start Phase 8 at the user's request while Phase 7 play-testing remains pending.
