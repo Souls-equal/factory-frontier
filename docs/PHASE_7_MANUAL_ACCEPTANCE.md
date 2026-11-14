@@ -159,3 +159,19 @@ manual scenarios separately; report layout, rotation and any problems found.
    on that belt. Switch to a different mode and back, then reopen the panel: the
    filters remain. Demolition/rebuilding or reloading resets them. Test mixed
    merger inputs feeding a filtered splitter and check separate outputs.
+
+
+### Selected storage stacks
+
+1. Place a storage container, put multiple stacks of the same item plus another
+   material inside, then open it with E. Select the second stack and use
+   **Retrieve selected stack**: only that stack should move. **Retrieve contents**
+   still transfers everything that fits. Receiving terminals support selected
+   retrieval too; they do not accept manual deposits.
+2. Fill the player inventory partially or completely and try selected retrieval.
+   Only what fits moves, and the remainder stays in the chosen slot. Try the
+   reverse with **Store selected stack**, including two player stacks of the same
+   item: only the selected slot should change.
+3. While a belt feeds storage, open the panel, retrieve a selected stack and
+   close it. Check transport resumes and items already on the belt arrive.
+   Splitter/merger buffer retrieval and storage output filtering remain unchanged.

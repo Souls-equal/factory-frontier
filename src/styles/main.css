@@ -512,7 +512,7 @@ body {
 :is([data-splitter-settings], [data-storage-settings]) p { margin: 0; }
 [data-splitter-filters] { display: grid; gap: 10px; }
 .terminal__detail { min-height: 2.7em; }
-.terminal__actions { display: flex; }
-.inventory .terminal__retrieve { flex: 1; display: flex; justify-content: space-between; font-weight: 700; background: #1a5963; border-color: #58b8c2; }
+.terminal__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.inventory .terminal__retrieve { flex: 1 1 160px; display: flex; justify-content: space-between; font-weight: 700; background: #1a5963; border-color: #58b8c2; }
 .terminal__notice { color: #91ddd6; font-size: 12px; min-height: 1.3em; }
 @media (max-width: 700px) { .terminal__layout { grid-template-columns: 1fr; gap: 14px; } .terminal__pane { padding: 12px; } }

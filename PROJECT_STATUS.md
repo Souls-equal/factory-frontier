@@ -3,11 +3,27 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 7 — Advanced logistics (integration and acceptance)
-**Phase Status:** 🟡 In progress — filtered splitter routing and remaining logistics acceptance
-**Next Recommended Task:** Play-test filtered splitter routing and fine lift-height control alongside remaining logistics scenarios; Phase 7 acceptance remains open.
+**Phase Status:** 🟡 In progress — selected stack transfers and remaining logistics acceptance
+**Next Recommended Task:** Play-test selected stack transfers, filtered splitter routing and remaining logistics scenarios; Phase 7 acceptance remains open.
 **Last Updated:** 2026-11-11
 
 ---
+
+## Selected storage stack transfers
+
+- The E storage and receiving-terminal panel can now retrieve the selected stack
+  without collecting other stacks. Storage can also deposit exactly the selected
+  player stack, fixing the previous first-matching-stack behavior when several
+  slots contained the same item. Retrieve contents remains available unchanged.
+- Transfers move only what fits and leave any remainder in the original slot;
+  they do not affect other stacks, filters or in-flight conveyor items. Changing
+  an inventory clears its selection before another action to prevent stale-slot
+  transfers. Splitter and merger buffer retrieval remain unchanged. Arbitrary
+  quantity entry is not included.
+- Automated tests cover exact slots, partial/full destinations, stale selections,
+  terminal and storage UI, differing item stack limits, conservation and live
+  conveyor recovery. Foundation placement is unchanged. In-game acceptance remains
+  pending, and Phase 7 is not complete.
 
 ## Filtered splitter routing
 
@@ -993,8 +1009,8 @@ This task's merge is deployed by the same pipeline; the result is recorded below
 
 ## Next Recommended Task
 
-Continue Phase 7 integration and acceptance, including the fine lift-height
-controls and the remaining route and logistics scenarios. Phase 5 and earlier
+Continue Phase 7 integration and acceptance, including selected transfers, filtered
+routing, fine lift-height controls and the remaining route and logistics scenarios. Phase 5 and earlier
 physical acceptance items also remain outstanding; do not claim full acceptance
 without evidence. Follow CI, PR and deployment checks before completing each slice.
 

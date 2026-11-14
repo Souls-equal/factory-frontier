@@ -211,3 +211,89 @@ it('configures independent splitter item filters through the actual page', () =>
   ui.closePanel(); selects[0]!.value = 'wood'; selects[0]!.dispatchEvent(new Event('change'));
   expect(logistics.splitter(first.id)!.filters[0]).toBe('coal'); ui.dispose();
 });
+
+it('retrieves only the selected storage stack and respects partial capacity', () => {
+  const html = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../../index.html'), 'utf8');
+  document.body.innerHTML = /<body[^>]*>([\s\S]*)<\/body>/i.exec(html)![1]!;
+  const root = document.querySelector<HTMLElement>('[data-ui="logistics"]')!, items = createDefaultItemRegistry(), player = new Inventory(items, 1);
+  player.addItem('iron-ore', 85);
+  const buildings = new BuildingSystem(createDefaultBuildingRegistry(items), new Inventory(items, 5), terrain, [], 1, 19); buildings.setCreativeMode(true);
+  const logistics = new LogisticsManager(buildings, new MachineManager(buildings, items, () => []), items);
+  const storage = buildings.place('storage-container', 0, 0, 0, { x: 8, z: 8, radius: .4 }).building!; logistics.sync();
+  const contents = logistics.terminal(storage.id)!; contents.addItem('iron-ore', 150); contents.addItem('coal', 7);
+  const ui = new LogisticsUI(root, logistics, player, vi.fn()); ui.open(storage.id);
+  const button = root.querySelector<HTMLButtonElement>('[data-logistics-retrieve-selected]')!;
+  const slot = (i: number) => root.querySelector<HTMLButtonElement>(`[data-logistics-grid] [data-slot="${i}"]`)!;
+  expect(button.hidden).toBe(false); expect(button.disabled).toBe(true); slot(1).click(); expect(button.disabled).toBe(false);
+  button.click(); expect(contents.snapshot().map((v) => v?.quantity ?? 0).slice(0,3)).toEqual([100,35,7]);
+  expect(player.getItemCount('iron-ore')).toBe(100); expect(root.textContent).toContain('Transferred 15; 35 remain in the selected stack.');
+  expect(button.disabled).toBe(true); slot(1).click(); button.click(); expect(root.textContent).toContain('Transferred 0; 35 remain');
+  expect(contents.getItemCount('iron-ore')).toBe(135); player.removeItem('iron-ore', 100); ui.update();
+  expect(button.disabled).toBe(false); button.click(); expect(player.getItemCount('iron-ore')).toBe(35);
+  expect(contents.snapshot()[0]?.quantity).toBe(100); expect(contents.snapshot()[1]).toBeNull(); expect(contents.getItemCount('coal')).toBe(7);
+  expect(root.querySelector<HTMLButtonElement>('[data-logistics-retrieve]')!.hidden).toBe(false); ui.dispose();
+});
+
+it('stores exactly the selected player stack and rejects stale selections in either pane', () => {
+  const html = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../../index.html'), 'utf8');
+  document.body.innerHTML = /<body[^>]*>([\s\S]*)<\/body>/i.exec(html)![1]!;
+  const root = document.querySelector<HTMLElement>('[data-ui="logistics"]')!, items = createDefaultItemRegistry(), player = new Inventory(items, 3);
+  player.addItem('iron-ore', 130); player.addItem('coal', 5);
+  const buildings = new BuildingSystem(createDefaultBuildingRegistry(items), new Inventory(items, 5), terrain, [], 1, 19); buildings.setCreativeMode(true);
+  const logistics = new LogisticsManager(buildings, new MachineManager(buildings, items, () => []), items);
+  const storage = buildings.place('storage-container', 0, 0, 0, { x: 8, z: 8, radius: .4 }).building!; logistics.sync();
+  const contents = logistics.terminal(storage.id)!; contents.addItem('iron-ore', 790);
+  const ui = new LogisticsUI(root, logistics, player, vi.fn()); ui.open(storage.id);
+  const slot = (name: string, i: number) => root.querySelector<HTMLButtonElement>(`[data-logistics-${name}-grid] [data-slot="${i}"]`)!;
+  const deposit = root.querySelector<HTMLButtonElement>('[data-logistics-deposit]')!, selected = root.querySelector<HTMLButtonElement>('[data-logistics-retrieve-selected]')!;
+  slot('player',1).click(); deposit.click();
+  expect(player.snapshot().map((v) => v?.quantity)).toEqual([100,20,5]); expect(contents.getItemCount('iron-ore')).toBe(800);
+  expect(root.textContent).toContain('Stored 10; 20 remain in inventory.');
+  slot('player',1).click(); player.swapSlots(1,2); deposit.click(); expect(root.textContent).toContain('Inventory changed; select a stack again.');
+  expect(player.snapshot().map((v) => v?.quantity)).toEqual([100,5,20]);
+  contents.removeItem('iron-ore', 100); contents.addItem('coal', 4); ui.update();
+  root.querySelector<HTMLButtonElement>('[data-logistics-grid] [data-slot="0"]')!.click();
+  expect(selected.disabled).toBe(false); contents.swapSlots(0, 1); selected.click();
+  expect(root.textContent).toContain('Storage changed; select a stack again.'); expect(selected.disabled).toBe(true);
+  expect(player.getItemCount('coal')).toBe(5); expect(contents.getItemCount('coal')).toBe(4);
+  ui.dispose();
+});
+
+it('shows selected retrieval for terminals but never for splitters or conveyors', () => {
+  const html = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../../index.html'), 'utf8');
+  document.body.innerHTML = /<body[^>]*>([\s\S]*)<\/body>/i.exec(html)![1]!;
+  const root = document.querySelector<HTMLElement>('[data-ui="logistics"]')!, items = createDefaultItemRegistry(), player = new Inventory(items, 3);
+  const buildings = new BuildingSystem(createDefaultBuildingRegistry(items), new Inventory(items, 5), terrain, [], 1, 19); buildings.setCreativeMode(true);
+  const logistics = new LogisticsManager(buildings, new MachineManager(buildings, items, () => []), items);
+  const far = { x: 8, z: 8, radius: .4 }, terminal = buildings.place('receiving-terminal', 0, 0, 0, far).building!,
+    splitter = buildings.place('splitter', 5, 0, 0, far).building!, belt = buildings.place('conveyor-cell', .5, 5.5, 0, far).building!;
+  logistics.sync(); logistics.terminal(terminal.id)!.addItem('coal', 6);
+  const ui = new LogisticsUI(root, logistics, player, vi.fn()); ui.open(terminal.id);
+  const take = root.querySelector<HTMLButtonElement>('[data-logistics-retrieve-selected]')!, deposit = root.querySelector<HTMLButtonElement>('[data-logistics-deposit]')!;
+  expect(take.hidden).toBe(false); expect(deposit.hidden).toBe(true);
+  root.querySelector<HTMLButtonElement>('[data-logistics-grid] [data-slot="0"]')!.click(); take.click();
+  expect(player.getItemCount('coal')).toBe(6); expect(logistics.terminal(terminal.id)!.usedSlots).toBe(0);
+  ui.open(splitter.id); expect(take.hidden).toBe(true); expect(deposit.hidden).toBe(true);
+  ui.open(belt.id); expect(take.hidden).toBe(true); expect(root.querySelector<HTMLButtonElement>('[data-logistics-retrieve]')!.hidden).toBe(true);
+  ui.closePanel(); take.dispatchEvent(new MouseEvent('click', { bubbles: true })); expect(player.getItemCount('coal')).toBe(6); ui.dispose();
+});
+
+it('resumes conveyor transport after selected retrieval without losing in-flight items', () => {
+  const html = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../../index.html'), 'utf8');
+  document.body.innerHTML = /<body[^>]*>([\s\S]*)<\/body>/i.exec(html)![1]!;
+  const root = document.querySelector<HTMLElement>('[data-ui="logistics"]')!, items = createDefaultItemRegistry(), player = new Inventory(items, 5);
+  const buildings = new BuildingSystem(createDefaultBuildingRegistry(items), new Inventory(items, 5), terrain, [], 1, 19); buildings.setCreativeMode(true);
+  let ui: LogisticsUI | undefined;
+  const logistics = new LogisticsManager(buildings, new MachineManager(buildings, items, () => []), items, () => !!ui?.isOpen);
+  const far = { x: 8, z: 8, radius: .4 }, source = buildings.place('storage-container', 0, 3, 0, far).building!,
+    belt = buildings.place('conveyor-cell', -.5, 1.5, 0, far).building!, sink = buildings.place('storage-container', 0, 0, 0, far).building!;
+  logistics.sync(); const input = logistics.terminal(source.id)!, output = logistics.terminal(sink.id)!;
+  input.addItem('coal', 8); logistics.fixedUpdate(50); expect(logistics.network.get(belt.id)!.items).toHaveLength(1);
+  ui = new LogisticsUI(root, logistics, player, vi.fn()); ui.open(source.id); logistics.fixedUpdate(1000);
+  root.querySelector<HTMLButtonElement>('[data-logistics-grid] [data-slot="0"]')!.click();
+  root.querySelector<HTMLButtonElement>('[data-logistics-retrieve-selected]')!.click();
+  expect(player.getItemCount('coal')).toBe(7); expect(logistics.network.get(belt.id)!.items).toHaveLength(1);
+  ui.closePanel(); for (let i = 0; i < 150; i++) logistics.fixedUpdate(50);
+  expect(output.getItemCount('coal')).toBe(1); expect(player.getItemCount('coal') + output.getItemCount('coal') + input.getItemCount('coal')).toBe(8);
+  ui.dispose();
+});
