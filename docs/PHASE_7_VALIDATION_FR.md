@@ -1,8 +1,10 @@
 # Phase 7 — guide de validation en jeu
 
-**Statut : à tester par le joueur.** Les tests automatisés ne remplacent pas cet
-essai. La phase 8 n'est pas commencée. Les changements disparaissent au
-rechargement : les sauvegardes relèvent d'une phase ultérieure.
+**Statut : validation globale par le joueur.** Il ne signale aucun bug apparent
+dans ce qu'il a testé ; les résultats de chaque scénario ci-dessous ne sont pas
+connus individuellement. La phase 8 est en cours, sans intégration jouable à ce
+stade. Les changements disparaissent au rechargement : les sauvegardes relèvent
+d'une phase ultérieure.
 
 Ouvrir [le jeu](https://souls-equal.github.io/factory-frontier/). Dans Q, le
 mode créatif rend la construction gratuite ; les machines ont toujours besoin

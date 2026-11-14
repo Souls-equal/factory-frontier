@@ -9,6 +9,7 @@ export class Processor implements Machine {
   readonly output: Inventory;
   private work = 0;
   private enabledValue = true;
+  private poweredValue = true;
   constructor(readonly id: string, items: ItemRegistry, readonly recipe: Readonly<Recipe>) {
     if (!id.trim() || !Number.isFinite(recipe.durationMs) || recipe.durationMs <= 0 ||
         !Number.isSafeInteger(recipe.input.quantity) || recipe.input.quantity <= 0 ||
@@ -17,6 +18,8 @@ export class Processor implements Machine {
     this.input = new Inventory(items, 1); this.output = new Inventory(items, 1);
   }
   get enabled(): boolean { return this.enabledValue; }
+  get powered(): boolean { return this.poweredValue; }
+  setPowered(value: boolean): void { this.poweredValue = value; }
   setEnabled(enabled: boolean): void { this.enabledValue = enabled; }
   get progress(): number { return this.work / this.recipe.durationMs; }
   protected get additionalState(): MachineState | null { return null; }
@@ -24,6 +27,7 @@ export class Processor implements Machine {
   protected consumeAdditional(_count: number): void { /* No auxiliary ingredients by default. */ }
   get state(): MachineState {
     if (!this.enabled) return 'DISABLED';
+    if (!this.powered) return 'NO_POWER';
     if (this.input.getItemCount(this.recipe.input.itemId) < this.recipe.input.quantity) return 'MISSING_INPUT';
     if (this.output.getAvailableSpace(this.recipe.output.itemId) < this.recipe.output.quantity) return 'OUTPUT_FULL';
     return this.additionalState ?? 'RUNNING';

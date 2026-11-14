@@ -14,21 +14,20 @@
 ## PROGRESS TRACKER
 
 **Last updated:** 2026-11-11
-**Current phase:** Phase 8 electricity foundation; Phase 7 player testing pending in parallel; Phase 5 acceptance incomplete
+**Current phase:** Phase 8 electricity in progress; Phase 7 globally user-validated; Phase 5 acceptance incomplete
 
-The user explicitly requested beginning Phase 8 while they test Phase 7. This is
-an exception to the Phase 7 acceptance gate, not acceptance of Phase 7. The first
-Phase 8 slice is an isolated power-grid domain model; in-game electrical buildings,
-fuel, machine consumption and statistics are still to be implemented. Existing
-Phase 7 gameplay remains unaffected during testing.
+The player now reports no apparent bugs in their Phase 7 tests and globally
+validates Phase 7; individual checklist results were not supplied. Phase 8 has
+isolated network, biomass fuel and powered-machine simulation, but none of those
+systems are yet connected to gameplay or player-facing controls.
 
 The user explicitly authorized the next step after confirming in-game miner →
 conveyor → terminal transport, turns/slopes without item loss, and blockage/recovery.
 Other Phase 5 checklist scenarios were not explicitly confirmed. Starting the
 smelter slice before full Phase 5 acceptance is a user-directed exception to the
 existing Phase 5 gate below; it does not mark that phase accepted or complete.
-The user reported everything works after the Phase 6 complete-chain play-test was requested, and explicitly asked to proceed. The Phase 6 chain is user-validated; this does not establish acceptance of every Phase 5 scenario. Phase 7 includes storage, splitter modes including optional item filters, a fair merger and bounded upward/downward lifts. The user reports that all previously playable additions work after testing; this is a global report, not individual scenario evidence. The new bounded control-point route editor was added afterwards. The user reported that requiring an existing destination prevented incremental construction; open-ended routes and continuation have now been added and still require player retesting. Lifts now support 0.1 m increments within 1–8 m; the fine-height slice requires player validation, and Phase 7 acceptance remains pending.
-The player validated the direct lift-to-lift slice. Direct lift connections to aligned compatible machines, splitters, mergers and other lifts are implemented; direct legacy-belt links remain unsupported. The player confirmed conveyor and lift flow inspection with G works. A storage output filter is now implemented and awaits player validation; the Phase 7 acceptance gate remains open.
+The user reported everything works after the Phase 6 complete-chain play-test was requested, and explicitly asked to proceed. The Phase 6 chain is user-validated; this does not establish acceptance of every Phase 5 scenario. Phase 7 includes storage, splitter modes including optional item filters, a fair merger and bounded upward/downward lifts. The user reports that all previously playable additions work after testing; this is a global report, not individual scenario evidence. The new bounded control-point route editor was added afterwards. The user reported that requiring an existing destination prevented incremental construction; open-ended routes and continuation were added before the later global validation. Lifts support 0.1 m increments within 1–8 m; the subsequent global Phase 7 report did not specify individual scenarios.
+The player validated the direct lift-to-lift slice. Direct lift connections to aligned compatible machines, splitters, mergers and other lifts are implemented; direct legacy-belt links remain unsupported. The player confirmed conveyor and lift flow inspection with G works. A storage output filter is implemented; individual results were not reported in the subsequent global Phase 7 validation.
 At the user's request the smelter now directly consumes coal (1 per iron ingot);
 this is an early fuel exception, not the Phase 8 electrical power network. The
 user subsequently reported testing without specifying results. A user-requested,
@@ -52,8 +51,8 @@ detailed evidence and verification results live in `PROJECT_STATUS.md`.
 | 4 — First automated extractor | 🟡 User accepted | Browser verification remains pending |
 | 5 — Conveyor foundation | 🟡 Partially user-validated | User confirmed miner → terminal, turns/slopes, blockage and recovery; remaining checklist not confirmed |
 | 6 — First production chain | ✅ User validated | Coal-fueled smelter, constructor and plates implemented; user reports everything works after complete-chain test request |
-| 7 — Advanced logistics | 🟡 Acceptance pending | Previous playable logistics additions user-validated globally; implementation and automated coverage audited; player testing pending (`PHASE_7_VALIDATION_FR.md`); lift range 1–8 m and other documented limits apply |
-| 8 — Electricity | 🟡 In progress | Isolated power-grid foundation only; generator, poles, wiring, machine consumption and UI remain |
+| 7 — Advanced logistics | ✅ Globally user-validated | Player reports no apparent bugs in their tests; individual checklist results not specified; documented limits apply |
+| 8 — Electricity | 🟡 In progress | Isolated network, biomass fuel and machine simulation; playable buildings, wiring, gameplay hookup and UI remain |
 | 9 — Advanced manufacturing | ◻ Planned | — |
 | 10 — World expansion | ◻ Planned | — |
 | 11 — Progression | ◻ Planned | — |
