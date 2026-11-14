@@ -14,7 +14,7 @@
 ## PROGRESS TRACKER
 
 **Last updated:** 2026-11-11
-**Current phase:** Phase 7 integration and acceptance; selected storage transfers, filtered splitter and remaining logistics checks pending; Phase 5 acceptance incomplete
+**Current phase:** Phase 7 integration and acceptance; quantity-limited storage transfers, filtered splitter and remaining logistics checks pending; Phase 5 acceptance incomplete
 
 The user explicitly authorized the next step after confirming in-game miner →
 conveyor → terminal transport, turns/slopes without item loss, and blockage/recovery.
@@ -46,7 +46,7 @@ detailed evidence and verification results live in `PROJECT_STATUS.md`.
 | 4 — First automated extractor | 🟡 User accepted | Browser verification remains pending |
 | 5 — Conveyor foundation | 🟡 Partially user-validated | User confirmed miner → terminal, turns/slopes, blockage and recovery; remaining checklist not confirmed |
 | 6 — First production chain | ✅ User validated | Coal-fueled smelter, constructor and plates implemented; user reports everything works after complete-chain test request |
-| 7 — Advanced logistics | 🟡 Acceptance pending | Previous playable logistics additions user-validated globally; selected stack transfers, filtered routing, fine lift-height adjustment and remaining route/platform scenarios need player testing; heights outside 1–8 m remain unimplemented |
+| 7 — Advanced logistics | 🟡 Acceptance pending | Previous playable logistics additions user-validated globally; quantity-limited stack transfers, filtered routing, fine lift-height adjustment and remaining route/platform scenarios need player testing; heights outside 1–8 m remain unimplemented |
 | 8 — Electricity | ◻ Planned | — |
 | 9 — Advanced manufacturing | ◻ Planned | — |
 | 10 — World expansion | ◻ Planned | — |

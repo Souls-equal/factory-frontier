@@ -175,3 +175,13 @@ manual scenarios separately; report layout, rotation and any problems found.
 3. While a belt feeds storage, open the panel, retrieve a selected stack and
    close it. Check transport resumes and items already on the belt arrive.
    Splitter/merger buffer retrieval and storage output filtering remain unchanged.
+
+4. Select a stack, enter a smaller whole number in **Store quantity** or
+   **Retrieve quantity**, and verify exactly that amount moves from that slot.
+   Leave the field blank to transfer the whole stack. Try zero, a fraction, a
+   negative number and more than the selected stack: none should transfer.
+5. Reduce destination capacity below the requested quantity and verify only
+   what fits moves and the remaining source-stack count is reported. Change
+   selection or reopen the panel and check the field clears. Repeat selected
+   retrieval at a receiving terminal; **Retrieve contents** remains independent.
+   Press Escape while editing a quantity and verify the panel closes.

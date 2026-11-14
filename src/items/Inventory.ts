@@ -70,15 +70,20 @@ export class Inventory {
     if (moved > 0) { this.removeItem(id, moved); destination.addItem(id, moved); }
     return { requested: amount, moved, remainder: amount - moved };
   }
-  /** Transfer just one selected stack; other stacks of the same item are untouched. */
-  transferStack(destination: Inventory, source: number): QuantityResult {
+  /** Transfer from one selected stack. Omitted amount means the whole stack;
+   * remainder is the unfulfilled requested amount, not the entire source balance. */
+  transferStack(destination: Inventory, source: number, amount?: number): QuantityResult {
     this.validSlot(source);
+    if (amount !== undefined) quantity(amount);
     const slot = this.slots[source];
-    if (!slot) return { requested: 0, moved: 0, remainder: 0 };
-    if (destination === this) return { requested: slot.quantity, moved: 0, remainder: slot.quantity };
-    const result = destination.addItem(slot.itemId, slot.quantity);
+    if (!slot) return { requested: amount ?? 0, moved: 0, remainder: amount ?? 0 };
+    const requested = amount ?? slot.quantity;
+    if (requested > slot.quantity) throw new RangeError('Not enough items in source stack.');
+    if (destination === this) return { requested, moved: 0, remainder: requested };
+    const result = destination.addItem(slot.itemId, requested);
     if (result.moved) {
-      this.slots[source] = result.remainder ? { itemId: slot.itemId, quantity: result.remainder } : null;
+      const remaining = slot.quantity - result.moved;
+      this.slots[source] = remaining ? { itemId: slot.itemId, quantity: remaining } : null;
       this.revisionValue++;
     }
     return result;

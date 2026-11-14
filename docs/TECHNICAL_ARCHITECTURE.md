@@ -1611,3 +1611,22 @@ the exact remainder. Splitter/merger buffers, automated output filters and
 conveyor items remain on their existing paths; the modal pause is unchanged.
 Tests cover exact and stale selections, capacity, both directions, conservation
 and live conveyor recovery. In-game acceptance remains pending.
+
+
+## Implementation note — quantity-limited selected stack transfers
+
+`Inventory.transferStack` accepts an optional positive safe integer quantity,
+validated against the selected source stack before mutation. Without it the
+whole stack is requested. The result remainder describes the unfulfilled
+requested quantity, while the source slot retains both unrequested items and
+any amount that could not fit. Empty and self transfers do not mutate state;
+revisions change only when items move.
+
+The logistics panel provides separate optional numeric inputs for storage
+deposit and storage/terminal selected retrieval. Blank means the whole stack;
+invalid or excessive values are rejected without transfer. Selections and
+quantities reset when their source inventory changes, and actions recheck the
+source revision. Destination changes do not invalidate the source selection.
+The notice reports the total still in the selected source stack. Bulk retrieval,
+transport, filters, foundations and modal pause are unchanged. In-game player
+validation remains pending.

@@ -179,3 +179,30 @@ describe('selected stack transfers', () => {
     }
   });
 });
+
+describe('quantity-limited selected stack transfers', () => {
+  it('moves only the requested amount of the exact stack and reports capacity remainder', () => {
+    const items = createDefaultItemRegistry(), source = new Inventory(items, 3), dest = new Inventory(items, 1);
+    source.addItem('iron-ore', 150); dest.addItem('iron-ore', 90);
+    expect(source.transferStack(dest, 1, 20)).toEqual({ requested: 20, moved: 10, remainder: 10 });
+    expect(source.snapshot().map(s => s?.quantity ?? 0)).toEqual([100, 40, 0]);
+    expect(dest.getItemCount('iron-ore')).toBe(100);
+    const revisions = [source.revision, dest.revision];
+    expect(source.transferStack(dest, 1, 1)).toEqual({ requested: 1, moved: 0, remainder: 1 });
+    expect([source.revision, dest.revision]).toEqual(revisions);
+    dest.removeItem('iron-ore', 100);
+    expect(source.transferStack(dest, 1, 7)).toEqual({ requested: 7, moved: 7, remainder: 0 });
+    expect(source.snapshot()[1]?.quantity).toBe(33);
+    expect(source.getItemCount('iron-ore') + dest.getItemCount('iron-ore')).toBe(140);
+  });
+  it('validates quantities without mutations and handles self and empty slots', () => {
+    const items = createDefaultItemRegistry(), source = new Inventory(items, 2), dest = new Inventory(items, 1);
+    source.addItem('wood', 5); const before = source.snapshot(), revision = source.revision;
+    for (const n of [0, -1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, 6]) {
+      expect(() => source.transferStack(dest, 0, n)).toThrow(RangeError);
+    }
+    expect(source.transferStack(source, 0, 3)).toEqual({ requested: 3, moved: 0, remainder: 3 });
+    expect(source.transferStack(dest, 1, 3)).toEqual({ requested: 3, moved: 0, remainder: 3 });
+    expect(source.snapshot()).toEqual(before); expect(source.revision).toBe(revision); expect(dest.revision).toBe(0);
+  });
+});
