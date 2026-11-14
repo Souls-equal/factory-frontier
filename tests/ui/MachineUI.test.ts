@@ -53,9 +53,11 @@ it('inspects a constructor, shows its recipe, and transfers input and plates', a
   player.addItem('iron-ingot', 3); const ui = new MachineUI(root, player, vi.fn()); ui.open(m);
   expect(root.querySelector('[data-machine-title]')!.textContent).toBe('Constructor');
   expect(root.textContent).toContain('1 Iron Ingot → 1 Iron Plate');
+  expect(root.textContent).toContain('Produced by this machine (Iron Plate): 0');
   expect(root.querySelector<HTMLButtonElement>('[data-machine-feed-fuel]')!.hidden).toBe(true);
   expect(root.querySelector('[data-machine-feed]')!.textContent).toBe('Add Iron Ingot');
   root.querySelector<HTMLButtonElement>('[data-machine-feed]')!.click(); m.fixedUpdate(2000); ui.update();
+  expect(root.textContent).toContain('Produced by this machine (Iron Plate): 1');
   root.querySelector<HTMLButtonElement>('[data-machine-retrieve]')!.click(); expect(player.getItemCount('iron-plate')).toBe(1);
   root.querySelector<HTMLButtonElement>('[data-machine-retrieve-input]')!.click(); expect(player.getItemCount('iron-ingot')).toBe(2);
   ui.dispose();
@@ -71,6 +73,7 @@ it('inspects a generator and pole, transfers wood and shows live network statist
     shortfallWatts: generator.ready ? 0 : 10000, status: generator.ready ? 'online' as const : 'offline' as const }));
   const ui = new MachineUI(root, player, vi.fn(), network); ui.openPower('g', generator);
   expect(root.textContent).toContain('Biomass Generator'); expect(root.textContent).toContain('Network: offline');
+  expect(root.textContent).toContain('Cyan rear input accepts wood');
   root.querySelector<HTMLButtonElement>('[data-machine-feed-fuel]')!.click();
   expect(generator.fuel.getItemCount('wood')).toBe(3); expect(root.textContent).toContain('Network: online');
   expect(root.textContent).toContain('Supply: 10 kW'); expect(root.textContent).toContain('Demand: 10 kW');

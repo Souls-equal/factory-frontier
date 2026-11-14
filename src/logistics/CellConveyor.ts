@@ -4,6 +4,7 @@ import { machinePort, pathForBuilding, isDirectionalMachine, isLiftBuilding, spl
 const epsilon = 1e-7;
 /** Whether a machine's 2-cell-wide port touches a particular one-cell lane. */
 export function cellTouchesMachine(cell: BuildingInstance, machine: BuildingInstance, cellSize: number, kind: 'source' | 'receiver', ignoreHeight = false): boolean {
+  if (kind === 'source' && machine.typeId === 'biomass-generator') return false;
   const path = pathForBuilding(cell, cellSize)!;
   const port = machinePort(machine, cellSize, kind);
   const d = port.direction;

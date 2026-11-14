@@ -8,7 +8,7 @@ export function connectedHeight(typeId: string, transform: BuildingTransform, ex
   const candidate: BuildingInstance = { id: '__preview__', typeId, transform: { ...transform, y: 0 } };
   const path = pathForBuilding(candidate, cellSize);
   const input = path ? { position: path.point(0), direction: path.direction('input') } : (typeId === RECEIVER_TYPE || isDirectionalMachine(typeId)) ? machinePort(candidate, cellSize, 'receiver') : undefined;
-  const output = path ? { position: path.point(path.length), direction: path.direction('output') } : isDirectionalMachine(typeId) ? machinePort(candidate, cellSize, 'source') : undefined;
+  const output = path ? { position: path.point(path.length), direction: path.direction('output') } : isDirectionalMachine(typeId) && typeId !== 'biomass-generator' ? machinePort(candidate, cellSize, 'source') : undefined;
   const matches: number[] = [];
   function match(candidatePort: PortPose | undefined, other: PortPose): void {
     if (!candidatePort || Math.hypot(candidatePort.position.x - other.position.x, candidatePort.position.z - other.position.z) > 1e-7 ||
@@ -21,7 +21,7 @@ export function connectedHeight(typeId: string, transform: BuildingTransform, ex
       match(input, { position: other.point(other.length), direction: other.direction('output') });
       match(output, { position: other.point(0), direction: other.direction('input') });
     } else {
-      if (building.typeId === 'miner-mk1' || isDirectionalMachine(building.typeId)) match(input, machinePort(building, cellSize, 'source'));
+      if (building.typeId === 'miner-mk1' || (isDirectionalMachine(building.typeId) && building.typeId !== 'biomass-generator')) match(input, machinePort(building, cellSize, 'source'));
       if (building.typeId === RECEIVER_TYPE || isDirectionalMachine(building.typeId)) match(output, machinePort(building, cellSize, 'receiver'));
     }
   }
@@ -36,7 +36,7 @@ export function connectionStatus(typeId: string, transform: BuildingTransform, e
   const candidate: BuildingInstance = { id: '__preview__', typeId, transform };
   const path = pathForBuilding(candidate, cellSize);
   const input = path ? { position: path.point(0), direction: path.direction('input') } : (typeId === RECEIVER_TYPE || isDirectionalMachine(typeId)) ? machinePort(candidate, cellSize, 'receiver') : undefined;
-  const output = path ? { position: path.point(path.length), direction: path.direction('output') } : (typeId === 'miner-mk1' || isDirectionalMachine(typeId)) ? machinePort(candidate, cellSize, 'source') : undefined;
+  const output = path ? { position: path.point(path.length), direction: path.direction('output') } : (typeId === 'miner-mk1' || (isDirectionalMachine(typeId) && typeId !== 'biomass-generator')) ? machinePort(candidate, cellSize, 'source') : undefined;
   let connected = false, incompatible = false;
   function touch(a: PortPose | undefined, b: PortPose | undefined, allowed: boolean): void {
     if (!a || !b || Math.hypot(a.position.x - b.position.x, a.position.z - b.position.z) > 1e-7) return;
@@ -50,7 +50,7 @@ export function connectionStatus(typeId: string, transform: BuildingTransform, e
       otherInput = { position: other.point(0), direction: other.direction('input') };
       otherOutput = { position: other.point(other.length), direction: other.direction('output') };
     } else {
-      if (building.typeId === 'miner-mk1' || isDirectionalMachine(building.typeId)) otherOutput = machinePort(building, cellSize, 'source');
+      if (building.typeId === 'miner-mk1' || (isDirectionalMachine(building.typeId) && building.typeId !== 'biomass-generator')) otherOutput = machinePort(building, cellSize, 'source');
       if (building.typeId === RECEIVER_TYPE || isDirectionalMachine(building.typeId)) otherInput = machinePort(building, cellSize, 'receiver');
     }
     touch(input, otherOutput, true); touch(output, otherInput, true);

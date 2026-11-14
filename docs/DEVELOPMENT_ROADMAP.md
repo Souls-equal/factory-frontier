@@ -21,7 +21,10 @@ validates Phase 7; individual checklist results were not supplied. Phase 8 has
 playable automatic pole connections, biomass generation, machine power and
 inspection. The user has globally validated Phase 8 without individual scenario
 results and authorized moving on. Phase 9 starts with selectable constructor
-recipes and an isolated multi-input processor foundation.
+recipes, an isolated multi-input processor foundation and per-machine completed
+output counts for processors. At the user’s request,
+wood can now feed a biomass generator through its rear conveyor port; this
+quality-of-life addition does not complete the remaining Phase 9 objectives.
 
 The user explicitly authorized the next step after confirming in-game miner →
 conveyor → terminal transport, turns/slopes without item loss, and blockage/recovery.
@@ -55,7 +58,7 @@ detailed evidence and verification results live in `PROJECT_STATUS.md`.
 | 6 — First production chain | ✅ User validated | Coal-fueled smelter, constructor and plates implemented; user reports everything works after complete-chain test request |
 | 7 — Advanced logistics | ✅ Globally user-validated | Player reports no apparent bugs in their tests; individual checklist results not specified; documented limits apply |
 | 8 — Electricity | ✅ Globally user-validated | Automatic visible links, biomass generation, machine power and inspection; documented limitations remain |
-| 9 — Advanced manufacturing | 🟡 In progress | Playable constructor plate/rod selector and isolated multi-input processing; assembler, foundry and statistics remain |
+| 9 — Advanced manufacturing | 🟡 In progress | Playable constructor plate/rod selector, processor output totals and isolated multi-input processing; assembler, foundry and comprehensive statistics remain |
 | 10 — World expansion | ◻ Planned | — |
 | 11 — Progression | ◻ Planned | — |
 | 12 — Persistence | ◻ Planned | — |

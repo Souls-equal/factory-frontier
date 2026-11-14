@@ -11,6 +11,7 @@ export class Processor implements Machine {
   private enabledValue = true;
   private poweredValue = true;
   private recipeValue: Readonly<Recipe>;
+  private readonly producedItems = new Map<string, number>();
   constructor(readonly id: string, items: ItemRegistry, recipe: Readonly<Recipe>) {
     if (!id.trim() || !Number.isFinite(recipe.durationMs) || recipe.durationMs <= 0 ||
         !Number.isSafeInteger(recipe.input.quantity) || recipe.input.quantity <= 0 ||
@@ -25,6 +26,8 @@ export class Processor implements Machine {
     this.input = new Inventory(items, 1 + (recipe.additionalInputs?.length ?? 0)); this.output = new Inventory(items, 1);
   }
   get recipe(): Readonly<Recipe> { return this.recipeValue; }
+  /** Lifetime completed output, independent of buffer retrieval or recipe switches. */
+  produced(itemId: string): number { return this.producedItems.get(itemId) ?? 0; }
   /** Only for compatible recipes of a subclass; never discard buffered items. */
   protected changeRecipe(recipe: Readonly<Recipe>): boolean {
     if (recipe.id === this.recipe.id) return true;
@@ -60,6 +63,7 @@ export class Processor implements Machine {
     if (!this.input.exchange(ingredients.map(item => ({ itemId: item.itemId, quantity: count * item.quantity })), [])) throw new Error('Processor input changed during production');
     this.consumeAdditional(count);
     if (!this.output.exchange([], [{ itemId: output.itemId, quantity: count * output.quantity }])) throw new Error('Processor output changed during production');
+    this.producedItems.set(output.itemId, this.produced(output.itemId) + count * output.quantity);
     this.work = Math.max(0, this.work - count * durationMs);
   }
   feed(source: Inventory): QuantityResult { return this.transfer(source, this.input, this.recipe.input.itemId); }

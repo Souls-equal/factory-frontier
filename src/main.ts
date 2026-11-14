@@ -170,7 +170,7 @@ async function boot(): Promise<void> {
   const power = new PowerManager(buildings, machines, registry,
     () => !!(machineUI?.isOpen || logisticsUI?.isOpen || constructionUI?.isOpen || inventoryUI?.isOpen));
   const logistics = new LogisticsManager(buildings, machines, registry,
-    () => !!(machineUI?.isOpen || logisticsUI?.isOpen || constructionUI?.isOpen || inventoryUI?.isOpen), 1, undefined, groundItems);
+    () => !!(machineUI?.isOpen || logisticsUI?.isOpen || constructionUI?.isOpen || inventoryUI?.isOpen), 1, undefined, groundItems, power);
   const routeEditor = new ConveyorRouteEditor(buildings, world.terrain);
   let routeMode = false;
   const clearRoute = (): void => { routeMode = false; routeEditor.reset(); };

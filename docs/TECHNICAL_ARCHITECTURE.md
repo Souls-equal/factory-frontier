@@ -1730,7 +1730,7 @@ capacity, available and supplied power, demand, shortfall, status and counts.
 Each miner, smelter and constructor reserves 10 kW while enabled; one fueled
 biomass generator supplies 30 kW. Shortage sheds the whole network and all
 available generators burn at full rate when a network is loaded and online.
-Fuel is manually transferred and stored wood prevents generator demolition;
+Fuel may be transferred manually or through the rear conveyor input; stored wood prevents generator demolition;
 already-burning fuel is lost on demolition of an otherwise empty generator.
 Smelters still require coal separately. Persistence is outside this phase.
 The player subsequently gave global Phase 8 validation without individual
@@ -1751,3 +1751,26 @@ power loss and pauses preserve existing behavior. Plate + rod → reinforced
 component is registered and tested with the generic processor, but no playable
 assembler or multi-input delivery UI exists yet. A buildable assembler, foundry,
 logistics integration and statistics remain Phase 9 work.
+
+## Implementation note — conveyor-fed biomass fuel
+
+`LogisticsManager` optionally receives the authoritative `PowerManager` and
+synchronizes it before rebuilding connections. The generator exposes only a
+rear receiver at belt height: one-cell lanes, aligned lift outputs and matching
+legacy conveyor outputs share its existing one-stack fuel inventory. The
+receiver accepts wood only and applies inventory backpressure. It never exposes
+a source; direction, elevation, topology guards, pause and demolition protections
+remain authoritative. The cyan rear marker and generator inspection describe
+the inlet. The auto-conveyor route planner still only automatically routes to
+its original miner/terminal endpoints; a compatible resolved belt can connect
+to the generator without extending that planner. No foundation rules changed.
+
+## Implementation note — initial Phase 9 production statistics
+
+A `Processor` tracks the quantity of each output item committed by completed
+cycles, independent of the current output inventory. The inspection panel shows
+the current recipe's per-machine lifetime count; switching recipes preserves
+previous counts. Pauses, blocked cycles and partial progress add nothing. Counts
+are in-memory only, reset on demolition/session reset, and cover processors, not
+miners or network-wide rates. Comprehensive throughput/bottleneck analytics
+remain Phase 9 work.

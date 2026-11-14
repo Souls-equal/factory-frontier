@@ -49,4 +49,26 @@ describe('phase 9 production primitives', () => {
     expect(m.selectRecipe('iron-plate')).toBe(false); m.output.removeItem('iron-rod', 2);
     expect(m.selectRecipe('iron-plate')).toBe(true); expect(() => m.selectRecipe('reinforced-component')).toThrow();
   });
+  it('counts completed output per item, not partial work, blocking or transfers', () => {
+    const items = createDefaultItemRegistry(), recipes = createDefaultRecipeRegistry(items);
+    const m = new ConstructorMachine('c', items, recipes.get('iron-plate'), [recipes.get('iron-rod')]);
+    m.input.addItem('iron-ingot', 2); m.fixedUpdate(1000); expect(m.produced('iron-plate')).toBe(0);
+    m.setPowered(false); m.fixedUpdate(10000); expect(m.produced('iron-plate')).toBe(0);
+    m.setPowered(true); m.fixedUpdate(3000); expect(m.produced('iron-plate')).toBe(2);
+    m.output.removeItem('iron-plate', 2); expect(m.produced('iron-plate')).toBe(2);
+    expect(m.selectRecipe('iron-rod')).toBe(true); m.input.addItem('iron-ingot', 1); m.fixedUpdate(2000);
+    expect(m.produced('iron-rod')).toBe(1); expect(m.produced('iron-plate')).toBe(2);
+    m.input.addItem('iron-ingot', 1); m.output.addItem('iron-rod', 99); m.fixedUpdate(2000);
+    expect(m.state).toBe('OUTPUT_FULL'); expect(m.produced('iron-rod')).toBe(1);
+  });
+  it('counts quantities produced by multi-output recipes, including large and partitioned ticks', () => {
+    const items = createDefaultItemRegistry();
+    const recipe = { id: 'bulk', name: 'Bulk', input: { itemId: 'iron-ingot', quantity: 1 }, output: { itemId: 'iron-plate', quantity: 2 }, durationMs: 2000 };
+    const a = new Processor('a', items, recipe), b = new Processor('b', items, recipe);
+    a.input.addItem('iron-ingot', 3); b.input.addItem('iron-ingot', 3); a.fixedUpdate(9000);
+    for (let i = 0; i < 90; i++) b.fixedUpdate(100);
+    expect(a.produced('iron-plate')).toBe(6); expect(b.produced('iron-plate')).toBe(6);
+    expect(a.produced('iron-rod')).toBe(0);
+  });
+
 });
