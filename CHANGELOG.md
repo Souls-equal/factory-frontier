@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — Phase 9 manufacturing foundation
+
+- Record global player validation of Phase 8 and start Phase 9 at their request.
+- Add a selectable iron rod recipe to constructors and preserve conveyor items
+  when recipes change. Require empty buffers and disclose partial-work reset.
+- Extend the shared processor and immutable recipe data to support multiple
+  inputs, and test a reinforced-component recipe; no playable assembler yet.
+
 ## Unreleased — playable Phase 8 electricity
 
 - Add buildable poles and biomass generators, automatic visible range-limited

@@ -15,6 +15,8 @@ export class MachineUI {
   private readonly feedFuel: HTMLButtonElement;
   private readonly retrieveFuel: HTMLButtonElement;
   private readonly details: HTMLElement;
+  private readonly recipeLabel: HTMLLabelElement;
+  private readonly recipeSelect: HTMLSelectElement;
   private readonly close: HTMLButtonElement;
   private readonly toggle: HTMLButtonElement;
   private readonly retrieve: HTMLButtonElement;
@@ -25,6 +27,10 @@ export class MachineUI {
       const result = root.querySelector<T>(selector); if (!result) throw new Error(`Missing machine UI ${selector}`); return result;
     };
     this.details = find('[data-machine-details]'); this.close = find('[data-machine-close]');
+    this.recipeLabel = root.ownerDocument.createElement('label'); this.recipeLabel.textContent = 'Recipe (empty buffers; partial progress resets): ';
+    this.recipeSelect = root.ownerDocument.createElement('select'); this.recipeSelect.dataset.machineRecipe = '';
+    this.recipeLabel.append(this.recipeSelect); this.details.after(this.recipeLabel);
+    this.recipeSelect.addEventListener('change', this.handleRecipe);
     this.toggle = find('[data-machine-toggle]'); this.retrieve = find('[data-machine-retrieve]'); this.notice = find('[data-machine-notice]');
     this.feed = root.ownerDocument.createElement('button'); this.feed.type = 'button'; this.feed.textContent = 'Add iron ore'; this.feed.dataset.machineFeed = '';
     this.retrieveInput = root.ownerDocument.createElement('button'); this.retrieveInput.type = 'button'; this.retrieveInput.textContent = 'Retrieve input'; this.retrieveInput.dataset.machineRetrieveInput = '';
@@ -40,6 +46,11 @@ export class MachineUI {
   get activeMachine(): Miner | Processor | null { return this.miner; }
   open(miner: Miner | Processor): void {
     this.powerTarget = null; this.miner = miner; this.root.hidden = false; this.notice.textContent = '';
+    this.recipeSelect.replaceChildren();
+    if (miner instanceof ConstructorMachine) for (const recipe of miner.recipes) {
+      const option = this.root.ownerDocument.createElement('option'); option.value = recipe.id; option.textContent = recipe.name;
+      this.recipeSelect.append(option);
+    }
     const name = miner instanceof Smelter ? 'Smelter' : miner instanceof ConstructorMachine ? 'Constructor' : 'Miner Mk.1';
     const title = this.root.querySelector('[data-machine-title]'); if (title) title.textContent = name;
     this.root.setAttribute('aria-label', name); this.update(); this.close.focus();
@@ -62,6 +73,7 @@ export class MachineUI {
     const power = this.powerTarget;
     if (power) {
       const generator = power.generator;
+      this.recipeLabel.hidden = true;
       this.feed.hidden = true; this.retrieveInput.hidden = true; this.retrieve.hidden = true;
       this.toggle.hidden = !generator; this.feedFuel.hidden = !generator; this.retrieveFuel.hidden = !generator;
       if (generator) {
@@ -75,6 +87,8 @@ export class MachineUI {
     }
     const miner = this.miner; if (!miner) return;
     const network = this.networkText(miner.id);
+    this.recipeLabel.hidden = !(miner instanceof ConstructorMachine) || miner.recipes.length < 2;
+    if (miner instanceof ConstructorMachine) this.recipeSelect.value = miner.recipe.id;
     this.retrieve.hidden = false; this.toggle.hidden = false;
     this.feedFuel.textContent = 'Add coal'; this.retrieveFuel.textContent = 'Retrieve coal';
     this.feed.hidden = !(miner instanceof Processor); this.retrieveInput.hidden = !(miner instanceof Processor);
@@ -102,7 +116,13 @@ export class MachineUI {
     if (miner instanceof Processor) this.feed.textContent = `Add ${this.player.registry.get(miner.recipe.input.itemId).name}`;
     this.toggle.textContent = miner.enabled ? 'Disable' : 'Enable';
   }
-  dispose(): void { this.feedFuel.removeEventListener('click', this.handleFeedFuel); this.retrieveFuel.removeEventListener('click', this.handleRetrieveFuel); this.feedFuel.remove(); this.retrieveFuel.remove(); this.feed.removeEventListener('click', this.handleFeed); this.retrieveInput.removeEventListener('click', this.handleRetrieveInput); this.feed.remove(); this.retrieveInput.remove(); this.close.removeEventListener('click', this.onClose); this.toggle.removeEventListener('click', this.handleToggle); this.retrieve.removeEventListener('click', this.handleRetrieve); }
+  dispose(): void { this.recipeSelect.removeEventListener('change', this.handleRecipe); this.recipeLabel.remove(); this.feedFuel.removeEventListener('click', this.handleFeedFuel); this.retrieveFuel.removeEventListener('click', this.handleRetrieveFuel); this.feedFuel.remove(); this.retrieveFuel.remove(); this.feed.removeEventListener('click', this.handleFeed); this.retrieveInput.removeEventListener('click', this.handleRetrieveInput); this.feed.remove(); this.retrieveInput.remove(); this.close.removeEventListener('click', this.onClose); this.toggle.removeEventListener('click', this.handleToggle); this.retrieve.removeEventListener('click', this.handleRetrieve); }
+  private readonly handleRecipe = (): void => {
+    if (!(this.miner instanceof ConstructorMachine)) return;
+    const changed = this.miner.selectRecipe(this.recipeSelect.value);
+    this.notice.textContent = changed ? 'Recipe changed. Partial progress was reset.' : 'Empty both input and output before changing recipe.';
+    this.update();
+  };
   private readonly handleFeed = (): void => {
     if (!(this.miner instanceof Processor)) return;
     const result = this.miner.feed(this.player); this.notice.textContent = `Added ${result.moved}; ${result.remainder} remain in inventory.`; this.update();

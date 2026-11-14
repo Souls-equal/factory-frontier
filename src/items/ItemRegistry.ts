@@ -32,6 +32,8 @@ export class ItemRegistry {
 export function createDefaultItemRegistry(): ItemRegistry {
   const registry = new ItemRegistry();
   const definitions: ItemDefinition[] = [
+    { id: 'iron-rod', name: 'Iron Rod', description: 'A formed iron component for advanced manufacturing.', category: 'COMPONENT', maxStackSize: 100, icon: 'R' },
+    { id: 'reinforced-component', name: 'Reinforced Component', description: 'A multi-part iron assembly.', category: 'COMPONENT', maxStackSize: 100, icon: 'RC' },
     { id: 'iron-plate', name: 'Iron Plate', description: 'Pressed iron for construction and manufacturing.', category: 'COMPONENT', maxStackSize: 100, icon: 'P' },
     { id: 'iron-ingot', name: 'Iron Ingot', description: 'Refined iron for manufacturing.', category: 'PROCESSED_RESOURCE', maxStackSize: 100, icon: 'Fe' },
     { id: 'iron-ore', name: 'Iron Ore', description: 'Iron-bearing raw mineral.', category: 'RAW_RESOURCE', maxStackSize: 100, icon: 'Fe' },

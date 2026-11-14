@@ -1733,4 +1733,21 @@ available generators burn at full rate when a network is loaded and online.
 Fuel is manually transferred and stored wood prevents generator demolition;
 already-burning fuel is lost on demolition of an otherwise empty generator.
 Smelters still require coal separately. Persistence is outside this phase.
-Player testing remains required: see `PHASE_8_VALIDATION_FR.md`.
+The player subsequently gave global Phase 8 validation without individual
+scenario results: see `PHASE_8_VALIDATION_FR.md`.
+
+## Implementation note — Phase 9 initial recipe slice
+
+The constructor can switch between validated single-input plate and rod recipes
+using its E panel. Switching requires both buffers empty; fractional work is
+reset, explicitly disclosed to the player. The conveyor output resolves the
+current recipe dynamically, without altering topology or touching items already
+in transit. Recipe choices remain session-only.
+
+`RecipeRegistry` validates and freezes optional additional distinct ingredients.
+`Processor` reserves one input slot per ingredient, checks all requirements and
+commits ingredient consumption atomically on completed cycles. Output space,
+power loss and pauses preserve existing behavior. Plate + rod → reinforced
+component is registered and tested with the generic processor, but no playable
+assembler or multi-input delivery UI exists yet. A buildable assembler, foundry,
+logistics integration and statistics remain Phase 9 work.

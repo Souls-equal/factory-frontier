@@ -2,12 +2,31 @@
 
 **Project:** Factory Frontier
 **Version:** 0.3.0
-**Current Phase:** Phase 8 — Electricity
-**Phase Status:** 🟡 In progress — playable automatic power networks; player validation pending
-**Next Recommended Task:** Player-test Phase 8 networks, fuel, overload, outages and recovery using docs/PHASE_8_VALIDATION_FR.md.
+**Current Phase:** Phase 9 — Advanced manufacturing
+**Phase Status:** 🟡 In progress — constructor recipe selection and multi-input production foundation
+**Next Recommended Task:** Implement a playable powered assembler and integrate multi-input transfers, inspection and production statistics.
 **Last Updated:** 2026-11-11
 
 ---
+
+## Phase 9 — initial manufacturing slice
+
+- The user globally validated Phase 8 and authorized Phase 9 if no blocker was
+  found. Phase 8 criteria have automated coverage; individual player scenarios
+  were not reported, and its documented gameplay limits remain.
+- Constructors can choose Iron Plate or Iron Rod in E inspection: 1 iron ingot
+  produces 1 selected item in 2 s. Empty both machine buffers before changing
+  recipe; doing so resets any partial progress. The live output port tracks the
+  new recipe without rebuilding the conveyor network; old items already on belts
+  continue normally. Real power, pause and existing smelter rules still apply.
+- Recipes can define multiple distinct ingredients; the shared `Processor` tests
+  all inputs and output capacity, then atomically consumes the ingredients only
+  on completed cycles. The registered Iron Plate + Iron Rod → Reinforced
+  Component recipe is tested in isolation with power loss and fuel exhaustion.
+  Its item and icon exist, but no playable machine can select it yet.
+- Phase 9 is **not complete**: buildable assembler and foundry, playable
+  multi-input logistics and inspection, production statistics and full acceptance
+  testing remain. The new constructor recipe also awaits player validation.
 
 ## Phase 8 — playable electrical integration
 
@@ -32,7 +51,8 @@
 - Automated coverage exercises real building/machine lifecycles, fuel depletion,
   pauses, demolition, overload, network merge/split, UI and rendered links. The
   previous bootstrap logistics tests now build and fuel real power infrastructure.
-  Actual browser/player acceptance is pending; Phase 8 is not yet complete.
+  The user subsequently gave global Phase 8 validation without individual
+  scenario results; the documented limitations still apply.
 
 > The sections below are historical progress notes; the current status above
 > supersedes earlier statements that player validation was pending.

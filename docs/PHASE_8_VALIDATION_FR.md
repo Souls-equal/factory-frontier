@@ -1,6 +1,7 @@
 # Phase 8 — essais en jeu
 
-**Statut :** intégration jouable, à valider par le joueur. Les sauvegardes ne sont
+**Statut :** validation globale donnée par le joueur ; les résultats individuels
+des scénarios ci-dessous ne sont pas connus. Les sauvegardes ne sont
 pas encore implémentées : recharger efface les constructions et leur contenu.
 La pose des fondations est inchangée.
 
