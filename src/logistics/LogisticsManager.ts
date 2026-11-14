@@ -169,9 +169,10 @@ export class LogisticsManager implements SimulationSystem {
       }
       const processor = this.machines.smelter(building.id) ?? this.machines.constructorMachine(building.id);
       if (processor) {
-        const rawSource = new InventorySource(building.id, machinePort(building, this.buildings.cellSize, 'source'), processor.output, processor.recipe.output.itemId);
-        const source = { id: rawSource.id, pose: rawSource.pose, peek: () => processor.enabled ? rawSource.peek() : null,
-          take: (itemId: string) => processor.enabled && rawSource.take(itemId) };
+        // Recipe changes do not alter building topology; resolve the current output on each transfer.
+        const source = { id: building.id, pose: machinePort(building, this.buildings.cellSize, 'source'),
+          peek: () => processor.enabled && processor.output.getItemCount(processor.recipe.output.itemId) ? processor.recipe.output.itemId : null,
+          take: (itemId: string) => processor.enabled && itemId === processor.recipe.output.itemId && processor.output.removeItem(itemId, 1).moved === 1 };
         const cell = cells.find((b) => cellTouchesMachine(b, building, this.buildings.cellSize, 'source'));
         if (cell) {
           const path = pathForBuilding(cell, this.buildings.cellSize)!, d = path.direction('input'), port = source.pose.direction;

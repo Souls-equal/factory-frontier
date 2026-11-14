@@ -127,6 +127,9 @@ describe('constructor through real bootstrap with mocked rendering', () => {
     const panel = document.querySelector<HTMLElement>('[data-ui="machine"]')!;
     expect(panel.hidden).toBe(false); expect(panel.textContent).toContain('Constructor');
     expect(panel.textContent).toContain('Iron Ingot → 1 Iron Plate'); expect(panel.textContent).toContain('NO_POWER');
+    const selector = panel.querySelector<HTMLSelectElement>('[data-machine-recipe]')!;
+    expect(selector.options).toHaveLength(2); selector.value = 'iron-rod'; selector.dispatchEvent(new Event('change'));
+    expect(panel.textContent).toContain('Iron Ingot → 1 Iron Rod');
     panel.querySelector<HTMLButtonElement>('[data-machine-feed]')!.click(); expect(panel.textContent).toContain('Input: 4');
     panel.querySelector<HTMLButtonElement>('[data-machine-close]')!.click();
     for (let i = 0; i < 50; i++) frame();

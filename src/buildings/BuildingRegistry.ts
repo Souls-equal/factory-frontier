@@ -68,7 +68,7 @@ export function createDefaultBuildingRegistry(items: ItemRegistry): BuildingRegi
     cost: [{ itemId: 'stone', quantity: 15 }, { itemId: 'wood', quantity: 10 }], widthCells: 2, depthCells: 2,
     height: 2.2, maxSlope: .58, maxGroundVariation: .8, color: 0x7b7370, placement: 'logistics' });
   registry.register({ id: 'constructor', name: 'Constructor', category: 'Production',
-    description: 'Presses iron ingots into plates. Cyan: input at rear; yellow: output at front.',
+    description: 'Presses iron ingots into plates or rods. Choose the recipe in E inspection.',
     cost: [{ itemId: 'stone', quantity: 15 }, { itemId: 'wood', quantity: 10 }], widthCells: 2, depthCells: 2,
     height: 2.2, maxSlope: .58, maxGroundVariation: .8, color: 0x56777e, placement: 'logistics' });
   for (const direction of ['up', 'down'] as const) for (let steps = 10; steps <= MAX_LIFT_HEIGHT * 10; steps++) {

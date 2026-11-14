@@ -9,7 +9,7 @@ describe('shared inventory slot artwork', () => {
   it('provides unique local artwork and accessible counts for every default item', () => {
     const registry = createDefaultItemRegistry(), inventory = new Inventory(registry, 8);
     const definitions = registry.all();
-    expect(definitions).toHaveLength(8);
+    expect(definitions.map(item => item.id)).toEqual(expect.arrayContaining(['iron-rod', 'reinforced-component']));
     const urls = definitions.map(item => itemIcon(item.id));
     expect(urls.every(url => typeof url === 'string' && url.length > 0)).toBe(true);
     expect(new Set(urls).size).toBe(definitions.length);

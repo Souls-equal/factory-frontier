@@ -81,3 +81,24 @@ it('inspects a generator and pole, transfers wood and shows live network statist
   expect(root.querySelector<HTMLButtonElement>('[data-machine-toggle]')!.hidden).toBe(true);
   ui.dispose();
 });
+
+it('changes constructor recipes only after buffers are empty, without discarding items', async () => {
+  const { ConstructorMachine } = await import('../../src/machines/ConstructorMachine');
+  const { createDefaultRecipeRegistry } = await import('../../src/production/Recipes');
+  document.body.innerHTML = '<section hidden><h2 data-machine-title></h2><div data-machine-details></div><button data-machine-close>Close</button><div><button data-machine-toggle></button><button data-machine-retrieve></button></div><p data-machine-notice></p></section>';
+  const root = document.querySelector('section')!, items = createDefaultItemRegistry(), player = new Inventory(items, 3);
+  const recipes = createDefaultRecipeRegistry(items), machine = new ConstructorMachine('c', items, recipes.get('iron-plate'), [recipes.get('iron-rod')]);
+  const ui = new MachineUI(root, player, vi.fn()); ui.open(machine);
+  const selector = root.querySelector<HTMLSelectElement>('[data-machine-recipe]')!;
+  expect(selector.value).toBe('iron-plate'); expect(selector.options).toHaveLength(2);
+  machine.input.addItem('iron-ingot', 1); machine.fixedUpdate(1000);
+  selector.value = 'iron-rod'; selector.dispatchEvent(new Event('change'));
+  expect(selector.value).toBe('iron-plate'); expect(root.textContent).toContain('Empty both input and output');
+  expect(machine.input.getItemCount('iron-ingot')).toBe(1); expect(machine.progress).toBe(.5);
+  root.querySelector<HTMLButtonElement>('[data-machine-retrieve-input]')!.click();
+  selector.value = 'iron-rod'; selector.dispatchEvent(new Event('change'));
+  expect(machine.recipe.id).toBe('iron-rod'); expect(machine.progress).toBe(0); expect(root.textContent).toContain('Iron Rod');
+  root.querySelector<HTMLButtonElement>('[data-machine-feed]')!.click(); machine.fixedUpdate(2000); ui.update();
+  root.querySelector<HTMLButtonElement>('[data-machine-retrieve]')!.click(); expect(player.getItemCount('iron-rod')).toBe(1);
+  ui.dispose();
+});

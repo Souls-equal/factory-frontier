@@ -33,8 +33,10 @@ export class MachineManager implements SimulationSystem {
     for (const id of this.smelters.keys()) if (!ids.has(id)) this.smelters.delete(id);
     for (const id of this.constructors.keys()) if (!ids.has(id)) this.constructors.delete(id);
     for (const building of all) {
-      if (building.typeId === 'constructor' && !this.constructors.has(building.id))
-        this.constructors.set(building.id, new ConstructorMachine(building.id, this.items, createDefaultRecipeRegistry(this.items).get('iron-plate')));
+      if (building.typeId === 'constructor' && !this.constructors.has(building.id)) {
+        const recipes = createDefaultRecipeRegistry(this.items);
+        this.constructors.set(building.id, new ConstructorMachine(building.id, this.items, recipes.get('iron-plate'), [recipes.get('iron-rod')]));
+      }
       if (building.typeId === 'smelter' && !this.smelters.has(building.id))
         this.smelters.set(building.id, new Smelter(building.id, this.items, createDefaultRecipeRegistry(this.items).get('iron-ingot')));
       if (building.typeId !== 'miner-mk1' || this.machines.has(building.id)) continue;
