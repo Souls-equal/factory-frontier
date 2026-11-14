@@ -2,12 +2,34 @@
 
 **Project:** Factory Frontier
 **Version:** 0.3.0
-**Current Phase:** Phase 7 — Advanced logistics (integration and acceptance)
-**Phase Status:** 🟡 In progress — Phase 7 integration audited; player acceptance pending
-**Next Recommended Task:** Player validation using `docs/PHASE_7_VALIDATION_FR.md`; Phase 7 remains open pending the results.
+**Current Phase:** Phase 8 — Electricity (first implementation slice)
+**Phase Status:** 🟡 In progress — isolated power-network simulation foundation
+**Next Recommended Task:** Implement and integrate a fueled biomass generator, power poles and inspection; the player is testing Phase 7 in parallel.
 **Last Updated:** 2026-11-11
 
 ---
+
+## Phase 8 — power network foundation
+
+- The user explicitly requested starting Phase 8 while they test Phase 7. This
+  is a user-directed exception to the earlier acceptance gate, **not** a Phase 7
+  acceptance report. Phase 7 stays open and its existing gameplay is unchanged.
+- Added an isolated `PowerGrid` domain model with explicit 3D range-limited
+  pole-to-pole and pole-to-endpoint wires. Consumers and generators attach to at
+  most one pole; topology updates immediately merge or split components. Node
+  removal cleans up incident wires. No building, renderer or machine owns it yet.
+- Per-network snapshots report installed and enabled generation capacity, enabled
+  demand, supplied watts, shortfall, status and membership. Power is represented
+  in safe integer watts. Disconnected endpoints are isolated; an inactive or
+  insufficient source leaves consumers unpowered. On overload the entire network
+  sheds its enabled demand; no partial allocation is claimed. These are domain
+  rules for the foundation, not yet active in the game.
+- Tests cover topology, 3D distance, cycles, merge/split, validation and safe sums,
+  overload/recovery, isolation, snapshot safety, deterministic ordering and
+  repeated graph changes. Biomass fuel, buildable poles/generators, wiring UI,
+  machine power requirements and player-facing statistics are **not implemented**.
+  Existing miners, smelters and constructors continue to operate as before so
+  Phase 7 remains testable. Phase 8 is not complete.
 
 ## Phase 7 final integration audit
 
@@ -1038,7 +1060,7 @@ This task's merge is deployed by the same pipeline; the result is recorded below
 6. **Two interactable props exist as environment content.** They demonstrate the
    interaction contract (ping log, relay channel) and are not resource/gameplay
    systems.
-7. **No save system or power network** — by design. Machines, buildings and inventory exist in memory only.
+7. **No save system or playable power network.** Machines, buildings and inventory exist in memory only. The Phase 8 power-grid core exists but is not connected to gameplay.
 8. **Source maps (~3.27 MB) ship with the production build** for debuggability.
 9. **Collision bounds:** a deeply embedded spawn or pathological intersecting
    cylinder cluster may need a noticeable depenetration correction or remain

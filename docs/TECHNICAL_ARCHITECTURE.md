@@ -1663,3 +1663,31 @@ still revalidates independently. Escape is handled at the logistics modal level,
 including selector and numeric-input focus. A consolidated French player checklist
 is in `PHASE_7_VALIDATION_FR.md`. Automated evidence does not establish player
 acceptance or remove the documented route, lift and legacy-connection limits.
+
+
+## Implementation note — Phase 8 electrical topology foundation
+
+`PowerGrid` is a pure, renderer-independent domain model, not yet registered in
+the game. It owns a graph of explicit 3D-positioned poles, generators and
+consumers. Wires must include a pole, fit a configurable 3D range and connect
+distinct nodes; generators and consumers have at most one wire, preventing them
+from bridging pole networks. Poles can form arbitrary graphs and cycles. Adding
+or removing a node or edge updates connected components without persisting
+network identities: a snapshot uses the least member ID for its current component.
+
+Rates are non-negative safe integer watts; global aggregate bounds prevent
+overflow. Snapshots are independent copies and contain sorted member IDs,
+installed capacity, enabled capacity, enabled demand, supplied watts, shortfall
+and status. Unconnected endpoints are `isolated`, a pole network without online
+capacity is `offline`, excess demand is `overloaded`, otherwise it is `online`.
+An overloaded network supplies zero to all consumers; a disabled consumer or
+isolated endpoint is never powered. Actual fuel use, generation dispatch, stored
+energy, wire rendering, persistence and machine simulation are not implemented.
+The current coal-smelter and Phase 7 gameplay retain their existing behavior.
+
+Graph mutations are validated before changes and increase the revision only on
+actual changes. Snapshots are rebuilt on query; future in-game integration should
+batch/cache them as needed and update the network before machines in the fixed
+timestep. Tests verify 3D range, merging, splitting, cycles, no phantom links,
+capacity/demand changes, overload recovery, validation and deterministic graph
+recomputation. Phase 7 acceptance remains pending; Phase 8 is only started.
