@@ -3,11 +3,28 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 7 — Advanced logistics (integration and acceptance)
-**Phase Status:** 🟡 In progress — quantity-limited stack transfers and remaining logistics acceptance
-**Next Recommended Task:** Play-test quantity-limited stack transfers, filtered splitter routing and remaining logistics scenarios; Phase 7 acceptance remains open.
+**Phase Status:** 🟡 In progress — shared production-network acceptance and remaining logistics checks
+**Next Recommended Task:** Play-test the shared production network, quantity-limited stack transfers, filtered splitter routing and remaining logistics scenarios; Phase 7 acceptance remains open.
 **Last Updated:** 2026-11-11
 
 ---
+
+## Shared production-network integration coverage
+
+- An automated Phase 7 integration scenario runs two real miners through a merger,
+  coal-fueled smelter and constructor, then a balanced splitter to a belt and an
+  elevated lift. It starts with filled output buffers and full destinations,
+  verifies blockage, paused simulation, occupied-demolition protection and
+  partial recovery before releasing the remaining branch.
+- The test accounts for ore, coal, ingots and plates across machine buffers,
+  junctions, belts, storage and player inventory, with no ground drops. It
+  explicitly simulates deposits becoming unavailable after 60 items each and
+  seeds 100 ingots and 100 plates to exercise backpressure without a long wait.
+  Items already committed to a full branch remain there until it is emptied;
+  opening the other branch does not reroute them.
+- This adds automated coverage, not gameplay features or in-game validation.
+  The combined scenario and the existing Phase 7 acceptance checklist still need
+  player testing. Foundations and earlier transport rules are unchanged.
 
 ## Selected storage stack transfers
 
