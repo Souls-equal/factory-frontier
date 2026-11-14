@@ -16,6 +16,8 @@ import { MinerInteractable } from './machines/MinerInteractable';
 import { SmelterInteractable } from './machines/SmelterInteractable';
 import { ConstructorInteractable } from './machines/ConstructorInteractable';
 import { MachineUI } from './ui/MachineUI';
+import { FactoryDashboard } from './ui/FactoryDashboard';
+import { ProductionHistory } from './statistics/ProductionHistory';
 import { ConstructionUI } from './ui/ConstructionUI';
 import { createGameConfig } from './core/Configuration';
 import { Game } from './core/Game';
@@ -72,6 +74,7 @@ let inventoryUI: InventoryUI | undefined;
 let constructionUI: ConstructionUI | undefined;
 let machineUI: MachineUI | undefined;
 let logisticsUI: LogisticsUI | undefined;
+let dashboardUI: FactoryDashboard | undefined;
 
 function measureViewport(): { width: number; height: number } {
   const width = app?.clientWidth ?? 0;
@@ -106,6 +109,7 @@ function shutdown(): void {
   machineUI?.dispose();
   machineUI = undefined;
   logisticsUI?.dispose(); logisticsUI = undefined;
+  dashboardUI?.dispose(); dashboardUI = undefined;
   game?.dispose();
 }
 
@@ -148,7 +152,8 @@ async function boot(): Promise<void> {
   const constructionStatus = document.querySelector<HTMLElement>('[data-ui="construction-status"]');
   const machineRoot = document.querySelector<HTMLElement>('[data-ui="machine"]');
   const logisticsRoot = document.querySelector<HTMLElement>('[data-ui="logistics"]');
-  if (!inventoryRoot || !constructionRoot || !constructionStatus || !machineRoot || !logisticsRoot) throw new Error('Application shell is missing a gameplay panel.');
+  const dashboardRoot = document.querySelector<HTMLElement>('[data-ui="factory"]');
+  if (!inventoryRoot || !constructionRoot || !constructionStatus || !machineRoot || !logisticsRoot || !dashboardRoot) throw new Error('Application shell is missing a gameplay panel.');
   const buildings = world.buildings;
   const buildingRegistry = buildings.registry;
   const construction = new ConstructionController(buildings, world.terrain, config.construction.reach);
@@ -166,11 +171,12 @@ async function boot(): Promise<void> {
   const playerFootprint = () => ({ x: player.position.x, z: player.position.z, radius: config.player.radius,
     feetY: player.position.y, headY: player.position.y + config.player.height });
   const machines = new MachineManager(buildings, registry, () => world.deposits, config.miner,
-    () => !!(machineUI?.isOpen || logisticsUI?.isOpen || constructionUI?.isOpen || inventoryUI?.isOpen));
+    () => !!(machineUI?.isOpen || logisticsUI?.isOpen || constructionUI?.isOpen || inventoryUI?.isOpen || dashboardUI?.isOpen));
   const power = new PowerManager(buildings, machines, registry,
-    () => !!(machineUI?.isOpen || logisticsUI?.isOpen || constructionUI?.isOpen || inventoryUI?.isOpen));
+    () => !!(machineUI?.isOpen || logisticsUI?.isOpen || constructionUI?.isOpen || inventoryUI?.isOpen || dashboardUI?.isOpen));
   const logistics = new LogisticsManager(buildings, machines, registry,
-    () => !!(machineUI?.isOpen || logisticsUI?.isOpen || constructionUI?.isOpen || inventoryUI?.isOpen), 1, undefined, groundItems, power);
+    () => !!(machineUI?.isOpen || logisticsUI?.isOpen || constructionUI?.isOpen || inventoryUI?.isOpen || dashboardUI?.isOpen), 1, undefined, groundItems, power);
+  const history = new ProductionHistory(machines, registry, () => !!(machineUI?.isOpen || logisticsUI?.isOpen || constructionUI?.isOpen || inventoryUI?.isOpen || dashboardUI?.isOpen));
   const routeEditor = new ConveyorRouteEditor(buildings, world.terrain);
   let routeMode = false;
   const clearRoute = (): void => { routeMode = false; routeEditor.reset(); };
@@ -192,6 +198,11 @@ async function boot(): Promise<void> {
     if (!logisticsUI?.isOpen) return;
     logisticsUI.closePanel(); createdInput.resumeFromModal();
   };
+  const closeDashboard = (): void => {
+    if (!dashboardUI?.isOpen) return;
+    dashboardUI.closePanel(); createdInput.resumeFromModal();
+  };
+  dashboardUI = new FactoryDashboard(dashboardRoot, buildings, machines, logistics, power, history, registry, closeDashboard);
   logisticsUI = new LogisticsUI(logisticsRoot, logistics, inventory, closeLogistics);
   machineUI = new MachineUI(machineRoot, inventory, closeMachine, id => power.networkFor(id), itemId => machines.statistics(itemId));
   inventoryUI = new InventoryUI(inventoryRoot, inventory, closeInventory);
@@ -202,7 +213,7 @@ async function boot(): Promise<void> {
   createdInput = new InputManager(canvas as HTMLCanvasElement, {
     onPointerLockChange: (locked) => controlsHint.setPointerLocked(locked),
     onInventoryToggle: () => {
-      if (constructionUI?.isOpen || machineUI?.isOpen || logisticsUI?.isOpen) return;
+      if (constructionUI?.isOpen || machineUI?.isOpen || logisticsUI?.isOpen || dashboardUI?.isOpen) return;
       if (inventoryUI?.isOpen) closeInventory();
       else { clearRoute(); construction.cancel(); pendingConstruction = null; player.stopHorizontalMotion(); createdInput.suspendForModal(); inventoryUI?.open(); }
     },
@@ -210,6 +221,7 @@ async function boot(): Promise<void> {
     isConstructionActive: () => construction.active,
     onConstructionClick: () => { if (construction.active) pendingConstruction = 'place'; },
     onConstructionKey: (code, shiftKey) => {
+      if (dashboardUI?.isOpen) { if (code === 'Escape' || code === 'KeyH') closeDashboard(); return true; }
       if (machineUI?.isOpen) { if (code === 'Escape') closeMachine(); return true; }
       if (logisticsUI?.isOpen) { if (code === 'Escape') closeLogistics(); return true; }
       if (inventoryUI?.isOpen) return code !== 'Escape';
@@ -217,6 +229,9 @@ async function boot(): Promise<void> {
         if (constructionUI?.isOpen) { closeConstruction(); return true; }
         if (construction.active) { clearRoute(); construction.cancel(); pendingConstruction = null; return true; }
         return false;
+      }
+      if (code === 'KeyH' && !construction.active && !constructionUI?.isOpen) {
+        pendingConstruction = null; player.stopHorizontalMotion(); createdInput.suspendForModal(); dashboardUI?.open(); return true;
       }
       if (code === 'KeyQ') {
         if (constructionUI?.isOpen) closeConstruction();
@@ -375,7 +390,7 @@ async function boot(): Promise<void> {
     fixedUpdate: (fixedDeltaMs) => {
       const movement = createdInput.getMovement();
       const jump = createdInput.consumeJump();
-      if (!constructionUI?.isOpen && !inventoryUI?.isOpen && !machineUI?.isOpen && !logisticsUI?.isOpen) {
+      if (!constructionUI?.isOpen && !inventoryUI?.isOpen && !machineUI?.isOpen && !logisticsUI?.isOpen && !dashboardUI?.isOpen) {
         player.step(fixedDeltaMs / 1000, {
           moveX: movement.right,
           moveZ: movement.forward,
@@ -400,7 +415,7 @@ async function boot(): Promise<void> {
       } else if (action === 'place' && construction.active && !constructionUI?.isOpen && !inventoryUI?.isOpen) {
         const result = construction.confirm(player.view, playerFootprint());
         interactionPrompt.showFeedback(result ? (result.reason === 'valid' ? `${buildings.registry.get(result.building!.typeId).name} placed.` : `Cannot place: ${result.reason}.`) : 'Aim at nearby ground.');
-      } else if (action === 'inspect-conveyor' && !construction.active && !constructionUI?.isOpen && !inventoryUI?.isOpen && !machineUI?.isOpen && !logisticsUI?.isOpen) {
+      } else if (action === 'inspect-conveyor' && !construction.active && !constructionUI?.isOpen && !inventoryUI?.isOpen && !machineUI?.isOpen && !logisticsUI?.isOpen && !dashboardUI?.isOpen) {
         const target = construction.target(player.view);
         logistics.sync();
         if (!target || !logistics.network.get(target)) interactionPrompt.showFeedback('Aim at a conveyor or lift to inspect.');
@@ -416,7 +431,7 @@ async function boot(): Promise<void> {
       }
       syncMachines(); syncPower(); syncLogistics(); syncBeltItems(); syncGroundItems();
       const interactPressed = createdInput.consumeInteract();
-      if (interactPressed && action === null && !construction.active && !constructionUI?.isOpen && !inventoryUI?.isOpen && !machineUI?.isOpen && !logisticsUI?.isOpen) {
+      if (interactPressed && action === null && !construction.active && !constructionUI?.isOpen && !inventoryUI?.isOpen && !machineUI?.isOpen && !logisticsUI?.isOpen && !dashboardUI?.isOpen) {
         interaction.requestInteraction();
       }
     },
@@ -424,6 +439,7 @@ async function boot(): Promise<void> {
   createdGame.registerSystem(interaction);
   createdGame.registerSystem(power);
   createdGame.registerSystem(logistics);
+  createdGame.registerSystem(history);
 
   // --- presentation stage --------------------------------------------------
   createdGame.registerFrameSystem({
@@ -456,7 +472,7 @@ async function boot(): Promise<void> {
       const routePreview = routePoint ? routeEditor.preview(routePoint, playerFootprint(), construction.facing(player.view), inventory.revision, performance.now()) : null;
       engine.syncBuildings?.(buildings.all());
       engine.syncPowerWires?.(power.wires());
-      engine.syncConveyors?.(logistics.network.all(), machineUI?.isOpen || logisticsUI?.isOpen || constructionUI?.isOpen || inventoryUI?.isOpen ? 1 : createdGame.clock.alpha, groundItems.all());
+      engine.syncConveyors?.(logistics.network.all(), machineUI?.isOpen || logisticsUI?.isOpen || constructionUI?.isOpen || inventoryUI?.isOpen || dashboardUI?.isOpen ? 1 : createdGame.clock.alpha, groundItems.all());
       engine.setMachineStates?.([...machines.all(), ...machines.allSmelters(), ...machines.allConstructors(), ...machines.allAdvanced()].map((machine) => ({ id: machine.id, state: machine.state })));
       const routeValid = !!routePreview && (routePreview.starting ? routePreview.startValid : routePreview.reason === 'valid');
       const first = routePreview?.visualCells[0];
@@ -474,7 +490,7 @@ async function boot(): Promise<void> {
       } else if (construction.active) constructionStatus.textContent = (buildings.creativeMode ? 'Creative · ' : '') + (preview
         ? `${preview.reason === 'valid' ? 'Valid placement' : `Cannot place: ${preview.reason}`} · R rotate · Left click place · Esc cancel${preview.connection ? ` · ${preview.connection} port` : ''}${construction.selected?.startsWith('conveyor-') ? ' · direction follows view; yellow = output · R rotates' : ''}${construction.selected === 'conveyor-cell' ? ' · T route mode' : ''}${preview.snappedToLogistics ? ' · aligned to raised conveyor level' : preview.snappedToConveyor || preview.snappedToFoundation ? ' · aligned to neighbour' : ''}${construction.selected && liftRise(construction.selected) !== null ? ` · Page Up/Down lift height (${Math.abs(liftRise(construction.selected)!)} m) · Shift + Page Up/Down: 0.1 m` : ''}${construction.selected === 'foundation' ? ` · Page Up/Down height (${construction.foundationHeightOffset >= 0 ? '+' : ''}${construction.foundationHeightOffset.toFixed(1)} m) · base ${preview.transform.y.toFixed(1)} m` : ''}${preview.conveyorPreviewChanges?.length ? ' · green preview shows belt after placement' : ''}${!createdInput.isPointerLocked ? ' · drag to look · right click to capture mouse' : ''}`
         : `Aim at ${construction.selected && buildings.registry.get(construction.selected).placement === 'logistics' ? 'ground or a platform' : 'ground'} within ${config.construction.reach} m · R rotate · Left click place · Esc cancel${construction.selected && liftRise(construction.selected) !== null ? ` · Page Up/Down lift height (${Math.abs(liftRise(construction.selected)!)} m) · Shift + Page Up/Down: 0.1 m` : ''}${!createdInput.isPointerLocked ? ' · drag to look · right click to capture mouse' : ''}`);
-      const target = inventoryUI?.isOpen || constructionUI?.isOpen || machineUI?.isOpen || logisticsUI?.isOpen || construction.active ? null : interaction.target;
+      const target = inventoryUI?.isOpen || constructionUI?.isOpen || machineUI?.isOpen || logisticsUI?.isOpen || dashboardUI?.isOpen || construction.active ? null : interaction.target;
       engine.setHighlight?.(target?.id ?? null);
 
       if (target === null) {

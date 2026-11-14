@@ -1796,3 +1796,24 @@ lifetime averages, not a rolling window; demolition and session reset erase
 statistics, and there is no dedicated dashboard or persistence. Power data is
 still per network. See `PHASE_9_VALIDATION_FR.md`; no foundation placement logic
 was changed.
+
+## Implementation note — Phase 9 factory dashboard and rolling history
+
+`ProductionHistory` samples the authoritative machine counters after power and
+logistics on each fixed step. It stores only 60 one-second simulation buckets
+of completed production, committed consumption and extracted items. Events are
+assigned to the end of the sample step; expiry is quantized by second. Rates
+scale by actual elapsed simulated time until the window fills. The bounded
+window retains already-recorded events briefly after a machine is removed, but
+cleans up per-machine baselines. Pauses do not advance or sample the history.
+The history is session-only; no historical charts, persistence or inferred
+root-cause/throughput analysis are claimed.
+
+H opens `FactoryDashboard`, a modal read-only snapshot which pauses all factory
+updates. It shows per-item rates, lifetime average utilization, a unique list of
+electrical networks with supply, demand and shortfall, and actual missing-input,
+coal, electricity, full-output and blocked-belt states with building coordinates.
+Summing each network once avoids double-counting power; aggregate numbers do not
+imply energy can flow between isolated networks. The H and Escape paths release
+and restore input capture consistently with existing panels. No foundation logic
+changed. The game UI and new phase 9 scenarios remain unvalidated by the player.

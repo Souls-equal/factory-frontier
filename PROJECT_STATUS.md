@@ -3,8 +3,8 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 9 — Advanced manufacturing
-**Phase Status:** 🟡 In progress — playable multi-input manufacturing and initial factory statistics
-**Next Recommended Task:** Player validation and further refine factory-wide bottleneck diagnostics and statistics.
+**Phase Status:** 🟡 In progress — playable multi-input manufacturing and factory dashboard
+**Next Recommended Task:** Validate Phase 9 in-game, then evaluate remaining diagnostics before starting Phase 10.
 **Last Updated:** 2026-11-11
 
 ---
@@ -38,9 +38,17 @@
   foundry → constructor chains, two-input assembler delivery, capacity,
   conservation, blocking, pause, recovery, lift, recipe changes and statistics.
   See `docs/PHASE_9_VALIDATION_FR.md` for outstanding player checks.
-- Phase 9 is **not yet accepted**: the new systems need player validation;
-  rolling/history statistics, a dedicated factory dashboard and more complete
-  bottleneck diagnostics remain to be assessed against the full GDD criteria.
+- H opens a read-only factory dashboard with rolling 60-second production,
+  consumption and extraction rates, live power-network snapshots and a list of
+  current missing-input, power/fuel and blocked-output/belt states with locations.
+  The window uses one-second simulation buckets and fixed-step sampling: boundary
+  values can differ by up to a bucket, and it scales rates during startup. It
+  includes events from machines demolished within the window; history is lost
+  when the session ends. Opening the dashboard pauses the simulation.
+- Phase 9 is **not yet accepted**: player validation of the new machines and
+  dashboard remains outstanding. Diagnostics describe observed states rather
+  than automatically inferring root causes or line balancing; historical graphs
+  and persistence are not implemented.
 
 ## Phase 8 — playable electrical integration
 
