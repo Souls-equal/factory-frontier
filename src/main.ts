@@ -193,7 +193,7 @@ async function boot(): Promise<void> {
     logisticsUI.closePanel(); createdInput.resumeFromModal();
   };
   logisticsUI = new LogisticsUI(logisticsRoot, logistics, inventory, closeLogistics);
-  machineUI = new MachineUI(machineRoot, inventory, closeMachine, id => power.networkFor(id));
+  machineUI = new MachineUI(machineRoot, inventory, closeMachine, id => power.networkFor(id), itemId => machines.statistics(itemId));
   inventoryUI = new InventoryUI(inventoryRoot, inventory, closeInventory);
   constructionUI = new ConstructionUI(constructionRoot, buildingRegistry, inventory, (id) => {
     clearRoute(); construction.select(id); closeConstruction();
@@ -260,7 +260,7 @@ async function boot(): Promise<void> {
   const machineInteractions = new Map<string, () => void>();
   const syncMachines = (): void => {
     machines.sync();
-    const active = new Set([...machines.all(), ...machines.allSmelters(), ...machines.allConstructors()].map((machine) => machine.id));
+    const active = new Set([...machines.all(), ...machines.allSmelters(), ...machines.allConstructors(), ...machines.allAdvanced()].map((machine) => machine.id));
     for (const [id, unregister] of machineInteractions) {
       if (!active.has(id)) { unregister(); machineInteractions.delete(id); }
     }
@@ -286,6 +286,17 @@ async function boot(): Promise<void> {
       machineInteractions.set(machine.id, interaction.register(new ConstructorInteractable(machine, building, config.interaction.range, (selected) => {
         pendingConstruction = null; player.stopHorizontalMotion(); createdInput.suspendForModal(); machineUI?.open(selected);
       })));
+    }
+    for (const machine of machines.allAdvanced()) {
+      if (machineInteractions.has(machine.id)) continue;
+      const building = buildings.get(machine.id); if (!building) continue;
+      machineInteractions.set(machine.id, interaction.register({
+        descriptor: { id: building.id, displayName: machine.kind, hint: 'Inspect machine',
+          position: { x: building.transform.x, y: building.transform.y + 1.1, z: building.transform.z }, targetRadius: 1.35, range: config.interaction.range },
+        isAvailable: () => true,
+        interact: () => { pendingConstruction = null; player.stopHorizontalMotion(); createdInput.suspendForModal(); machineUI?.open(machine);
+          return { ok: true, message: `Inspecting ${machine.kind}.` }; },
+      }));
     }
   };
 
@@ -446,7 +457,7 @@ async function boot(): Promise<void> {
       engine.syncBuildings?.(buildings.all());
       engine.syncPowerWires?.(power.wires());
       engine.syncConveyors?.(logistics.network.all(), machineUI?.isOpen || logisticsUI?.isOpen || constructionUI?.isOpen || inventoryUI?.isOpen ? 1 : createdGame.clock.alpha, groundItems.all());
-      engine.setMachineStates?.([...machines.all(), ...machines.allSmelters(), ...machines.allConstructors()].map((machine) => ({ id: machine.id, state: machine.state })));
+      engine.setMachineStates?.([...machines.all(), ...machines.allSmelters(), ...machines.allConstructors(), ...machines.allAdvanced()].map((machine) => ({ id: machine.id, state: machine.state })));
       const routeValid = !!routePreview && (routePreview.starting ? routePreview.startValid : routePreview.reason === 'valid');
       const first = routePreview?.visualCells[0];
       engine.setBuildingPreview?.(routeMode ? (first ? 'conveyor-cell' : null) : construction.selected,

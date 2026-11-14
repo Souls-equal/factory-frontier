@@ -68,9 +68,17 @@ export function createDefaultBuildingRegistry(items: ItemRegistry): BuildingRegi
     cost: [{ itemId: 'stone', quantity: 15 }, { itemId: 'wood', quantity: 10 }], widthCells: 2, depthCells: 2,
     height: 2.2, maxSlope: .58, maxGroundVariation: .8, color: 0x7b7370, placement: 'logistics' });
   registry.register({ id: 'constructor', name: 'Constructor', category: 'Production',
-    description: 'Presses iron ingots into plates or rods. Choose the recipe in E inspection.',
+    description: 'Forms iron or steel ingots into components. Choose the recipe in E inspection.',
     cost: [{ itemId: 'stone', quantity: 15 }, { itemId: 'wood', quantity: 10 }], widthCells: 2, depthCells: 2,
     height: 2.2, maxSlope: .58, maxGroundVariation: .8, color: 0x56777e, placement: 'logistics' });
+  registry.register({ id: 'assembler', name: 'Assembler', category: 'Production',
+    description: 'Combines iron plates and rods. Cyan rear input, yellow front output.',
+    cost: [{ itemId: 'stone', quantity: 20 }, { itemId: 'wood', quantity: 15 }], widthCells: 2, depthCells: 2,
+    height: 2.2, maxSlope: .58, maxGroundVariation: .8, color: 0x658782, placement: 'logistics' });
+  registry.register({ id: 'foundry', name: 'Foundry', category: 'Production',
+    description: 'Alloys iron ore and coal into steel ingots. Cyan rear input, yellow front output.',
+    cost: [{ itemId: 'stone', quantity: 20 }, { itemId: 'wood', quantity: 15 }], widthCells: 2, depthCells: 2,
+    height: 2.2, maxSlope: .58, maxGroundVariation: .8, color: 0x7c655c, placement: 'logistics' });
   for (const direction of ['up', 'down'] as const) for (let steps = 10; steps <= MAX_LIFT_HEIGHT * 10; steps++) {
     const rise = steps / 10;
     const id = `lift-${direction}-${rise}`, input = direction === 'up' ? 'low' : 'high';

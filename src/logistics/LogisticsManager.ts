@@ -33,7 +33,7 @@ export class LogisticsManager implements SimulationSystem {
     if (!Number.isSafeInteger(terminalSlots) || terminalSlots < 1) throw new RangeError('Invalid receiver capacity');
     this.network = new ConveyorNetwork(() => false, groundItems ? (item, position) => groundItems.drop(item.id, item.itemId, position) : undefined);
     buildings.addTopologyGuard((before, after) => {
-      const relevant = (entries: typeof before) => entries.filter((b) => b.typeId.startsWith('conveyor-') || b.typeId === 'miner-mk1' || (b.typeId === 'smelter' || b.typeId === 'constructor' || b.typeId === 'biomass-generator') || b.typeId === RECEIVER_TYPE || b.typeId === 'storage-container' || b.typeId === 'splitter' || b.typeId === 'merger' || isLiftBuilding(b.typeId))
+      const relevant = (entries: typeof before) => entries.filter((b) => b.typeId.startsWith('conveyor-') || b.typeId === 'miner-mk1' || (b.typeId === 'smelter' || b.typeId === 'constructor' || b.typeId === 'assembler' || b.typeId === 'foundry' || b.typeId === 'biomass-generator') || b.typeId === RECEIVER_TYPE || b.typeId === 'storage-container' || b.typeId === 'splitter' || b.typeId === 'merger' || isLiftBuilding(b.typeId))
         .map((b) => [b.id, b.typeId, b.transform.x, b.transform.y, b.transform.z, b.transform.rotation, b.autoConveyor, b.cellConveyor]);
       if (JSON.stringify(relevant(before)) === JSON.stringify(relevant(after))) return true;
       this.sync();
@@ -169,7 +169,7 @@ export class LogisticsManager implements SimulationSystem {
           this.network.attachCellSource(cell.id, conditional, distance, start);
         } else if (!attachLiftSource(building, conditional)) for (const segment of legacy) if (this.network.attachSource(segment.id, conditional)) break;
       }
-      const processor = this.machines.smelter(building.id) ?? this.machines.constructorMachine(building.id);
+      const processor = this.machines.smelter(building.id) ?? this.machines.constructorMachine(building.id) ?? this.machines.advanced(building.id);
       if (processor) {
         // Recipe changes do not alter building topology; resolve the current output on each transfer.
         const source = { id: building.id, pose: machinePort(building, this.buildings.cellSize, 'source'),
@@ -185,10 +185,10 @@ export class LogisticsManager implements SimulationSystem {
         const pose = machinePort(building, this.buildings.cellSize, 'receiver');
         const ore = new InventoryReceiver(building.id, pose, processor.input);
         const fuel = processor instanceof Smelter ? new InventoryReceiver(building.id, pose, processor.fuel) : null;
-        const destination = (itemId: string) => itemId === processor.recipe.input.itemId ? ore : itemId === SMELTER_FUEL.itemId ? fuel : null;
+        const destination = (itemId: string) => [processor.recipe.input, ...(processor.recipe.additionalInputs ?? [])].some(input => input.itemId === itemId) ? ore : itemId === SMELTER_FUEL.itemId ? fuel : null;
         const receiver = { id: building.id, pose,
-          canAccept: (itemId: string) => destination(itemId)?.canAccept(itemId) ?? false,
-          accept: (itemId: string) => destination(itemId)?.accept(itemId) ?? false };
+          canAccept: (itemId: string) => destination(itemId) === ore ? processor.inputSpace(itemId) > 0 : destination(itemId)?.canAccept(itemId) ?? false,
+          accept: (itemId: string) => destination(itemId) === ore ? processor.inputSpace(itemId) > 0 && ore.accept(itemId) : destination(itemId)?.accept(itemId) ?? false };
         for (const cell of cells) if (cellTouchesMachine(cell, building, this.buildings.cellSize, 'receiver')) this.network.attachCellReceiver(cell.id, receiver);
         attachLiftReceivers(building, receiver);
         for (const segment of legacy) if (this.network.attachReceiver(segment.id, receiver)) break;

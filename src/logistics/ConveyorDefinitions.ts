@@ -8,7 +8,7 @@ export { isLiftBuilding, liftRise } from './LiftDefinitions';
 export const CONVEYOR_SHAPES: Readonly<Record<string, ConveyorShape>> = Object.freeze({
   'conveyor-cell': 'straight', 'conveyor-straight': 'straight', 'conveyor-curve': 'curve-right', 'conveyor-incline': 'incline',
 });
-export const isProcessorBuilding = (typeId: string): boolean => typeId === 'smelter' || typeId === 'constructor';
+export const isProcessorBuilding = (typeId: string): boolean => typeId === 'smelter' || typeId === 'constructor' || typeId === 'assembler' || typeId === 'foundry';
 export const liftInputOffset = (typeId: string, cellSize: number): number => Math.max(0, -(liftRise(typeId) ?? 0)) * cellSize;
 export const liftOutputOffset = (typeId: string, cellSize: number): number => Math.max(0, liftRise(typeId) ?? 0) * cellSize;
 export const isDirectionalMachine = (typeId: string): boolean => isProcessorBuilding(typeId) || typeId === 'biomass-generator' || typeId === 'storage-container' || typeId === 'splitter' || typeId === 'merger' || isLiftBuilding(typeId);
