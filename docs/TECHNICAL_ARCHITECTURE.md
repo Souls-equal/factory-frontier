@@ -1630,3 +1630,17 @@ source revision. Destination changes do not invalidate the source selection.
 The notice reports the total still in the selected source stack. Bulk retrieval,
 transport, filters, foundations and modal pause are unchanged. In-game player
 validation remains pending.
+
+
+## Verification note — combined production logistics
+
+An integration test places two real miners, a merger, a fueled smelter, a
+constructor and a balanced splitter with a belt and an elevated direct lift
+branch, using the actual machine and logistics managers at 50 ms steps. It
+seeds downstream buffers and full destinations to exercise backpressure, checks
+modal pause, releases destinations in stages and counts all relevant resources
+across inventories, belts, junctions and the player. It simulates deposit
+unavailability after 60 items per miner to bound the input. It also verifies
+that opening a different branch does not reroute items already committed to a
+full belt. No game or architectural behavior changed. This is automated
+evidence for one arrangement, not browser or player acceptance of Phase 7.

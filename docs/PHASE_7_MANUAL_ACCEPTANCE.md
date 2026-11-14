@@ -29,6 +29,12 @@ blocked or disconnected, and flow resumes after it clears. Return to Balanced.
    until empty, and a full player inventory must not delete remaining items.
 4. Connect iron and coal miners through the merger to the smelter, then route
    ingots to the constructor and plates to storage. Observe automatic operation.
+5. Extend the constructor output through a balanced splitter to two receivers,
+   using a lift for one branch. Fill both receivers and confirm backing up.
+   Empty one: production should resume toward it while the other remains full.
+   Empty the second and check recovery and conservation. Items already on a
+   blocked branch stay on it until its receiver is cleared; they do not reroute.
+   Open a panel while the chain is active and verify the simulation pauses.
 
 ## Lifts
 

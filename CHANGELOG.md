@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — combined production-network verification
+
+- Add an automated real-machine integration scenario combining two miners,
+  merger, smelter, constructor, splitter, belt, lift and two receivers. Check
+  backpressure, pause, staged recovery and resource conservation, including
+  items already committed to a full branch. Update the player checklist; real
+  player acceptance remains pending. No gameplay behavior was changed.
+
 ## Unreleased — quantity-limited storage transfers
 
 - Choose an optional whole quantity from a selected storage or terminal stack,
