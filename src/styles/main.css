@@ -521,3 +521,10 @@ body {
 .inventory .terminal__retrieve { flex: 1 1 160px; display: flex; justify-content: space-between; font-weight: 700; background: #1a5963; border-color: #58b8c2; }
 .terminal__notice { color: #91ddd6; font-size: 12px; min-height: 1.3em; }
 @media (max-width: 700px) { .terminal__layout { grid-template-columns: 1fr; gap: 14px; } .terminal__pane { padding: 12px; } }
+
+.factory-dashboard h3 { margin: 20px 0 8px; color: var(--ff-text); }
+.factory-dashboard__table { overflow-x: auto; }
+.factory-dashboard table { border-collapse: collapse; width: 100%; font-size: 13px; }
+.factory-dashboard th, .factory-dashboard td { padding: 7px 10px; text-align: left; border-bottom: 1px solid #5ad6e833; }
+.factory-dashboard th { color: var(--ff-accent); }
+.factory-dashboard ul { color: var(--ff-text); line-height: 1.6; padding-left: 1.3rem; font-size: 13px; }

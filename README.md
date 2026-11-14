@@ -76,6 +76,8 @@ simulation time, ticks, draw calls, triangles, frame systems).
 | Space | Jump (grounded only; holding does not repeat) |
 | Shift | Sprint |
 | E | Interact with the highlighted target |
+| G | Inspect the targeted conveyor or lift |
+| H | Open the factory production and diagnostic dashboard |
 | Q | Open/close construction menu or cancel placement |
 | R | Rotate placement preview by 90° |
 | Left click | Confirm valid placement |

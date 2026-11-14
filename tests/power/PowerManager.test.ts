@@ -77,4 +77,16 @@ describe('building-backed power integration', () => {
     expect(power.wires().find(w => w.b === m.id)?.a).toBe(left.id);
   });
 
+  it('returns each power network once for factory-wide aggregation', () => {
+    const { power, place } = setup();
+    const m = place('miner-mk1', 0, 0); place('power-pole', 3, 0); const gen = place('biomass-generator', 5, 0);
+    const isolated = place('constructor', 20, 0); power.sync(); power.generator(gen.id)!.fuel.addItem('wood', 1); power.fixedUpdate(50);
+    const networks = power.networks(); expect(networks).toHaveLength(2);
+    expect(networks.find(n => n.consumers.includes(m.id))?.status).toBe('online');
+    expect(networks.find(n => n.consumers.includes(isolated.id))?.status).toBe('isolated');
+    expect(networks.reduce((n, network) => n + network.suppliedWatts, 0)).toBe(10000);
+    expect(networks.reduce((n, network) => n + network.demandWatts, 0)).toBe(20000);
+    expect(networks.reduce((n, network) => n + network.capacityWatts, 0)).toBe(30000);
+  });
+
 });

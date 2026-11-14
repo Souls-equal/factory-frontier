@@ -24,6 +24,8 @@ export class PowerManager implements SimulationSystem {
   generator(id: string): BiomassGenerator | undefined { return this.generators.get(id); }
   wires(): readonly PowerWire[] { return this.wireSnapshot; }
   networkFor(id: string): PowerNetwork { return this.simulation.networkFor(id); }
+  /** One snapshot per connected component; do not sum endpoint lookups. */
+  networks(): readonly PowerNetwork[] { this.sync(); return this.simulation.refresh(); }
   private position(b: BuildingInstance): PowerPosition {
     return { x: b.transform.x, y: b.transform.y + this.buildings.registry.get(b.typeId).height - .1, z: b.transform.z };
   }

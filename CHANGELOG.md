@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — Phase 9 factory dashboard
+
+- Add H factory dashboard with bounded rolling production/consumption/extraction,
+  unique power network snapshots and current machine/conveyor blockages.
+- Pause simulation while open; use one-second buckets on the fixed simulation
+  clock. Retain recent events after demolition and document startup/expiry limits.
+- Add automated sampling, pause, power aggregation, UI and bootstrap coverage.
+
 ## Unreleased — playable Phase 9 advanced manufacturing
 
 - Add powered Assembler and Foundry, bounded multi-ingredient logistics and

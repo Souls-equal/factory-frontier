@@ -223,3 +223,26 @@ it('inspects a belt with G, pauses the simulation, and does not leak G through a
   window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyG', cancelable: true })); frame(); expect(panel.hidden).toBe(true);
   window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', cancelable: true })); frame(); expect(panel.hidden).toBe(true);
 });
+
+it('opens the factory dashboard with H, pauses power and history, and resumes with Escape', async () => {
+  vi.spyOn(console, 'info').mockImplementation(() => undefined);
+  await import('../../src/main'); await vi.waitFor(() => expect(state.init).toBe(1)); frame();
+  const world = state.world!, deposit = world.deposits.find(entry => entry.itemId === 'iron-ore')!;
+  const result = world.buildings.place('miner-mk1', deposit.x, deposit.z, 0, { x: 80, z: 80, radius: .4 });
+  expect(result.reason).toBe('valid'); supply(result.building!);
+  for (let i = 0; i < 100; i++) frame();
+  const generatorBuilding = world.buildings.all().find(b => b.typeId === 'biomass-generator')!;
+  const generator = state.power!.generator(generatorBuilding.id)!;
+  window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyH', cancelable: true }));
+  const panel = document.querySelector<HTMLElement>('[data-ui="factory"]')!;
+  expect(panel.hidden).toBe(false); expect(panel.textContent).toContain('Iron Ore');
+  const text = panel.textContent, fuel = generator.fuelTimeMs;
+  for (let i = 0; i < 100; i++) frame();
+  expect(generator.fuelTimeMs).toBe(fuel); expect(panel.textContent).toBe(text);
+  window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Tab', cancelable: true }));
+  expect(document.querySelector<HTMLElement>('[data-ui="inventory"]')!.hidden).toBe(true);
+  window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', cancelable: true }));
+  expect(panel.hidden).toBe(true); for (let i = 0; i < 40; i++) frame(); expect(generator.fuelTimeMs).toBeLessThan(fuel);
+  window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyH', cancelable: true })); expect(panel.hidden).toBe(false);
+  panel.querySelector<HTMLButtonElement>('[data-factory-close]')!.click(); expect(panel.hidden).toBe(true);
+});

@@ -1,7 +1,7 @@
 # Phase 9 — vérifications en jeu
 
 Ces scénarios ne sont pas encore validés par le joueur. Les statistiques sont
-conservées uniquement tant que la machine existe dans la partie actuelle.
+limitées à la partie actuelle.
 
 ## Assembleur et composant renforcé
 
@@ -27,11 +27,17 @@ conservées uniquement tant que la machine existe dans la partie actuelle.
 
 ## Statistiques et limites
 
-- L'inspection d'une machine montre ses moyennes par minute depuis sa création,
-  son utilisation et les stocks. Le résumé d'usine regroupe les machines encore
-  posées et compte les sorties pleines, entrées manquantes, coupures de courant et manque de charbon des fondeurs.
-- Les moyennes ne sont pas des débits instantanés ; les données disparaissent à
-  la démolition ou à la fin de la partie. Le temps passé dans les menus est exclu.
+- Appuyer sur H hors construction pour ouvrir le tableau de bord : comparer les
+  productions, consommations et extractions par minute, puis les réseaux et
+  états des machines. Fermer avec H, Échap ou le bouton et vérifier la reprise.
+- Bloquer une sortie ou un convoyeur, enlever une entrée et couper l'électricité :
+  les états et coordonnées doivent apparaître, puis disparaître après correction.
+- Le tableau utilise les 60 derniers groupes d'une seconde de simulation. Au
+  démarrage les débits sont extrapolés ; les valeurs aux frontières sont
+  approximatives. Le menu met la simulation en pause. Un événement d'une machine
+  démolie reste visible jusqu'à l'expiration de sa fenêtre ; tout est perdu en
+  fin de session. L'inspection E garde ses propres moyennes depuis la construction.
 - Une voie transportant un excès d'un ingrédient peut bloquer celui qui suit :
-  utiliser les deux voies ou équilibrer l'arrivée. Aucun mode de diagnostic
-  spécialisé ni tableau historique n'est encore disponible.
+  utiliser les deux voies ou équilibrer l'arrivée. Le tableau montre des états
+  constatés, sans déduire automatiquement la cause en amont ; aucun graphique
+  historique ni sauvegarde n'est encore disponible.
