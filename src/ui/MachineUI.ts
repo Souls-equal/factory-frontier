@@ -3,10 +3,13 @@ import type { Miner } from '../machines/Miner';
 import { Smelter, SMELTER_FUEL } from '../machines/Smelter';
 import { ConstructorMachine } from '../machines/ConstructorMachine';
 import { Processor } from '../machines/Processor';
+import type { BiomassGenerator } from '../power/BiomassGenerator';
+import type { PowerNetwork } from '../power/PowerGrid';
 
 /** DOM-only inspection of authoritative machine state. */
 export class MachineUI {
   private miner: Miner | Processor | null = null;
+  private powerTarget: { id: string; generator?: BiomassGenerator } | null = null;
   private readonly feed: HTMLButtonElement;
   private readonly retrieveInput: HTMLButtonElement;
   private readonly feedFuel: HTMLButtonElement;
@@ -16,7 +19,8 @@ export class MachineUI {
   private readonly toggle: HTMLButtonElement;
   private readonly retrieve: HTMLButtonElement;
   private readonly notice: HTMLElement;
-  constructor(private readonly root: HTMLElement, private readonly player: Inventory, private readonly onClose: () => void) {
+  constructor(private readonly root: HTMLElement, private readonly player: Inventory, private readonly onClose: () => void,
+    private readonly network?: (id: string) => PowerNetwork) {
     const find = <T extends HTMLElement>(selector: string): T => {
       const result = root.querySelector<T>(selector); if (!result) throw new Error(`Missing machine UI ${selector}`); return result;
     };
@@ -35,19 +39,49 @@ export class MachineUI {
   get isOpen(): boolean { return !this.root.hidden; }
   get activeMachine(): Miner | Processor | null { return this.miner; }
   open(miner: Miner | Processor): void {
-    this.miner = miner; this.root.hidden = false; this.notice.textContent = '';
+    this.powerTarget = null; this.miner = miner; this.root.hidden = false; this.notice.textContent = '';
     const name = miner instanceof Smelter ? 'Smelter' : miner instanceof ConstructorMachine ? 'Constructor' : 'Miner Mk.1';
     const title = this.root.querySelector('[data-machine-title]'); if (title) title.textContent = name;
     this.root.setAttribute('aria-label', name); this.update(); this.close.focus();
   }
-  closePanel(): void { this.miner = null; this.root.hidden = true; }
+  openPower(id: string, generator?: BiomassGenerator): void {
+    this.miner = null; this.powerTarget = generator ? { id, generator } : { id };
+    this.root.hidden = false; this.notice.textContent = '';
+    const name = generator ? 'Biomass Generator' : 'Power Pole';
+    const title = this.root.querySelector('[data-machine-title]'); if (title) title.textContent = name;
+    this.root.setAttribute('aria-label', name); this.update(); this.close.focus();
+  }
+  closePanel(): void { this.miner = null; this.powerTarget = null; this.root.hidden = true; }
+  private networkText(id: string): string {
+    if (!this.network) return '';
+    const n = this.network(id);
+    return ` · Network: ${n.status} · Supply: ${n.suppliedWatts / 1000} kW · Demand: ${n.demandWatts / 1000} kW · Available: ${n.availableWatts / 1000} kW · Installed: ${n.capacityWatts / 1000} kW · Shortfall: ${n.shortfallWatts / 1000} kW · Poles: ${n.poles.length} · Generators: ${n.generators.length} · Machines: ${n.consumers.length}`;
+  }
   update(): void {
-    const miner = this.miner; if (!this.isOpen || !miner) return;
+    if (!this.isOpen) return;
+    const power = this.powerTarget;
+    if (power) {
+      const generator = power.generator;
+      this.feed.hidden = true; this.retrieveInput.hidden = true; this.retrieve.hidden = true;
+      this.toggle.hidden = !generator; this.feedFuel.hidden = !generator; this.retrieveFuel.hidden = !generator;
+      if (generator) {
+        this.feedFuel.textContent = 'Add Wood'; this.retrieveFuel.textContent = 'Retrieve Wood';
+        this.feedFuel.disabled = !this.player.getItemCount('wood') || generator.fuel.getAvailableSpace('wood') === 0;
+        this.retrieveFuel.disabled = !generator.fuel.getItemCount('wood');
+        this.toggle.textContent = generator.enabled ? 'Disable' : 'Enable';
+        this.details.textContent = `Generator: ${generator.enabled ? 'enabled' : 'disabled'} · Wood: ${generator.fuel.getItemCount('wood')} · Active fuel: ${(generator.remainingMs / 1000).toFixed(1)} s · 1 wood = 30 s · Capacity: 30 kW · Demolition discards active burn time${this.networkText(power.id)}`;
+      } else this.details.textContent = `Automatic links within 10 m; endpoints attach to their nearest pole.${this.networkText(power.id)}`;
+      return;
+    }
+    const miner = this.miner; if (!miner) return;
+    const network = this.networkText(miner.id);
+    this.retrieve.hidden = false; this.toggle.hidden = false;
+    this.feedFuel.textContent = 'Add coal'; this.retrieveFuel.textContent = 'Retrieve coal';
     this.feed.hidden = !(miner instanceof Processor); this.retrieveInput.hidden = !(miner instanceof Processor);
     this.feedFuel.hidden = !(miner instanceof Smelter); this.retrieveFuel.hidden = !(miner instanceof Smelter);
     if (miner instanceof Smelter) {
       const recipe = miner.recipe, input = this.player.registry.get(recipe.input.itemId).name, output = this.player.registry.get(recipe.output.itemId).name;
-      this.details.textContent = `State: ${miner.state}${miner.state === 'NO_POWER' ? ' (add coal)' : ''} · Recipe: ${recipe.input.quantity} ${input} + ${SMELTER_FUEL.quantity} Coal → ${recipe.output.quantity} ${output} / ${recipe.durationMs / 1000}s · Input: ${miner.input.getItemCount(recipe.input.itemId)} · Coal: ${miner.fuel.getItemCount(SMELTER_FUEL.itemId)} · Output: ${miner.output.getItemCount(recipe.output.itemId)} · Progress: ${Math.floor(miner.progress * 100)}% · Cyan input (ore and coal) at rear, yellow output at front`;
+      this.details.textContent = `State: ${miner.state}${miner.state === 'NO_POWER' ? (miner.powered ? ' (add coal)' : ' (electricity unavailable)') : ''} · Recipe: ${recipe.input.quantity} ${input} + ${SMELTER_FUEL.quantity} Coal → ${recipe.output.quantity} ${output} / ${recipe.durationMs / 1000}s · Input: ${miner.input.getItemCount(recipe.input.itemId)} · Coal: ${miner.fuel.getItemCount(SMELTER_FUEL.itemId)} · Output: ${miner.output.getItemCount(recipe.output.itemId)} · Progress: ${Math.floor(miner.progress * 100)}% · Cyan input (ore and coal) at rear, yellow output at front`;
       this.feed.disabled = !this.player.getItemCount(recipe.input.itemId) || miner.input.getAvailableSpace(recipe.input.itemId) === 0;
       this.retrieveInput.disabled = !miner.input.getItemCount(recipe.input.itemId);
       this.feedFuel.disabled = !this.player.getItemCount(SMELTER_FUEL.itemId) || miner.fuel.getAvailableSpace(SMELTER_FUEL.itemId) === 0;
@@ -55,15 +89,16 @@ export class MachineUI {
       this.retrieve.disabled = !miner.output.getItemCount(recipe.output.itemId);
     } else if (miner instanceof Processor) {
       const recipe = miner.recipe, input = this.player.registry.get(recipe.input.itemId).name, output = this.player.registry.get(recipe.output.itemId).name;
-      this.details.textContent = `State: ${miner.state} · Recipe: ${recipe.input.quantity} ${input} → ${recipe.output.quantity} ${output} / ${recipe.durationMs / 1000}s · Input: ${miner.input.getItemCount(recipe.input.itemId)} · Output: ${miner.output.getItemCount(recipe.output.itemId)} · Progress: ${Math.floor(miner.progress * 100)}% · Electricity: not required yet · Cyan input at rear, yellow output at front`;
+      this.details.textContent = `State: ${miner.state} · Recipe: ${recipe.input.quantity} ${input} → ${recipe.output.quantity} ${output} / ${recipe.durationMs / 1000}s · Input: ${miner.input.getItemCount(recipe.input.itemId)} · Output: ${miner.output.getItemCount(recipe.output.itemId)} · Progress: ${Math.floor(miner.progress * 100)}% · Cyan input at rear, yellow output at front`;
       this.feed.disabled = !this.player.getItemCount(recipe.input.itemId) || miner.input.getAvailableSpace(recipe.input.itemId) === 0;
       this.retrieveInput.disabled = !miner.input.getItemCount(recipe.input.itemId);
       this.retrieve.disabled = !miner.output.getItemCount(recipe.output.itemId);
     } else {
       const deposit = miner.deposit, name = this.player.registry.get(miner.itemId).name;
-      this.details.textContent = `State: ${miner.state} · Deposit: ${name} (${miner.depositId}) · Purity: ${deposit?.purity ?? 'unavailable'} · Rate: ${miner.effectiveRate} items/min · Output: ${miner.output.getItemCount(miner.itemId)} / ${miner.output.capacity * this.player.registry.get(miner.itemId).maxStackSize} ${name} · Progress: ${Math.floor(miner.progress * 100)}% · Power: not required in Phase 4`;
+      this.details.textContent = `State: ${miner.state} · Deposit: ${name} (${miner.depositId}) · Purity: ${deposit?.purity ?? 'unavailable'} · Rate: ${miner.effectiveRate} items/min · Output: ${miner.output.getItemCount(miner.itemId)} / ${miner.output.capacity * this.player.registry.get(miner.itemId).maxStackSize} ${name} · Progress: ${Math.floor(miner.progress * 100)}%`;
       this.retrieve.disabled = miner.output.getItemCount(miner.itemId) === 0;
     }
+    this.details.textContent += network;
     if (miner instanceof Processor) this.feed.textContent = `Add ${this.player.registry.get(miner.recipe.input.itemId).name}`;
     this.toggle.textContent = miner.enabled ? 'Disable' : 'Enable';
   }
@@ -77,14 +112,20 @@ export class MachineUI {
     const result = this.miner.retrieveInput(this.player); this.notice.textContent = `Transferred ${result.moved}; ${result.remainder} remain in input.`; this.update();
   };
   private readonly handleFeedFuel = (): void => {
+    if (this.powerTarget?.generator) {
+      const result = this.powerTarget.generator.feed(this.player); this.notice.textContent = `Added ${result.moved} wood; ${result.remainder} remain in inventory.`; this.update(); return;
+    }
     if (!(this.miner instanceof Smelter)) return;
     const result = this.miner.feedFuel(this.player); this.notice.textContent = `Added ${result.moved} coal; ${result.remainder} remain in inventory.`; this.update();
   };
   private readonly handleRetrieveFuel = (): void => {
+    if (this.powerTarget?.generator) {
+      const result = this.powerTarget.generator.retrieveFuel(this.player); this.notice.textContent = `Transferred ${result.moved} wood; ${result.remainder} remain in fuel buffer.`; this.update(); return;
+    }
     if (!(this.miner instanceof Smelter)) return;
     const result = this.miner.retrieveFuel(this.player); this.notice.textContent = `Transferred ${result.moved} coal; ${result.remainder} remain in fuel buffer.`; this.update();
   };
-  private readonly handleToggle = (): void => { if (!this.miner) return; this.miner.setEnabled(!this.miner.enabled); this.update(); };
+  private readonly handleToggle = (): void => { const target = this.miner ?? this.powerTarget?.generator; if (!target) return; target.setEnabled(!target.enabled); this.update(); };
   private readonly handleRetrieve = (): void => {
     if (!this.miner) return;
     const result = this.miner.retrieve(this.player);

@@ -169,6 +169,22 @@ export class BuildingView {
     const material = new MeshStandardMaterial({ color: def.color, transparent: preview, opacity: preview ? 0.5 : 1,
       depthWrite: !preview, roughness: 0.8 });
     const mesh = new Mesh(geometry, material); mesh.castShadow = !preview; mesh.receiveShadow = !preview;
+    if (typeId === 'power-pole') {
+      material.transparent = true; material.opacity = 0; material.depthWrite = false; mesh.castShadow = false;
+      const part = (w: number, h: number, d: number, y: number, color: number): void => {
+        const object = new Mesh(new BoxGeometry(w, h, d), new MeshStandardMaterial({ color, transparent: preview, opacity: preview ? .5 : 1, depthWrite: !preview }));
+        object.position.y = y - def.height / 2; object.castShadow = !preview; mesh.add(object);
+      };
+      part(.7 * this.cellSize, .25, .7 * this.cellSize, .125, 0x616f72);
+      part(.2 * this.cellSize, 2.4, .2 * this.cellSize, 1.3, 0x828b85);
+      part(.8 * this.cellSize, .17, .2 * this.cellSize, 2.45, 0xe2b64e);
+    }
+    if (typeId === 'biomass-generator') {
+      const vent = new Mesh(new BoxGeometry(.9 * this.cellSize, .35, .05), new MeshStandardMaterial({ color: 0x343f3b, transparent: preview, opacity: preview ? .5 : 1, depthWrite: !preview }));
+      vent.position.set(0, .25, -this.cellSize - .03); mesh.add(vent);
+      const cap = new Mesh(new BoxGeometry(.7 * this.cellSize, .2, .7 * this.cellSize), new MeshStandardMaterial({ color: 0xd0a35a, transparent: preview, opacity: preview ? .5 : 1, depthWrite: !preview }));
+      cap.position.set(0, def.height / 2 + .1, 0); mesh.add(cap);
+    }
     if (typeId === 'miner-mk1') {
       material.transparent = true; material.opacity = 0; material.depthWrite = false; mesh.castShadow = false;
       const part = (shape: BoxGeometry, color: number, x: number, y: number, z: number, name: string): void => {

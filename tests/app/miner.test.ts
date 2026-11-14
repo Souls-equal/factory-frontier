@@ -36,7 +36,7 @@ beforeEach(() => {
 afterEach(() => { window.dispatchEvent(new Event('beforeunload')); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
 describe('miner through real bootstrap with mocked rendering', () => {
-  it('constructs on generated deposit, runs, opens inspection, retrieves and demolishes', async () => {
+  it('constructs on a deposit and stays stopped without electricity', async () => {
     vi.spyOn(console, 'info').mockImplementation(() => undefined);
     await import('../../src/main'); await vi.waitFor(() => expect(state.init).toBe(1)); frame();
     const config = createGameConfig(), world = createWorld(config);
@@ -70,14 +70,13 @@ describe('miner through real bootstrap with mocked rendering', () => {
     for (let i = 0; i < 200; i++) frame();
     key('KeyE'); frame(); const panel = document.querySelector<HTMLElement>('[data-ui="machine"]')!;
     expect(panel.hidden).toBe(false); expect(panel.textContent).toContain('Iron Ore'); expect(panel.textContent).toContain(deposit.purity);
-    expect(panel.textContent).toMatch(/Output: [1-9]/);
+    expect(panel.textContent).toContain('NO_POWER'); expect(panel.textContent).toContain('Output: 0');
     const details = panel.querySelector('[data-machine-details]')!.textContent;
     for (let i = 0; i < 100; i++) frame();
     expect(panel.querySelector('[data-machine-details]')!.textContent).toBe(details);
     panel.querySelector<HTMLButtonElement>('[data-machine-toggle]')!.click(); expect(panel.textContent).toContain('DISABLED');
-    panel.querySelector<HTMLButtonElement>('[data-machine-toggle]')!.click(); expect(panel.textContent).toContain('RUNNING');
-    panel.querySelector<HTMLButtonElement>('[data-machine-retrieve]')!.click();
-    expect(panel.textContent).toContain('remain in output');
+    panel.querySelector<HTMLButtonElement>('[data-machine-toggle]')!.click(); expect(panel.textContent).toContain('NO_POWER');
+    expect(panel.querySelector<HTMLButtonElement>('[data-machine-retrieve]')!.disabled).toBe(true);
     panel.querySelector<HTMLButtonElement>('[data-machine-close]')!.click();
     key('KeyF'); frame(); expect(state.buildings).toHaveLength(0);
   });
@@ -101,18 +100,18 @@ describe('smelter through real bootstrap with mocked rendering', () => {
     key('Escape'); frame(); key('KeyE'); frame();
     const panel = document.querySelector<HTMLElement>('[data-ui="machine"]')!;
     expect(panel.hidden).toBe(false); expect(panel.textContent).toContain('Smelter');
-    expect(panel.textContent).toContain('MISSING_INPUT');
+    expect(panel.textContent).toContain('NO_POWER');
     panel.querySelector<HTMLButtonElement>('[data-machine-feed]')!.click();
     expect(panel.textContent).toContain('Input: 30'); expect(panel.textContent).toContain('NO_POWER');
     panel.querySelector<HTMLButtonElement>('[data-machine-feed-fuel]')!.click(); expect(panel.textContent).toContain('Coal: 10');
     panel.querySelector<HTMLButtonElement>('[data-machine-close]')!.click();
     for (let i = 0; i < 50; i++) frame();
-    key('KeyE'); frame(); expect(panel.textContent).toMatch(/Output: [1-9]/);
+    key('KeyE'); frame(); expect(panel.textContent).toContain('Output: 0'); expect(panel.textContent).toContain('NO_POWER');
   });
 });
 
 describe('constructor through real bootstrap with mocked rendering', () => {
-  it('constructs, inspects, feeds and produces a plate', async () => {
+  it('constructs, inspects and retains input without electricity', async () => {
     vi.spyOn(console, 'info').mockImplementation(() => undefined);
     await import('../../src/main'); await vi.waitFor(() => expect(state.init).toBe(1)); frame();
     const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
@@ -127,11 +126,11 @@ describe('constructor through real bootstrap with mocked rendering', () => {
     expect(state.buildings[0]?.typeId).toBe('constructor'); key('Escape'); frame(); key('KeyE'); frame();
     const panel = document.querySelector<HTMLElement>('[data-ui="machine"]')!;
     expect(panel.hidden).toBe(false); expect(panel.textContent).toContain('Constructor');
-    expect(panel.textContent).toContain('Iron Ingot → 1 Iron Plate'); expect(panel.textContent).toContain('MISSING_INPUT');
+    expect(panel.textContent).toContain('Iron Ingot → 1 Iron Plate'); expect(panel.textContent).toContain('NO_POWER');
     panel.querySelector<HTMLButtonElement>('[data-machine-feed]')!.click(); expect(panel.textContent).toContain('Input: 4');
     panel.querySelector<HTMLButtonElement>('[data-machine-close]')!.click();
     for (let i = 0; i < 50; i++) frame();
-    key('KeyE'); frame(); expect(panel.textContent).toMatch(/Output: [1-9]/);
+    key('KeyE'); frame(); expect(panel.textContent).toContain('Output: 0'); expect(panel.textContent).toContain('NO_POWER');
   });
 });
 
@@ -157,7 +156,7 @@ describe('splitter through real bootstrap with mocked rendering', () => {
   });
 });
 
-it.each(['merger', 'lift-up-1', 'lift-up-2', 'lift-down-1', 'lift-down-2'])('exposes and places %s through the actual construction menu (mock renderer)', async (id) => {
+it.each(['power-pole', 'biomass-generator', 'merger', 'lift-up-1', 'lift-up-2', 'lift-down-1', 'lift-down-2'])('exposes and places %s through the actual construction menu (mock renderer)', async (id) => {
   vi.spyOn(console, 'info').mockImplementation(() => undefined);
   await import('../../src/main'); await vi.waitFor(() => expect(state.init).toBe(1)); frame();
   const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
@@ -169,6 +168,19 @@ it.each(['merger', 'lift-up-1', 'lift-up-2', 'lift-down-1', 'lift-down-2'])('exp
   canvas.dispatchEvent(new MouseEvent('mousedown', { button: 0, bubbles: true }));
   canvas.dispatchEvent(new MouseEvent('mouseup', { button: 0, bubbles: true })); frame();
   expect(state.buildings[0]?.typeId).toBe(id);
+  if (id === 'biomass-generator') {
+    key('Escape'); frame();
+    canvas.dispatchEvent(new MouseEvent('mousedown', { button: 0, clientX: 5000, clientY: 5000 }));
+    window.dispatchEvent(new MouseEvent('mousemove', { clientX: 5000, clientY: 4920 })); frame(); window.dispatchEvent(new MouseEvent('mouseup'));
+    key('KeyE'); frame();
+    const panel = document.querySelector<HTMLElement>('[data-ui="machine"]')!;
+    expect(panel.hidden).toBe(false); expect(panel.textContent).toContain('Biomass Generator');
+    expect(panel.textContent).toContain('Network: isolated');
+    panel.querySelector<HTMLButtonElement>('[data-machine-feed-fuel]')!.click();
+    expect(panel.textContent).toContain('Wood: 10');
+    panel.querySelector<HTMLButtonElement>('[data-machine-close]')!.click();
+    key('KeyF'); frame(); expect(state.buildings).toHaveLength(1); // wood cannot be lost on demolition
+  }
   if (id === 'merger') {
     key('Escape'); frame();
     canvas.dispatchEvent(new MouseEvent('mousedown', { button: 0, clientX: 5000, clientY: 5000 }));
