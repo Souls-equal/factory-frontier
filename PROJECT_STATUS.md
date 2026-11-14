@@ -3,11 +3,32 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 7 — Advanced logistics (integration and acceptance)
-**Phase Status:** 🟡 In progress — shared production-network acceptance and remaining logistics checks
-**Next Recommended Task:** Play-test the shared production network, quantity-limited stack transfers, filtered splitter routing and remaining logistics scenarios; Phase 7 acceptance remains open.
+**Phase Status:** 🟡 In progress — Phase 7 integration audited; player acceptance pending
+**Next Recommended Task:** Player validation using `docs/PHASE_7_VALIDATION_FR.md`; Phase 7 remains open pending the results.
 **Last Updated:** 2026-11-11
 
 ---
+
+## Phase 7 final integration audit
+
+- The roadmap objectives have implementations and automated coverage: storage,
+  splitters (balanced, overflow, priority and filters), mergers, configurable
+  up/down lifts, shared machine networks and the control-point route editor.
+  The user requested completion of all Phase 7 details before testing; no Phase 8
+  work was started and player acceptance is not claimed.
+- Fixed false obstruction by buildings on a different floor: route planning and
+  live cell output now share a height-aware check. Same-height incompatible
+  buildings still block. Existing foundation placement rules are unchanged.
+- Logistics inspection now handles Escape from any focused control. The route
+  preview refreshes precisely for player-body movement near the route, including
+  height changes; the distant-player cache remains bounded and final placement
+  is always revalidated. Automated tests cover both fixes and rotated multi-floor
+  construction in either order.
+- A French player acceptance checklist and current limits are collected in
+  `docs/PHASE_7_VALIDATION_FR.md`. Remaining documented restrictions include 1–8 m
+  lift height, 24 cells per route, incremental placement rejections and no links
+  to legacy two-cell belts. Persistence and electricity remain future phases.
+  Player testing is still required before considering Phase 7 accepted.
 
 ## Shared production-network integration coverage
 

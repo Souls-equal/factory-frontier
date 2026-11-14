@@ -342,3 +342,31 @@ it('transfers chosen quantities in both directions, validates input and resets s
   storageSlot(0).click(); input('retrieve').dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true })); expect(close).toHaveBeenCalledOnce();
   ui.closePanel(); ui.open(storage.id); expect(input('retrieve').value).toBe(''); expect(input('deposit').value).toBe(''); ui.dispose();
 });
+
+it('closes the logistics modal with Escape from selectors, quantity inputs and buttons without leaking the key', () => {
+  const html = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../../index.html'), 'utf8');
+  document.body.innerHTML = /<body[^>]*>([\s\S]*)<\/body>/i.exec(html)![1]!;
+  const root = document.querySelector<HTMLElement>('[data-ui="logistics"]')!, items = createDefaultItemRegistry();
+  const player = new Inventory(items, 5), buildings = new BuildingSystem(createDefaultBuildingRegistry(items), player, terrain, [], 1, 19);
+  buildings.setCreativeMode(true);
+  const logistics = new LogisticsManager(buildings, new MachineManager(buildings, items, () => []), items);
+  const storage = buildings.place('storage-container', 0, 0, 0, { x: 8, z: 8, radius: .4 }).building!;
+  const splitter = buildings.place('splitter', 5, 0, 0, { x: 8, z: 8, radius: .4 }).building!;
+  logistics.sync(); logistics.terminal(storage.id)!.addItem('coal', 3); player.addItem('wood', 3);
+  const close = vi.fn(), listener = vi.fn(), ui = new LogisticsUI(root, logistics, player, close);
+  window.addEventListener('keydown', listener);
+  for (const selector of ['[data-storage-filter]', '[data-logistics-deposit-quantity]', '[data-logistics-retrieve-quantity]', '[data-logistics-close]']) {
+    ui.open(storage.id);
+    const event = new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape', bubbles: true, cancelable: true });
+    root.querySelector<HTMLElement>(selector)!.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(true);
+  }
+  ui.open(splitter.id);
+  for (const selector of ['[data-splitter-mode]', '[data-splitter-priority]', '[data-splitter-filter="0"]']) {
+    root.querySelector<HTMLElement>(selector)!.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }));
+  }
+  expect(close).toHaveBeenCalledTimes(7); expect(listener).not.toHaveBeenCalled();
+  root.querySelector<HTMLElement>('[data-splitter-mode]')!.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, repeat: true, cancelable: true }));
+  expect(close).toHaveBeenCalledTimes(7); expect(listener).not.toHaveBeenCalled();
+  ui.closePanel(); ui.dispose(); window.removeEventListener('keydown', listener);
+});

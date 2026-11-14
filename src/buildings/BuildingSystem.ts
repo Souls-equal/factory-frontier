@@ -1,7 +1,7 @@
 import { directLiftInput, directLiftOutput, directLiftSplitterOutput, directLiftMergerInput, directLiftLink } from '../logistics/DirectLiftConnections';
 import { cellAhead, cellTouchesMachine, cellTouchesSource, cellTouchesReceiver, mergerInputTouches, splitterOutputTouches, resolveCellConveyors, type CellConveyorShape } from '../logistics/CellConveyor';
 import { resolveAutoConveyors, type AutoConveyorShape } from '../logistics/AutoConveyor';
-import { BELT_HEIGHT, machinePort, pathForBuilding, isDirectionalMachine, isLiftBuilding, liftInputOffset, liftOutputOffset } from '../logistics/ConveyorDefinitions';
+import { BELT_HEIGHT, blocksCellOutput, machinePort, pathForBuilding, isDirectionalMachine, isLiftBuilding, liftInputOffset, liftOutputOffset } from '../logistics/ConveyorDefinitions';
 import { matchesPort } from '../logistics/Ports';
 import { connectedHeight, connectionStatus } from '../logistics/ConveyorPlacement';
 import type { ResourceDeposit } from '../resources/ResourceDeposit';
@@ -451,11 +451,8 @@ export class BuildingSystem {
     });
     // Match the network's obstruction rule: a non-accepting building directly
     // ahead blocks the output. An empty cell ahead is a valid open route end.
-    const direction = pathForBuilding(last, this.cellSize)!.direction('output');
-    const x = last.transform.x + direction.x * this.cellSize, z = last.transform.z + direction.z * this.cellSize;
-    const blocked = !hasDestination && before.some((b) => b.typeId !== 'foundation' &&
-      x > b.transform.footprint.minX && x < b.transform.footprint.maxX &&
-      z > b.transform.footprint.minZ && z < b.transform.footprint.maxZ);
+    const lastPath = pathForBuilding(last, this.cellSize)!;
+    const blocked = !hasDestination && before.some((b) => blocksCellOutput(last, b, this.cellSize, this.registry, lastPath));
     const endConnection: RouteEndConnection = hasDestination ? 'connected' : blocked ? 'blocked' : 'open';
     const cost = definition.cost.map((entry) => ({ itemId: entry.itemId, quantity: entry.quantity * route.length }));
     const changed = after.filter((b) => !ids.includes(b.id) && (b.typeId === 'conveyor-cell' || b.typeId === 'conveyor-auto') &&

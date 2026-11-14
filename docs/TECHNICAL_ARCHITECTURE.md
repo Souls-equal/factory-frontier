@@ -1644,3 +1644,22 @@ unavailability after 60 items per miner to bound the input. It also verifies
 that opening a different branch does not reroute items already committed to a
 full belt. No game or architectural behavior changed. This is automated
 evidence for one arrangement, not browser or player acceptance of Phase 7.
+
+
+## Implementation note — Phase 7 integration audit
+
+Cell-output obstruction is shared by route planning and live topology through
+`blocksCellOutput`. It compares the output endpoint height with the candidate
+building's vertical span, including conveyor ramp endpoints, instead of blocking
+every object at the same horizontal coordinates. Foundations are still excluded
+from the obstruction rule and their placement/support rules are unchanged.
+Same-height non-accepting buildings still block and existing open-end drops are
+unchanged. Tests exercise both placement orders and all rotations with a real
+upper container, plus height comparisons and existing blockage regressions.
+
+The route-preview cache uses exact player body coordinates and vertical bounds
+near candidate cells, retaining coarse position caching farther away; confirmation
+still revalidates independently. Escape is handled at the logistics modal level,
+including selector and numeric-input focus. A consolidated French player checklist
+is in `PHASE_7_VALIDATION_FR.md`. Automated evidence does not establish player
+acceptance or remove the documented route, lift and legacy-connection limits.

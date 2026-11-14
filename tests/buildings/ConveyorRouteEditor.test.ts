@@ -104,3 +104,20 @@ describe('route editor', () => {
     expect(editor.pointCount).toBe(2);
   });
 });
+
+it('refreshes the advisory route preview as the player enters or leaves a supported elevated belt', () => {
+  const { editor, system, inventory, source, sink } = setup();
+  expect(system.demolish(source.id)).toBe('removed'); expect(system.demolish(sink.id)).toBe('removed');
+  system.setCreativeMode(true);
+  expect(system.place('foundation', 0, 0, 0, player, 3).reason).toBe('valid');
+  expect(system.place('foundation', 0, -2, 0, player, 0).reason).toBe('valid');
+  expect(system.place('storage-container', 0, 0, 0, player).reason).toBe('valid');
+  const below = { x: -.5, z: -1.5, radius: .4, feetY: 0, headY: 1.8 };
+  const above = { ...below, feetY: 3.4, headY: 5.2 };
+  expect(editor.preview(start, below, 0, inventory.revision, 1).reason).toBe('valid');
+  expect(editor.preview(start, above, 0, inventory.revision, 2).reason).toBe('player overlap');
+  expect(editor.preview(start, below, 0, inventory.revision, 3).reason).toBe('valid');
+  const outside = { ...above, x: -1.401 }, inside = { ...above, x: -1.399 };
+  expect(editor.preview(start, outside, 0, inventory.revision, 4).reason).toBe('valid');
+  expect(editor.preview(start, inside, 0, inventory.revision, 5).reason).toBe('player overlap');
+});

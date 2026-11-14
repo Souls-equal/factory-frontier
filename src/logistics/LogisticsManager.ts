@@ -13,7 +13,7 @@ import { Merger } from './Merger';
 import { directLiftInput, directLiftOutput, directLiftMergerInput, directLiftLink } from './DirectLiftConnections';
 import type { ItemSource, ItemReceiver } from './Ports';
 
-import { pathForBuilding, machinePort, splitterPort, mergerPort, isLiftBuilding, RECEIVER_TYPE } from './ConveyorDefinitions';
+import { blocksCellOutput, pathForBuilding, machinePort, splitterPort, mergerPort, isLiftBuilding, RECEIVER_TYPE } from './ConveyorDefinitions';
 
 /** Bridges registered buildings to the existing conveyor simulation, not the renderer. */
 export class LogisticsManager implements SimulationSystem {
@@ -253,8 +253,7 @@ export class LogisticsManager implements SimulationSystem {
     for (const cell of cells) {
       const segment = this.network.get(cell.id)!;
       if (segment.output || segment.receiver) continue;
-      const d = segment.path.direction('output'), x = cell.transform.x + d.x * this.buildings.cellSize, z = cell.transform.z + d.z * this.buildings.cellSize;
-      if (buildings.some((b) => b.id !== cell.id && b.typeId !== 'foundation' && x > b.transform.footprint.minX && x < b.transform.footprint.maxX && z > b.transform.footprint.minZ && z < b.transform.footprint.maxZ)) this.network.blockCellOutput(cell.id);
+      if (buildings.some((b) => blocksCellOutput(cell, b, this.buildings.cellSize, this.buildings.registry, segment.path))) this.network.blockCellOutput(cell.id);
     }
     this.seenRevision = this.buildings.revision;
   }
