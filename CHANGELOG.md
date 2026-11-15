@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — Phase 10 terrain mesh streaming
+
+- Partition authoritative voxel surfaces into seam-free column chunks; generate,
+  load and dispose terrain meshes around the camera with fog/frustum coverage.
+- Keep shared textures and stable appearance on reload; do not unload simulation
+  or gameplay state. Chunk rendering may increase draw calls in the small world.
+- Test seams, loading, disposal, camera coverage and retained factory/resources.
+  World-data streaming, save/load and browser validation remain outstanding.
+
 ## Unreleased — Phase 10 biome visual enrichment
 
 - Add instanced, seed-stable voxel flora for meadows, forests, deserts and

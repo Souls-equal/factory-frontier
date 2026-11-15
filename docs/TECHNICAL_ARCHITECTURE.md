@@ -1852,3 +1852,27 @@ coarse patches select top tiles without changing the voxel geometry. Rocks and
 collectable forest trees use biome-sensitive tints. The classification still has
 discrete boundaries, no water, chunks or save/load. Cosmetic details are bounded
 to the existing play area and have not been visually validated in a browser.
+
+## Phase 10 — initial terrain mesh streaming
+
+`VoxelTerrain` can emit exposed faces for a half-open range of columns. Its
+counting and generation read adjacent columns outside the range, so borders
+match the authoritative full surface without extra walls. The immutable voxel
+grid is still generated and retained in full.
+
+`TerrainChunkView` maps 64-column blocks to unique coordinate keys. It lazily
+creates nearby geometry, shares one texture/material, disposes unloaded geometry
+and recreates it from the same data on return. Position-based shading remains
+stable across reloading and different chunk partitions. Camera focus updates on
+chunk or coverage changes; the square coverage includes an extra chunk beyond
+the far fog-plane corner distance, adjusted for vertical FOV and aspect ratio.
+This avoids holes at viewport edges and respects finite world bounds. Default
+chunk counts can cover all of the small world; splitting the terrain can increase
+draw calls and has not been benchmarked in the browser.
+
+This is **not world-data streaming**: factories, power, machines, logistics,
+resources, collision, biome decorations and the voxel grid remain resident and
+simulated as before. It preserves in-memory state across terrain mesh unloads,
+not across page reloads. Dynamic generation, chunk ownership of environmental
+objects, persistent modification storage and browser acceptance remain future
+work. No foundation placement logic was changed.

@@ -3,7 +3,7 @@ import { BiomeField, type Biome } from '../../src/world/Biomes';
 import { createWorld } from '../../src/world/World';
 import { createGameConfig } from '../../src/core/Configuration';
 import { EnvironmentView } from '../../src/engine/EnvironmentView';
-import { Mesh } from 'three';
+import { Group, Mesh } from 'three';
 import { Inventory } from '../../src/items/Inventory';
 import { createDefaultItemRegistry } from '../../src/items/ItemRegistry';
 import { generateGatherables } from '../../src/resources/Gatherables';
@@ -28,13 +28,17 @@ describe('phase 10 biome regions', () => {
     const world = createWorld(createGameConfig({ world: { seed: 123, obstacleCount: 0 } }));
     const before = world.terrain.getRenderData();
     const view = new EnvironmentView(world);
-    const mesh = view.group.getObjectByName('environment:terrain') as Mesh;
-    const uv = mesh.geometry.getAttribute('uv');
+    const chunks = (view.group.getObjectByName('environment:terrain') as Group).children as Mesh[];
     const used = new Set<number>();
-    for (let face = 0; face < before.faceCount; face++) used.add(Math.floor(uv.getX(face * 4) * 8));
+    let total = 0;
+    for (const mesh of chunks) {
+      const region = world.terrain.getRenderData(mesh.userData.range), uv = mesh.geometry.getAttribute('uv');
+      for (let face = 0; face < region.faceCount; face++) used.add(Math.floor(uv.getX(face * 4) * 8));
+      expect(mesh.geometry.getAttribute('position').array).toEqual(region.positions); total += region.faceCount;
+    }
+    expect(total).toBe(before.faceCount);
     expect(used.has(0)).toBe(true); expect(used.has(3)).toBe(true); expect(used.has(4)).toBe(true);
     expect(used.has(5)).toBe(true); expect(used.has(6)).toBe(true); expect(used.has(7)).toBe(true);
-    expect(mesh.geometry.getAttribute('position').array).toEqual(before.positions);
     view.dispose();
   });
   it('collects wild objects and updates state through the existing interaction system', () => {

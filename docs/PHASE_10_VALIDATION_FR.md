@@ -12,9 +12,16 @@ sauvegarde : recharger la page remet l'usine à zéro.
 3. Construire sur une zone décorée : les petites plantes sous le bâtiment doivent
    disparaître ; après démolition elles doivent réapparaître. Vérifier également
    les fondations, les machines et les convoyeurs comme auparavant.
-4. Vérifier le confort visuel et les performances en explorant. Les frontières
+4. Construire et alimenter une petite usine, puis s'éloigner et revenir : elle
+   doit conserver son contenu et continuer à fonctionner. Répéter après avoir
+   récolté une ressource. Vérifier l'absence de trous ou de coutures dans le sol.
+   Le monde par défaut peut rester presque entièrement affiché à cause de sa
+   taille et de la distance du brouillard ; seuls les maillages du terrain sont
+   actuellement chargés par zones.
+5. Vérifier le confort visuel et les performances en explorant. Les frontières
    entre biomes restent pour l'instant nettes ; les marais et l'eau ne sont pas
    encore implémentés.
 
-La phase 10 reste incomplète : chargement/déchargement par chunks, préservation
-des modifications, géographie et répartition des minerais restent à développer.
+La phase 10 reste incomplète : chargement des données du monde par zones,
+préservation après rechargement, géographie et répartition des minerais restent
+à développer.

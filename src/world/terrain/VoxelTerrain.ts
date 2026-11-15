@@ -17,6 +17,12 @@ export interface VoxelTerrainOptions {
   readonly sampleHeight: (x: number, z: number) => number;
 }
 
+/** Half-open column range. Neighbouring columns still contribute to face culling. */
+export interface VoxelColumnRange {
+  readonly minX: number; readonly maxX: number;
+  readonly minZ: number; readonly maxZ: number;
+}
+
 export interface VoxelSurfaceData {
   readonly positions: Float32Array;
   readonly normals: Float32Array;
@@ -121,15 +127,24 @@ export class VoxelTerrain implements TerrainQuery {
     }
     return ground;
   }
-  getRenderData() {
-    const data = this.getSurfaceData();
+  getRenderData(range?: VoxelColumnRange) {
+    const data = this.getSurfaceData(range);
     return { ...data, vertexCount: data.faceCount * 4, triangleCount: data.faceCount * 2 };
   }
 
   /** Count exposed top and side faces without allocating mesh buffers. */
-  getSurfaceFaceCount(): number {
-    let totalFaces = this.columnsX * this.columnsZ;
-    for (let z = 0; z < this.columnsZ; z++) for (let x = 0; x < this.columnsX; x++) {
+  private checkedRange(range?: VoxelColumnRange): VoxelColumnRange {
+    const r = range ?? { minX: 0, maxX: this.columnsX, minZ: 0, maxZ: this.columnsZ };
+    if (![r.minX, r.maxX, r.minZ, r.maxZ].every(Number.isSafeInteger) || r.minX < 0 || r.minZ < 0 ||
+        r.maxX > this.columnsX || r.maxZ > this.columnsZ || r.maxX <= r.minX || r.maxZ <= r.minZ)
+      throw new RangeError('Invalid voxel column range.');
+    return r;
+  }
+
+  getSurfaceFaceCount(range?: VoxelColumnRange): number {
+    const r = this.checkedRange(range);
+    let totalFaces = (r.maxX - r.minX) * (r.maxZ - r.minZ);
+    for (let z = r.minZ; z < r.maxZ; z++) for (let x = r.minX; x < r.maxX; x++) {
       const top = this.topLevel(x, z)!;
       for (const [dx, dz] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
         totalFaces += Math.max(0, top - (this.topLevel(x + dx, z + dz) ?? this.bottomLevel));
@@ -139,8 +154,9 @@ export class VoxelTerrain implements TerrainQuery {
   }
 
   /** Visible top and side quads only. No bottom is rendered in this finite prototype. */
-  getSurfaceData(): VoxelSurfaceData {
-    const totalFaces = this.getSurfaceFaceCount();
+  getSurfaceData(range?: VoxelColumnRange): VoxelSurfaceData {
+    const r = this.checkedRange(range);
+    const totalFaces = this.getSurfaceFaceCount(r);
     if (totalFaces > 500_000) throw new RangeError('Voxel surface exceeds the finite prototype mesh limit.');
     const positions = new Float32Array(totalFaces * 12), normals = new Float32Array(totalFaces * 12);
     const indices = new Uint32Array(totalFaces * 6);
@@ -153,7 +169,7 @@ export class VoxelTerrain implements TerrainQuery {
       faceCount++;
     };
     const size = this.blockSize;
-    for (let z = 0; z < this.columnsZ; z++) for (let x = 0; x < this.columnsX; x++) {
+    for (let z = r.minZ; z < r.maxZ; z++) for (let x = r.minX; x < r.maxX; x++) {
       const top = this.topLevel(x, z)!;
       const x0 = this.originX + x * size, x1 = x0 + size;
       const z0 = this.originZ + z * size, z1 = z0 + size, y = top * size;

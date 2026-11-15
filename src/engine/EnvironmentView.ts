@@ -22,10 +22,10 @@ import type { World } from '../world/World';
 import type { ResourceDeposit } from '../resources/ResourceDeposit';
 import type { GatherableField } from '../resources/Gatherables';
 import type { InteractableDefinition } from '../world/World';
-import { createNaturalTexture, terrainTileUv } from './NaturalTextures';
+import { createNaturalTexture } from './NaturalTextures';
 import { createNaturalBlockGeometry, createRockGeometry } from './NaturalModels';
 import { BiomeDecorationView } from './BiomeDecorationView';
-import { hash2D } from '../world/noise';
+import { TerrainChunkView } from './TerrainChunkView';
 
 /**
  * Renderer for the Phase 1 environment.
@@ -36,7 +36,7 @@ import { hash2D } from '../world/noise';
  * physics collides with.
  *
  * Performance notes:
- * - one merged terrain mesh with a pixel texture atlas and vertex tint,
+ * - streamed terrain chunks share a pixel texture atlas and vertex tint,
  * - boulders and formations share three instanced meshes,
  * - geometries and materials are created once and disposed together,
  * - gatherable and decorative visibility update only when their state changes.
@@ -67,16 +67,18 @@ export class EnvironmentView {
   private highlightedId: string | null = null;
   private readonly gatherables: GatherableField;
   private readonly biomeDetails: BiomeDecorationView;
+  private readonly terrainChunks: TerrainChunkView;
   private readonly gatherableModels = new Map<string, Group>();
   private gatherablesRevision = -1;
 
-  constructor(world: World) {
+  constructor(world: World, fogDistance = 265) {
     this.gatherables = world.gatherables;
     this.group = new Group();
     this.group.name = 'environment';
 
     this.group.add(this.createSky());
-    this.group.add(this.createTerrain(world));
+    this.terrainChunks = new TerrainChunkView(world, fogDistance);
+    this.group.add(this.terrainChunks.group);
     this.group.add(this.createRocks(world));
     this.group.add(this.createDeposits(world));
     this.group.add(this.createGatherables(world));
@@ -109,6 +111,9 @@ export class EnvironmentView {
     }
   }
 
+  /** Update visible terrain chunks without affecting gameplay state. */
+  setFocus(x: number, z: number, coverage?: number): void { this.terrainChunks.setFocus(x, z, coverage); }
+
   /** Called before rendering; removed resources disappear without rebuilding the world. */
   syncGatherables(): void {
     this.biomeDetails.sync();
@@ -123,6 +128,7 @@ export class EnvironmentView {
 
   dispose(): void {
     this.biomeDetails.dispose();
+    this.terrainChunks.dispose();
     for (const geometry of this.geometries) {
       geometry.dispose();
     }
@@ -179,52 +185,6 @@ export class EnvironmentView {
     this.registerGeometry(geometry);
     this.registerMaterial(material);
     return sky;
-  }
-
-  private createTerrain(world: World): Mesh {
-    const data = world.terrain.getRenderData();
-    const geometry = new BufferGeometry();
-    geometry.setAttribute('position', new BufferAttribute(data.positions, 3));
-    geometry.setAttribute('normal', new BufferAttribute(data.normals, 3));
-    geometry.setIndex(new BufferAttribute(data.indices, 1));
-
-    const colors = new Float32Array(data.vertexCount * 3);
-    const uv = new Float32Array(data.vertexCount * 2);
-    for (let face = 0; face < data.faceCount; face++) {
-      const p = face * 12, nx = data.normals[p]!, ny = data.normals[p + 1]!, nz = data.normals[p + 2]!;
-      // Sample just inside the owning column; only its uppermost wall has a grass fringe.
-      const x = (data.positions[p]! + data.positions[p + 6]!) / 2 - nx * world.terrain.blockSize * .01;
-      const z = (data.positions[p + 2]! + data.positions[p + 8]!) / 2 - nz * world.terrain.blockSize * .01;
-      const topY = Math.max(data.positions[p + 1]!, data.positions[p + 4]!);
-      const biome = world.biomes.at(x, z);
-      const patch = hash2D(world.biomes.seed ^ 0x431b, Math.floor(x / 5), Math.floor(z / 5));
-      const tile = biome === 'desert' ? (ny === 1 && patch > .55 ? 7 : 4)
-        : biome === 'highlands' ? (ny === 1 && patch > .65 ? 6 : 3)
-        : ny === 1 ? (biome === 'forest' && patch > .25 ? 5 : 0)
-        : Math.abs(topY - world.terrain.heightAt(x, z)) < world.terrain.blockSize * .001 ? 1 : 2;
-      const [u0, v0, u1, v1] = terrainTileUv(tile, 8);
-      uv.set([u0, v0, u0, v1, u1, v1, u1, v0], face * 8);
-      const shade = .91 + .09 * ((face * 2654435761) % 1000) / 1000;
-      for (let vertex = 0; vertex < 4; vertex++) colors.set(biome === 'forest' ? [shade * .78, shade, shade * .76] : [shade, shade, shade], p + vertex * 3);
-    }
-    geometry.setAttribute('color', new BufferAttribute(colors, 3));
-    geometry.setAttribute('uv', new BufferAttribute(uv, 2));
-    geometry.computeBoundingSphere();
-
-    const material = new MeshStandardMaterial({
-      vertexColors: true,
-      map: this.naturalTexture(['grass', 'grass-side', 'dirt', 'stone', 'sand', 'forest-floor', 'moss-stone', 'sand-ripple']),
-      roughness: 0.96,
-      metalness: 0.04,
-    });
-
-    const terrain = new Mesh(geometry, material);
-    terrain.name = 'environment:terrain';
-    terrain.receiveShadow = true;
-
-    this.registerGeometry(geometry);
-    this.registerMaterial(material);
-    return terrain;
   }
 
   private createRocks(world: World): Group {

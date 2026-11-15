@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { Color, Fog, InstancedMesh, Mesh, MeshBasicMaterial, MeshStandardMaterial } from 'three';
+import { Color, Fog, Group, InstancedMesh, Mesh, MeshBasicMaterial, MeshStandardMaterial } from 'three';
 
 import { createGameConfig } from '../../src/core/Configuration';
 import { SceneManager } from '../../src/engine/SceneManager';
@@ -27,7 +27,7 @@ describe('SceneManager', () => {
     const { manager } = createHarness();
 
     expect(manager.scene.children).toHaveLength(1);
-    expect(findObject<Mesh>(manager, 'environment:terrain')).toBeInstanceOf(Mesh);
+    expect(findObject<Group>(manager, 'environment:terrain')).toBeInstanceOf(Group);
     expect(findObject<Mesh>(manager, 'environment:sky')).toBeInstanceOf(Mesh);
     expect(manager.scene.getObjectByName('environment:rocks')).toBeDefined();
     expect(manager.scene.getObjectByName('environment:props')).toBeDefined();
@@ -35,12 +35,14 @@ describe('SceneManager', () => {
 
   it('builds the terrain mesh from the same height data physics uses', () => {
     const { manager, world } = createHarness();
-    const terrain = findObject<Mesh>(manager, 'environment:terrain');
+    const chunks = findObject<Group>(manager, 'environment:terrain').children as Mesh[];
     const data = world.terrain.getRenderData();
-
-    const position = terrain.geometry.getAttribute('position');
-    expect(position.count).toBe(data.vertexCount);
-    expect(terrain.geometry.getIndex()?.count).toBe(data.triangleCount * 3);
+    expect(chunks.reduce((sum, m) => sum + m.geometry.getAttribute('position').count, 0)).toBe(data.vertexCount);
+    expect(chunks.reduce((sum, m) => sum + m.geometry.getIndex()!.count, 0)).toBe(data.triangleCount * 3);
+    for (const chunk of chunks) {
+      const region = world.terrain.getRenderData(chunk.userData.range);
+      expect(chunk.geometry.getAttribute('position').array).toEqual(region.positions);
+    }
 
     // Each top face centre must agree with the authoritative voxel column.
     let tops = 0, walls = 0;
@@ -59,7 +61,7 @@ describe('SceneManager', () => {
 
   it('shades terrain with vertex colours and receives shadows', () => {
     const { manager } = createHarness();
-    const terrain = findObject<Mesh>(manager, 'environment:terrain');
+    const terrain = findObject<Group>(manager, 'environment:terrain').children[0] as Mesh;
     const material = terrain.material as MeshStandardMaterial;
 
     expect(terrain.geometry.getAttribute('color')).toBeDefined();
@@ -119,7 +121,7 @@ describe('SceneManager', () => {
 
   it('disposes geometries and materials and detaches the scene graph', () => {
     const { manager } = createHarness();
-    const terrain = findObject<Mesh>(manager, 'environment:terrain');
+    const terrain = findObject<Group>(manager, 'environment:terrain').children[0] as Mesh;
     const geometryDispose = vi.spyOn(terrain.geometry, 'dispose');
     const materialDispose = vi.spyOn(terrain.material as MeshStandardMaterial, 'dispose');
 
@@ -223,7 +225,7 @@ it('renders deposits, natural rocks and props without changing logical world dat
 it('uses a light daytime sky, fog and colourful terrain by default', () => {
   const { manager, config } = createHarness();
   const sky = findObject<Mesh>(manager, 'environment:sky').geometry.getAttribute('color');
-  const terrain = findObject<Mesh>(manager, 'environment:terrain').geometry.getAttribute('color');
+  const terrain = (findObject<Group>(manager, 'environment:terrain').children[0] as Mesh).geometry.getAttribute('color');
   expect(config.render.backgroundColor).toBe(0xb8e0e8); expect(config.render.fogColor).toBe(0xb8e0e8);
   expect(sky.getZ(0)).toBeGreaterThan(.5);
   expect(terrain.getY(0)).toBeGreaterThan(.2);

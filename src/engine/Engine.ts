@@ -82,6 +82,11 @@ export class Engine implements GameEngine {
       return;
     }
     this.cameraManager.applyView(view);
+    // Fog is based on view-space depth, not Euclidean distance. Include the
+    // corners of the far fog plane for any camera pitch and aspect ratio.
+    const camera = this.cameraManager.camera, tangent = Math.tan(camera.fov * Math.PI / 360);
+    const coverage = this.config.render.fogFar * Math.sqrt(1 + tangent * tangent * (1 + camera.aspect * camera.aspect));
+    this.sceneManager.environment.setFocus(view.position.x, view.position.z, coverage);
     // Shadows follow the player so the fixed-size shadow map stays useful.
     this.lightingManager.setFocus(view.position.x, view.position.z);
   }

@@ -22,7 +22,9 @@ export class SceneManager {
     // Fog depth hides the finite world edge and gives the horizon atmosphere.
     this.scene.fog = new Fog(config.fogColor, config.fogNear, config.fogFar);
 
-    this.environment = new EnvironmentView(world);
+    // Before the first camera update, cover a square-aspect far-plane diagonal.
+    const tangent = Math.tan(config.fov * Math.PI / 360);
+    this.environment = new EnvironmentView(world, config.fogFar * Math.sqrt(1 + 2 * tangent * tangent));
     this.scene.add(this.environment.group);
   }
 
