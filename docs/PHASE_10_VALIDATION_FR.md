@@ -18,10 +18,15 @@ sauvegarde : recharger la page remet l'usine à zéro.
    Le monde par défaut peut rester presque entièrement affiché à cause de sa
    taille et de la distance du brouillard ; seuls les maillages du terrain sont
    actuellement chargés par zones.
-5. Vérifier le confort visuel et les performances en explorant. Les frontières
+5. Explorer les gisements secondaires : fer et pierre favorisent les hauts
+   plateaux, cuivre et calcaire le désert, charbon forêt ou hauts plateaux, bois
+   la forêt. Viser un gisement pour lire son biome et sa pureté. Placer et
+   alimenter un mineur sur un gisement éloigné, puis vérifier sa production.
+   Ces préférences ne sont pas exclusives et dépendent de la place disponible.
+6. Vérifier le confort visuel et les performances en explorant. Les frontières
    entre biomes restent pour l'instant nettes ; les marais et l'eau ne sont pas
    encore implémentés.
 
 La phase 10 reste incomplète : chargement des données du monde par zones,
-préservation après rechargement, géographie et répartition des minerais restent
+préservation après rechargement et approfondissement de la géographie restent
 à développer.

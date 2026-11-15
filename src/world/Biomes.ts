@@ -1,6 +1,9 @@
 import { valueNoise2D } from './noise';
 
 export type Biome = 'grassland' | 'forest' | 'desert' | 'highlands';
+export const BIOME_LABELS: Readonly<Record<Biome, string>> = Object.freeze({
+  grassland: 'Grassland', forest: 'Forest', desert: 'Desert', highlands: 'Highlands',
+});
 
 /** Deterministic, coordinate-based regions; independent of visit or generation order. */
 export class BiomeField {

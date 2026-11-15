@@ -59,6 +59,9 @@ describe('miner through real bootstrap with mocked rendering', () => {
     const pos = state.view!.position, distance = Math.hypot(pos.x - deposit.x, pos.z - deposit.z);
     const pitch = Math.atan2(deposit.y - pos.y, distance);
     turn(0, -pitch / config.controls.lookSensitivity);
+    frame();
+    expect(document.querySelector('[data-ui="interaction-name"]')?.textContent).toContain('Iron Ore Deposit');
+    expect(document.querySelector('[data-ui="interaction-hint"]')?.textContent).toContain('Biome: Grassland');
     key('KeyQ'); const menu = document.querySelector<HTMLElement>('[data-ui="construction"]')!;
     const entry = menu.querySelector<HTMLButtonElement>('[data-building="miner-mk1"]')!;
     expect(entry.disabled).toBe(false); entry.click(); frame();

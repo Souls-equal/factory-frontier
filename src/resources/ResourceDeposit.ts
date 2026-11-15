@@ -4,6 +4,7 @@ import type { ItemRegistry } from '../items/ItemRegistry';
 import type { ObstacleDefinition } from '../world/ObstacleField';
 import { createRandom } from '../world/rng';
 import type { TerrainQuery } from '../world/terrain/TerrainHeightfield';
+import { BIOME_LABELS, type Biome } from '../world/Biomes';
 
 export type Purity = 'impure' | 'normal' | 'pure';
 export interface ResourceDeposit {
@@ -59,10 +60,10 @@ export function generateDeposits(terrain: TerrainQuery, obstacles: readonly Obst
 export class DepositInteractable implements Interactable {
   readonly descriptor;
   constructor(readonly deposit: ResourceDeposit, registry: ItemRegistry, range: number,
-    private readonly available: () => boolean = () => true) {
+    private readonly available: () => boolean = () => true, biome?: Biome) {
     const item = registry.get(deposit.itemId);
     this.descriptor = Object.freeze({ id: deposit.id, displayName: `${item.name} Deposit`,
-      hint: `Purity: ${deposit.purity.toUpperCase()} · Requires Miner`,
+      hint: `${biome ? `Biome: ${BIOME_LABELS[biome]} · ` : ''}Purity: ${deposit.purity.toUpperCase()} · Requires Miner`,
       position: Object.freeze({ x: deposit.x, y: deposit.y + 1.1, z: deposit.z }), targetRadius: 1.1, range });
   }
   isAvailable(): boolean { return this.available(); }

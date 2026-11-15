@@ -3,8 +3,8 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 10 — World expansion
-**Phase Status:** 🟡 In progress — biomes and initial terrain-render streaming
-**Next Recommended Task:** Validate terrain streaming in-game; extend chunking beyond rendering and preserve world state.
+**Phase Status:** 🟡 In progress — biome-aware deposits and initial terrain-render streaming
+**Next Recommended Task:** Validate biomes and exploratory deposits in-game; extend chunking beyond rendering and preserve world state.
 **Last Updated:** 2026-11-11
 
 ---
@@ -17,9 +17,17 @@
   changing terrain heights, collisions or foundation placement.
 - Up to 24 additional removable trees and loose stones are generated outside the
   starting area, biased towards forests and highlands. Desert is sparse; the
-  original guaranteed starter objects and ore deposit algorithm are unchanged.
-  Biomes do not yet affect ore, terrain shape, or water; they are sampled with
-  discrete boundaries and some seeds or small worlds may not show every region.
+  original starting resource generation is retained. Biomes do not yet affect
+  terrain shape or water; they are sampled with discrete boundaries and some seeds
+  or small worlds may not show every region.
+- Biome-biased exploratory deposits keep the first successfully generated deposit
+  of each type unchanged. Secondary deposits can move to preferred biomes: iron
+  and stone to highlands, copper and limestone to desert, coal to highlands or
+  forest and wood to forest. Identity, purity and yield are unchanged. Search is
+  bounded and falls back to the original site; a single-deposit configuration is
+  unchanged. The exact initial layout therefore changes for some existing seeds.
+  Deposit prompts display the current biome. A buildable footprint does not
+  guarantee a walkable route over the terrain. No miner/foundation rules changed.
 - Added voxel-style meadow grass and flowers, forest ferns, desert scrub and
   alpine plants in seeded bounded instanced batches. Forest-floor, sand-ripple and
   mossy-stone surface variants, biome-tinted rocks and forest tree foliage enrich
