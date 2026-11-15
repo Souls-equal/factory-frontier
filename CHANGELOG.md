@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — Phase 10 biome-aware deposits
+
+- Relocate eligible secondary deposits toward biome preferences, with seeded,
+  bounded candidate search and safe fallback. Preserve each resource's first
+  deposit, all IDs, purity and yield; some secondary positions for old seeds
+  change. Single-deposit configurations keep the old layout.
+- Show the biome in deposit interaction prompts. Test determinism, valid Miner
+  sites, fallbacks, starter preservation and actual powered extraction.
+- In-game validation, full world-data streaming and persistence remain open.
+
 ## Unreleased — Phase 10 terrain mesh streaming
 
 - Partition authoritative voxel surfaces into seam-free column chunks; generate,

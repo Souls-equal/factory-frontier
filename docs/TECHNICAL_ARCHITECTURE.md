@@ -1876,3 +1876,23 @@ simulated as before. It preserves in-memory state across terrain mesh unloads,
 not across page reloads. Dynamic generation, chunk ownership of environmental
 objects, persistent modification storage and browser acceptance remain future
 work. No foundation placement logic was changed.
+
+## Phase 10 — biome-aware exploratory deposits
+
+`generateDeposits` retains the original seeded generation and its baseline
+constraints. `distributeBiomeDeposits` then protects the first generated
+deposit per item, and uses independent ID-seeded random streams to try up to 320
+positions for each later deposit in its preferred biome. It checks terrain
+bounds, the playable radius, distance from spawn, existing obstacles, other
+deposits and the exact same Miner footprint support predicate as the baseline.
+If no valid site is found, the original remains. The pass preserves IDs,
+quantities, purity and extraction multiplier; no existing array is mutated.
+Preferences are directional biases, not exclusive distributions or a guarantee
+that every biome appears or that every site is reachable on foot; only Miner
+placement suitability is checked. A configured single deposit per resource remains
+unchanged. Some secondary coordinates for existing seeds do change; the game
+has no cross-session save migration yet.
+
+Deposit prompts show the sampled biome alongside purity and Miner guidance.
+These rules do not alter the voxel field, construction logic, power, extraction
+simulation, or the starter deposit. In-game acceptance remains outstanding.

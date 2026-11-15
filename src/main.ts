@@ -265,7 +265,7 @@ async function boot(): Promise<void> {
   }
   for (const deposit of world.deposits) {
     interaction.register(new DepositInteractable(deposit, registry, config.interaction.range,
-      () => !buildings.all().some((building) => building.depositId === deposit.id)));
+      () => !buildings.all().some((building) => building.depositId === deposit.id), world.biomes.at(deposit.x, deposit.z)));
   }
 
   for (const gatherable of world.gatherables.interactables(inventory, config.interaction.range)) {

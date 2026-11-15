@@ -7,6 +7,7 @@ import { createDefaultItemRegistry } from '../items/ItemRegistry';
 import type { GameConfig } from '../core/Configuration';
 import { GatherableField, generateGatherables } from '../resources/Gatherables';
 import { generateDeposits, type ResourceDeposit } from '../resources/ResourceDeposit';
+import { distributeBiomeDeposits } from '../resources/BiomeDeposits';
 import { ObstacleField, type ObstacleDefinition } from './ObstacleField';
 import { BiomeField } from './Biomes';
 import { createRandom } from './rng';
@@ -105,15 +106,19 @@ export function createWorld(config: GameConfig, inventory = new Inventory(create
   const original = createObstacles(terrain, worldConfig, interactables);
   const buildingRegistry = createDefaultBuildingRegistry(inventory.registry);
   const miner = buildingRegistry.get('miner-mk1');
-  const deposits = generateDeposits(terrain, original.definitions, worldConfig.seed,
-    { x: SPAWN_X, z: SPAWN_Z }, config.resources, config.controls.playAreaRadius, (x, z) => {
-      const f = snapFootprint(miner, x, z, 0, config.construction.gridSize).footprint;
-      if (!terrain.contains(f.minX, f.minZ) || !terrain.contains(f.maxX, f.maxZ) ||
-          [[f.minX, f.minZ], [f.minX, f.maxZ], [f.maxX, f.minZ], [f.maxX, f.maxZ]]
-            .some(([px, pz]) => Math.hypot(px!, pz!) > config.controls.playAreaRadius)) return false;
-      const support = terrainSupport(terrain, f);
-      return !!support && support.slope <= miner.maxSlope && support.high - support.low <= miner.maxGroundVariation;
-    });
+  const suitableMiner = (x: number, z: number): boolean => {
+    const f = snapFootprint(miner, x, z, 0, config.construction.gridSize).footprint;
+    if (!terrain.contains(f.minX, f.minZ) || !terrain.contains(f.maxX, f.maxZ) ||
+        [[f.minX, f.minZ], [f.minX, f.maxZ], [f.maxX, f.minZ], [f.maxX, f.maxZ]]
+          .some(([px, pz]) => Math.hypot(px!, pz!) > config.controls.playAreaRadius)) return false;
+    const support = terrainSupport(terrain, f);
+    return !!support && support.slope <= miner.maxSlope && support.high - support.low <= miner.maxGroundVariation;
+  };
+  const spawn = { x: SPAWN_X, z: SPAWN_Z };
+  const baselineDeposits = generateDeposits(terrain, original.definitions, worldConfig.seed,
+    spawn, config.resources, config.controls.playAreaRadius, suitableMiner);
+  const deposits = distributeBiomeDeposits(baselineDeposits, terrain, original.definitions, biomes,
+    worldConfig.seed, spawn, config.controls.playAreaRadius, suitableMiner);
   const obstacles = new ObstacleField([...original.definitions, ...deposits.map((deposit) => ({
     id: `${deposit.id}-collider`, kind: 'prop' as const, x: deposit.x, y: deposit.y,
     z: deposit.z, radius: deposit.radius, height: 1.5, yaw: 0, variant: 0,
