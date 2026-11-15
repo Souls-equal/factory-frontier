@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { InstancedMesh, Mesh, MeshStandardMaterial, NearestFilter, SRGBColorSpace } from 'three';
+import { Group, InstancedMesh, Mesh, MeshStandardMaterial, NearestFilter, SRGBColorSpace } from 'three';
 import { createGameConfig } from '../../src/core/Configuration';
 import { EnvironmentView } from '../../src/engine/EnvironmentView';
 import { createNaturalTexture } from '../../src/engine/NaturalTextures';
@@ -21,24 +21,28 @@ describe('natural environment visuals', () => {
   });
   it('maps each terrain face to its top, grassy side or deep dirt tile without changing geometry', () => {
     const world = createWorld(createGameConfig({ world: { resolution: 24, obstacleCount: 4, sizeMeters: 80 } }));
-    const view = new EnvironmentView(world), terrain = view.group.getObjectByName('environment:terrain') as Mesh;
-    const data = world.terrain.getRenderData(), uv = terrain.geometry.getAttribute('uv');
-    const material = terrain.material as MeshStandardMaterial, texture = material.map!;
-    expect(texture).toBeTruthy(); expect(uv.count).toBe(data.vertexCount);
+    const view = new EnvironmentView(world);
+    const chunks = (view.group.getObjectByName('environment:terrain') as Group).children as Mesh[];
+    const texture = (chunks[0]!.material as MeshStandardMaterial).map!;
+    expect(texture).toBeTruthy();
     let tops = 0, sides = 0, dirt = 0;
-    for (let face = 0; face < data.faceCount; face++) {
-      const p = face * 12, nx = data.normals[p]!, ny = data.normals[p + 1]!, nz = data.normals[p + 2]!;
-      const x = (data.positions[p]! + data.positions[p + 6]!) / 2 - nx * world.terrain.blockSize * .01;
-      const z = (data.positions[p + 2]! + data.positions[p + 8]!) / 2 - nz * world.terrain.blockSize * .01;
-      const top = Math.max(data.positions[p + 1]!, data.positions[p + 4]!);
-      const biome = world.biomes.at(x, z);
-      const patch = hash2D(world.biomes.seed ^ 0x431b, Math.floor(x / 5), Math.floor(z / 5));
-      const tile = biome === 'desert' ? (ny === 1 && patch > .55 ? 7 : 4)
-        : biome === 'highlands' ? (ny === 1 && patch > .65 ? 6 : 3)
-        : ny === 1 ? (biome === 'forest' && patch > .25 ? 5 : 0)
-        : Math.abs(top - world.terrain.heightAt(x, z)) < .001 * world.terrain.blockSize ? 1 : 2;
-      expect(Math.floor(uv.getX(face * 4) * 8)).toBe(tile);
-      if (tile === 0) tops++; else if (tile === 1) sides++; else if (tile === 2) dirt++;
+    for (const terrain of chunks) {
+      const data = world.terrain.getRenderData(terrain.userData.range), uv = terrain.geometry.getAttribute('uv');
+      expect(uv.count).toBe(data.vertexCount);
+      for (let face = 0; face < data.faceCount; face++) {
+        const p = face * 12, nx = data.normals[p]!, ny = data.normals[p + 1]!, nz = data.normals[p + 2]!;
+        const x = (data.positions[p]! + data.positions[p + 6]!) / 2 - nx * world.terrain.blockSize * .01;
+        const z = (data.positions[p + 2]! + data.positions[p + 8]!) / 2 - nz * world.terrain.blockSize * .01;
+        const top = Math.max(data.positions[p + 1]!, data.positions[p + 4]!);
+        const biome = world.biomes.at(x, z);
+        const patch = hash2D(world.biomes.seed ^ 0x431b, Math.floor(x / 5), Math.floor(z / 5));
+        const tile = biome === 'desert' ? (ny === 1 && patch > .55 ? 7 : 4)
+          : biome === 'highlands' ? (ny === 1 && patch > .65 ? 6 : 3)
+          : ny === 1 ? (biome === 'forest' && patch > .25 ? 5 : 0)
+          : Math.abs(top - world.terrain.heightAt(x, z)) < .001 * world.terrain.blockSize ? 1 : 2;
+        expect(Math.floor(uv.getX(face * 4) * 8)).toBe(tile);
+        if (tile === 0) tops++; else if (tile === 1) sides++; else if (tile === 2) dirt++;
+      }
     }
     expect(tops).toBeGreaterThan(0); expect(sides).toBeGreaterThan(0); expect(dirt).toBeGreaterThan(0);
     const disposed = vi.spyOn(texture, 'dispose'); view.dispose(); expect(disposed).toHaveBeenCalledOnce();

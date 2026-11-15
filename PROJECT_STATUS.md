@@ -3,8 +3,8 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 10 — World expansion
-**Phase Status:** 🟡 In progress — seeded biomes, natural resources and visual detail
-**Next Recommended Task:** Validate biome visuals in-game, then implement chunk streaming without losing factory state.
+**Phase Status:** 🟡 In progress — biomes and initial terrain-render streaming
+**Next Recommended Task:** Validate terrain streaming in-game; extend chunking beyond rendering and preserve world state.
 **Last Updated:** 2026-11-11
 
 ---
@@ -26,10 +26,18 @@
   the look. These are presentation-only (not targets, resources or colliders);
   they hide under building footprints and reappear when buildings are demolished.
   The renderer caps the decoration count at 2,200 and does not stream it.
-- The world is still finite and generated/rendered in full: no chunk loading or
-  unloading, no factory modification persistence across reloads, no wetlands.
-  Existing factory state stays in memory only. Phase 10 remains in progress and
-  these changes have not yet been validated by the player.
+- Terrain rendering now loads and disposes 64-column mesh chunks around the camera.
+  Coverage includes the camera frustum through the fog distance, with a chunk
+  margin; chunks read neighbouring columns to avoid seams and rebuild identically.
+  The small default world can remain mostly or entirely loaded because the fog
+  distance is large. Chunk count increases draw calls versus the former single
+  mesh and performance needs browser profiling; no improvement is asserted.
+- This is presentation-only streaming: the finite world voxel grid, collisions,
+  buildings, simulation, resources, flora and other scene objects remain resident.
+  Machines continue running while terrain chunks are absent. There is no world
+  data streaming, procedural generation on demand, save/load or persistence across
+  reloads; no wetlands or water. Phase 10 remains in progress and the slice
+  still needs player validation.
 
 ## Phase 9 — advanced manufacturing globally user-validated
 
@@ -1147,8 +1155,8 @@ This task's merge is deployed by the same pipeline; the result is recorded below
 
 ## Next Recommended Task
 
-Continue Phase 10: validate the first biome slice in the browser, then design and
-implement streaming and state preservation. Phase 5 and earlier individual
+Continue Phase 10: validate biome visuals and terrain streaming in the browser,
+then extend chunking and state preservation beyond the renderer. Phase 5 and earlier individual
 physical acceptance items also remain outstanding. Follow CI, PR and deployment
 checks before completing each slice.
 

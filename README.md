@@ -21,8 +21,10 @@ The first Phase 10 slice adds seeded grassland, forest, desert and rocky regions
 with extra removable natural resources, voxel vegetation and varied surface
 textures. Small decorative plants are non-interactive and hide under buildings.
 Ore distribution and terrain height are
-unchanged. Chunk streaming, persistent saves and wetlands are not implemented.
-The world remains finite and factory state is lost on reload.
+unchanged. Terrain meshes load in camera-relative chunks, while world data and factory
+simulation stay resident. Full world-data streaming, persistent saves and
+wetlands are not implemented. The world remains finite and factory state is lost
+on reload.
 
 ## Quick start
 
