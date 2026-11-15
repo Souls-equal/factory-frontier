@@ -2,48 +2,39 @@ import { BufferAttribute, BufferGeometry, Group, Mesh, MeshStandardMaterial } fr
 import type { World } from '../world/World';
 import type { VoxelColumnRange } from '../world/terrain/VoxelTerrain';
 import { hash2D } from '../world/noise';
+import { ChunkManager, type ChunkChanges, type WorldChunk } from '../world/ChunkManager';
 import { createNaturalTexture, terrainTileUv } from './NaturalTextures';
 
-/** Terrain streaming is presentation only; authoritative world data remains resident. */
+/** The shared chunk lifecycle drives terrain meshes; gameplay state remains resident. */
 export class TerrainChunkView {
   readonly group = new Group();
   private readonly loaded = new Map<string, Mesh>();
   private readonly texture = createNaturalTexture(['grass', 'grass-side', 'dirt', 'stone', 'sand', 'forest-floor', 'moss-stone', 'sand-ripple']);
   private readonly material = new MeshStandardMaterial({ vertexColors: true, map: this.texture, roughness: .96, metalness: .04 });
-  private lastX = NaN;
-  private lastZ = NaN;
-  private lastRadius = -1;
+  private readonly chunks: ChunkManager;
 
-  constructor(private readonly world: World, private readonly fogDistance = 265, private readonly chunkColumns = 64) {
+  constructor(private readonly world: World, private readonly fogDistance = 265, chunkColumns = 64) {
     if (!Number.isFinite(fogDistance) || fogDistance < 0 || !Number.isSafeInteger(chunkColumns) || chunkColumns < 1 || chunkColumns > 512)
       throw new RangeError('Invalid terrain streaming options.');
+    this.chunks = new ChunkManager(world, chunkColumns);
     this.group.name = 'environment:terrain';
     this.setFocus(world.spawn.x, world.spawn.z);
   }
 
+  loadedChunks(): readonly WorldChunk[] { return this.chunks.all(); }
+
   /** Coverage bounds the camera frustum out to fog; extra chunk covers edge positions. */
-  setFocus(x: number, z: number, coverage = this.fogDistance): void {
-    if (!Number.isFinite(x) || !Number.isFinite(z) || !Number.isFinite(coverage) || coverage < 0) return;
-    const t = this.world.terrain, width = this.chunkColumns * t.blockSize;
-    const cx = Math.floor((x - t.originX) / width), cz = Math.floor((z - t.originZ) / width);
-    const radius = Math.ceil(coverage / width) + 1;
-    if (cx === this.lastX && cz === this.lastZ && radius === this.lastRadius) return;
-    this.lastX = cx; this.lastZ = cz; this.lastRadius = radius;
-    const maxX = Math.ceil(t.columnsX / this.chunkColumns), maxZ = Math.ceil(t.columnsZ / this.chunkColumns);
-    const needed = new Set<string>();
-    for (let zc = Math.max(0, cz - radius); zc <= Math.min(maxZ - 1, cz + radius); zc++)
-      for (let xc = Math.max(0, cx - radius); xc <= Math.min(maxX - 1, cx + radius); xc++) {
-        const id = `${xc},${zc}`; needed.add(id);
-        if (!this.loaded.has(id)) {
-          const range = { minX: xc * this.chunkColumns, maxX: Math.min(t.columnsX, (xc + 1) * this.chunkColumns),
-            minZ: zc * this.chunkColumns, maxZ: Math.min(t.columnsZ, (zc + 1) * this.chunkColumns) };
-          const mesh = this.createMesh(range); mesh.name = `environment:terrain:${id}`;
-          mesh.userData.range = range; this.loaded.set(id, mesh); this.group.add(mesh);
-        }
-      }
-    for (const [id, mesh] of this.loaded) if (!needed.has(id)) {
-      this.group.remove(mesh); mesh.geometry.dispose(); this.loaded.delete(id);
+  setFocus(x: number, z: number, coverage = this.fogDistance): ChunkChanges {
+    const { loaded, unloaded } = this.chunks.update(x, z, coverage);
+    for (const chunk of unloaded) {
+      const mesh = this.loaded.get(chunk.id);
+      if (mesh) { this.group.remove(mesh); mesh.geometry.dispose(); this.loaded.delete(chunk.id); }
     }
+    for (const chunk of loaded) {
+      const mesh = this.createMesh(chunk.range); mesh.name = `environment:terrain:${chunk.id}`;
+      mesh.userData.range = chunk.range; this.loaded.set(chunk.id, mesh); this.group.add(mesh);
+    }
+    return { loaded, unloaded };
   }
 
   private createMesh(range: VoxelColumnRange): Mesh {
@@ -79,6 +70,6 @@ export class TerrainChunkView {
 
   dispose(): void {
     for (const mesh of this.loaded.values()) mesh.geometry.dispose();
-    this.loaded.clear(); this.group.clear(); this.material.dispose(); this.texture.dispose();
+    this.loaded.clear(); this.chunks.clear(); this.group.clear(); this.material.dispose(); this.texture.dispose();
   }
 }

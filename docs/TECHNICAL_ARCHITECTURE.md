@@ -1919,3 +1919,28 @@ full world streaming or cross-reload persistence. Extra sampling, allocations an
 cache churn can increase CPU cost and need browser profiling. Foundation rules
 and placement logic are unchanged. This note supersedes the older description
 above that all voxel levels are kept in a single array.
+
+
+## Phase 10 — chunk lifecycle and streamed resource models
+
+`ChunkManager` is a Three-free, camera-centred lifecycle for finite coordinate
+chunks. It generates and removes metadata for the required square and one-chunk
+margin, returning load/unload deltas. Metadata provides the half-open voxel
+range, world bounds, centre biome (the biome field may vary within the region),
+and references to deposits, gatherables, obstacles and interactables whose
+centres fall inside. Buildings are queried live by footprint intersection so
+edge-spanning buildings appear in each intersected loaded region. No generated
+metadata owns mutable player or factory state. Definitions and their collisions
+are still created and kept globally; this is not full world-data streaming.
+
+`TerrainChunkView` consumes lifecycle deltas for mesh creation/disposal and
+`EnvironmentView` uses them to create and remove deposit and gatherable models.
+The per-deposit terrain-following mark is disposed on unload, while shared
+geometry, materials and textures survive until the environment is disposed.
+On reload, visual selection and gatherable visibility are derived from current
+state. Rock instances, biome decoration, other props and factory render data are
+still resident. The manager does not suspend factory simulation, and no state is
+persisted across browser reloads. Loading is synchronous and performance has not
+been measured in a browser. The chunk size and camera coverage are configurable
+through constructors; the game uses 64 columns and its fog/frustum coverage.
+This supersedes earlier presentation-only terrain descriptions where applicable.
