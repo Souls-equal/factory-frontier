@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — Phase 10 bounded voxel data cache
+
+- Regenerate immutable voxel levels in bounded LRU chunks on demand, retaining
+  deterministic collision, support and seam behaviour; enable it in world assembly.
+- Keep eager initialization validation and the resident procedural source; other
+  world data and simulation are not streamed. No save/load or performance claim.
+- The player reports the map is very playable; Phase 10 is still in progress.
+
 ## Unreleased — Phase 10 biome-aware deposits
 
 - Relocate eligible secondary deposits toward biome preferences, with seeded,

@@ -1896,3 +1896,26 @@ has no cross-session save migration yet.
 Deposit prompts show the sampled biome alongside purity and Miner guidance.
 These rules do not alter the voxel field, construction logic, power, extraction
 simulation, or the starter deposit. In-game acceptance remains outstanding.
+
+
+## Phase 10 — bounded voxel data cache
+
+`VoxelTerrain` optionally stores column levels in a bounded least-recently-used
+chunk cache rather than a full level array. `createWorld` selects 64-column chunks
+and at most 16 cached chunks. All columns are still sampled at construction for
+validation and maximum height, and during world assembly for minimum height and
+mesh-budget checks; chunks are then reconstructed synchronously on access from
+the resident seeded heightfield. A stable sampling function for the terrain's
+entire lifetime is required. Adjacent queries may load or evict neighbouring data;
+the mesher and collisions continue to query the same global coordinates. Eager
+storage remains the default for other `VoxelTerrain` callers. The voxel terrain
+is immutable, so there are no voxel edits to preserve.
+
+Mesh visibility and cache eviction are independent: a camera change does not
+explicitly unload data, and the default world can fit entirely in the cache.
+The source heightfield, factory state, resources and decorations remain resident;
+simulation continues independently of terrain meshes. This does not implement
+full world streaming or cross-reload persistence. Extra sampling, allocations and
+cache churn can increase CPU cost and need browser profiling. Foundation rules
+and placement logic are unchanged. This note supersedes the older description
+above that all voxel levels are kept in a single array.

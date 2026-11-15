@@ -96,7 +96,7 @@ export function createWorld(config: GameConfig, inventory = new Inventory(create
     }
     terrain = new VoxelTerrain({ originX: source.bounds.minX, originZ: source.bounds.minZ,
       columnsX: columns, columnsZ: columns, blockSize, bottomLevel: lowest - 1,
-      sampleHeight: (x, z) => source.heightAt(x, z) });
+      sampleHeight: (x, z) => source.heightAt(x, z), chunkCache: { columns: 64, maxChunks: 16 } });
     if (terrain.getSurfaceFaceCount() <= 500_000) break;
     columns = Math.max(1, Math.floor(columns * .8));
   }
