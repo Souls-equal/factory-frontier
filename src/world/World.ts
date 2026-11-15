@@ -53,6 +53,7 @@ export interface WorldSpawn {
 export interface World {
   readonly terrain: VoxelTerrain;
   readonly biomes: BiomeField;
+  readonly playAreaRadius: number;
   readonly buildings: BuildingSystem;
   readonly obstacles: ObstacleField;
   readonly obstacleDefinitions: readonly ObstacleDefinition[];
@@ -123,6 +124,7 @@ export function createWorld(config: GameConfig, inventory = new Inventory(create
   return {
     terrain,
     biomes,
+    playAreaRadius: config.controls.playAreaRadius,
     gatherables,
     buildings: new BuildingSystem(buildingRegistry, inventory, terrain,
       obstacles.definitions, config.construction.gridSize, config.controls.playAreaRadius, deposits, () => gatherables.placementObstacles()),

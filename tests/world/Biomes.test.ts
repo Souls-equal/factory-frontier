@@ -31,8 +31,9 @@ describe('phase 10 biome regions', () => {
     const mesh = view.group.getObjectByName('environment:terrain') as Mesh;
     const uv = mesh.geometry.getAttribute('uv');
     const used = new Set<number>();
-    for (let face = 0; face < before.faceCount; face++) used.add(Math.floor(uv.getX(face * 4) * 5));
+    for (let face = 0; face < before.faceCount; face++) used.add(Math.floor(uv.getX(face * 4) * 8));
     expect(used.has(0)).toBe(true); expect(used.has(3)).toBe(true); expect(used.has(4)).toBe(true);
+    expect(used.has(5)).toBe(true); expect(used.has(6)).toBe(true); expect(used.has(7)).toBe(true);
     expect(mesh.geometry.getAttribute('position').array).toEqual(before.positions);
     view.dispose();
   });

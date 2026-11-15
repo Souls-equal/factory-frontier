@@ -24,6 +24,8 @@ import type { GatherableField } from '../resources/Gatherables';
 import type { InteractableDefinition } from '../world/World';
 import { createNaturalTexture, terrainTileUv } from './NaturalTextures';
 import { createNaturalBlockGeometry, createRockGeometry } from './NaturalModels';
+import { BiomeDecorationView } from './BiomeDecorationView';
+import { hash2D } from '../world/noise';
 
 /**
  * Renderer for the Phase 1 environment.
@@ -37,7 +39,7 @@ import { createNaturalBlockGeometry, createRockGeometry } from './NaturalModels'
  * - one merged terrain mesh with a pixel texture atlas and vertex tint,
  * - boulders and formations share three instanced meshes,
  * - geometries and materials are created once and disposed together,
- * - the only per-frame work is toggling a highlight ring.
+ * - gatherable and decorative visibility update only when their state changes.
  */
 
 const SKY_RADIUS = 480;
@@ -64,6 +66,7 @@ export class EnvironmentView {
   private readonly textures: Texture[] = [];
   private highlightedId: string | null = null;
   private readonly gatherables: GatherableField;
+  private readonly biomeDetails: BiomeDecorationView;
   private readonly gatherableModels = new Map<string, Group>();
   private gatherablesRevision = -1;
 
@@ -77,6 +80,8 @@ export class EnvironmentView {
     this.group.add(this.createRocks(world));
     this.group.add(this.createDeposits(world));
     this.group.add(this.createGatherables(world));
+    this.biomeDetails = new BiomeDecorationView(world);
+    this.group.add(this.biomeDetails.group);
     this.syncGatherables();
 
     const props = new Group();
@@ -106,6 +111,7 @@ export class EnvironmentView {
 
   /** Called before rendering; removed resources disappear without rebuilding the world. */
   syncGatherables(): void {
+    this.biomeDetails.sync();
     if (this.gatherablesRevision === this.gatherables.revision) return;
     for (const [id, model] of this.gatherableModels) model.visible = this.gatherables.active(id);
     this.gatherablesRevision = this.gatherables.revision;
@@ -116,6 +122,7 @@ export class EnvironmentView {
   }
 
   dispose(): void {
+    this.biomeDetails.dispose();
     for (const geometry of this.geometries) {
       geometry.dispose();
     }
@@ -190,9 +197,12 @@ export class EnvironmentView {
       const z = (data.positions[p + 2]! + data.positions[p + 8]!) / 2 - nz * world.terrain.blockSize * .01;
       const topY = Math.max(data.positions[p + 1]!, data.positions[p + 4]!);
       const biome = world.biomes.at(x, z);
-      const tile = biome === 'desert' ? 4 : biome === 'highlands' ? 3
-        : ny === 1 ? 0 : Math.abs(topY - world.terrain.heightAt(x, z)) < world.terrain.blockSize * .001 ? 1 : 2;
-      const [u0, v0, u1, v1] = terrainTileUv(tile, 5);
+      const patch = hash2D(world.biomes.seed ^ 0x431b, Math.floor(x / 5), Math.floor(z / 5));
+      const tile = biome === 'desert' ? (ny === 1 && patch > .55 ? 7 : 4)
+        : biome === 'highlands' ? (ny === 1 && patch > .65 ? 6 : 3)
+        : ny === 1 ? (biome === 'forest' && patch > .25 ? 5 : 0)
+        : Math.abs(topY - world.terrain.heightAt(x, z)) < world.terrain.blockSize * .001 ? 1 : 2;
+      const [u0, v0, u1, v1] = terrainTileUv(tile, 8);
       uv.set([u0, v0, u0, v1, u1, v1, u1, v0], face * 8);
       const shade = .91 + .09 * ((face * 2654435761) % 1000) / 1000;
       for (let vertex = 0; vertex < 4; vertex++) colors.set(biome === 'forest' ? [shade * .78, shade, shade * .76] : [shade, shade, shade], p + vertex * 3);
@@ -203,7 +213,7 @@ export class EnvironmentView {
 
     const material = new MeshStandardMaterial({
       vertexColors: true,
-      map: this.naturalTexture(['grass', 'grass-side', 'dirt', 'stone', 'sand']),
+      map: this.naturalTexture(['grass', 'grass-side', 'dirt', 'stone', 'sand', 'forest-floor', 'moss-stone', 'sand-ripple']),
       roughness: 0.96,
       metalness: 0.04,
     });
@@ -280,7 +290,11 @@ export class EnvironmentView {
 
         // Deterministic tint variation per rock.
         const shade = 0.82 + ((solidIndex * 7919) % 100) / 320;
-        tint.setRGB(shade * 0.92, shade * 0.97, shade);
+        const biome = world.biomes.at(obstacle.x, obstacle.z);
+        if (biome === 'desert') tint.setRGB(shade, shade * .82, shade * .62);
+        else if (biome === 'forest') tint.setRGB(shade * .75, shade * .90, shade * .74);
+        else if (biome === 'highlands') tint.setRGB(shade * .86, shade * .91, shade);
+        else tint.setRGB(shade * 0.92, shade * 0.97, shade);
         mesh.setColorAt(instance, tint);
       });
 
@@ -404,9 +418,11 @@ export class EnvironmentView {
     const bark = new MeshStandardMaterial({ map: this.naturalTexture(['bark']), roughness: 1 });
     const foliage = new MeshStandardMaterial({ map: this.naturalTexture(['leaves']), roughness: 1 });
     const foliageLight = new MeshStandardMaterial({ color: 0xd6ecc6, map: foliage.map, roughness: 1 });
+    const forestFoliage = new MeshStandardMaterial({ color: 0x9bc6a0, map: foliage.map, roughness: 1 });
+    const forestLight = new MeshStandardMaterial({ color: 0xb8df9e, map: foliage.map, roughness: 1 });
     const rock = new MeshStandardMaterial({ map: this.naturalTexture(['stone']), roughness: 1 });
     const highlight = new MeshBasicMaterial({ color: 0x8ff3ff });
-    for (const material of [bark, foliage, foliageLight, rock, highlight]) this.registerMaterial(material);
+    for (const material of [bark, foliage, foliageLight, forestFoliage, forestLight, rock, highlight]) this.registerMaterial(material);
 
     const part = (model: Group, name: string, geometry: BufferGeometryType, material: MeshStandardMaterial): Mesh => {
       const mesh = new Mesh(geometry, material); mesh.name = `${model.name}:${name}`;
@@ -419,8 +435,9 @@ export class EnvironmentView {
       model.rotation.y = (index * 2.3999632297) % (Math.PI * 2);
       if (d.kind === 'tree') {
         part(model, 'trunk', treeBark, bark);
-        part(model, 'crown', leaves, foliage);
-        part(model, 'crown-light', leavesLight, foliageLight);
+        const forest = world.biomes.at(d.x, d.z) === 'forest';
+        part(model, 'crown', leaves, forest ? forestFoliage : foliage);
+        part(model, 'crown-light', leavesLight, forest ? forestLight : foliageLight);
       } else if (d.kind === 'branch') {
         part(model, 'branch', branch, bark);
       } else {

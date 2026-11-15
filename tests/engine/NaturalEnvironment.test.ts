@@ -5,6 +5,7 @@ import { EnvironmentView } from '../../src/engine/EnvironmentView';
 import { createNaturalTexture } from '../../src/engine/NaturalTextures';
 import { createRockGeometry } from '../../src/engine/NaturalModels';
 import { createWorld } from '../../src/world/World';
+import { hash2D } from '../../src/world/noise';
 
 describe('natural environment visuals', () => {
   it('makes deterministic, distinct image textures with pixel filtering', () => {
@@ -31,9 +32,12 @@ describe('natural environment visuals', () => {
       const z = (data.positions[p + 2]! + data.positions[p + 8]!) / 2 - nz * world.terrain.blockSize * .01;
       const top = Math.max(data.positions[p + 1]!, data.positions[p + 4]!);
       const biome = world.biomes.at(x, z);
-      const tile = biome === 'desert' ? 4 : biome === 'highlands' ? 3
-        : ny === 1 ? 0 : Math.abs(top - world.terrain.heightAt(x, z)) < .001 * world.terrain.blockSize ? 1 : 2;
-      expect(Math.floor(uv.getX(face * 4) * 5)).toBe(tile);
+      const patch = hash2D(world.biomes.seed ^ 0x431b, Math.floor(x / 5), Math.floor(z / 5));
+      const tile = biome === 'desert' ? (ny === 1 && patch > .55 ? 7 : 4)
+        : biome === 'highlands' ? (ny === 1 && patch > .65 ? 6 : 3)
+        : ny === 1 ? (biome === 'forest' && patch > .25 ? 5 : 0)
+        : Math.abs(top - world.terrain.heightAt(x, z)) < .001 * world.terrain.blockSize ? 1 : 2;
+      expect(Math.floor(uv.getX(face * 4) * 8)).toBe(tile);
       if (tile === 0) tops++; else if (tile === 1) sides++; else if (tile === 2) dirt++;
     }
     expect(tops).toBeGreaterThan(0); expect(sides).toBeGreaterThan(0); expect(dirt).toBeGreaterThan(0);

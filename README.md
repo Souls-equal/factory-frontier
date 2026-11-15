@@ -18,7 +18,9 @@ The user has globally validated Phases 7–9. Individual earlier acceptance
 scenarios remain outstanding; see `PROJECT_STATUS.md` for details.
 
 The first Phase 10 slice adds seeded grassland, forest, desert and rocky regions,
-with extra removable natural resources. Ore distribution and terrain height are
+with extra removable natural resources, voxel vegetation and varied surface
+textures. Small decorative plants are non-interactive and hide under buildings.
+Ore distribution and terrain height are
 unchanged. Chunk streaming, persistent saves and wetlands are not implemented.
 The world remains finite and factory state is lost on reload.
 
