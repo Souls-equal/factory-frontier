@@ -20,7 +20,8 @@ import {
 
 import type { World } from '../world/World';
 import type { ResourceDeposit } from '../resources/ResourceDeposit';
-import type { GatherableField } from '../resources/Gatherables';
+import type { GatherableDefinition, GatherableField } from '../resources/Gatherables';
+import type { WorldChunk } from '../world/ChunkManager';
 import type { InteractableDefinition } from '../world/World';
 import { createNaturalTexture } from './NaturalTextures';
 import { createNaturalBlockGeometry, createRockGeometry } from './NaturalModels';
@@ -69,19 +70,28 @@ export class EnvironmentView {
   private readonly biomeDetails: BiomeDecorationView;
   private readonly terrainChunks: TerrainChunkView;
   private readonly gatherableModels = new Map<string, Group>();
+  private readonly depositModels = new Map<string, { model: Group; ground: BufferGeometry }>();
+  private depositRoot!: Group;
+  private makeDeposit!: (deposit: ResourceDeposit) => void;
   private gatherablesRevision = -1;
+  private gatherableRoot!: Group;
+  private makeGatherable!: (definition: GatherableDefinition) => void;
 
-  constructor(world: World, fogDistance = 265) {
+  constructor(world: World, fogDistance = 265, chunkColumns = 64) {
     this.gatherables = world.gatherables;
     this.group = new Group();
     this.group.name = 'environment';
 
     this.group.add(this.createSky());
-    this.terrainChunks = new TerrainChunkView(world, fogDistance);
+    this.terrainChunks = new TerrainChunkView(world, fogDistance, chunkColumns);
     this.group.add(this.terrainChunks.group);
     this.group.add(this.createRocks(world));
-    this.group.add(this.createDeposits(world));
-    this.group.add(this.createGatherables(world));
+    this.depositRoot = this.createDeposits(world);
+    this.group.add(this.depositRoot);
+    this.loadDeposits(this.terrainChunks.loadedChunks());
+    this.gatherableRoot = this.createGatherables(world);
+    this.group.add(this.gatherableRoot);
+    this.loadGatherables(this.terrainChunks.loadedChunks());
     this.biomeDetails = new BiomeDecorationView(world);
     this.group.add(this.biomeDetails.group);
     this.syncGatherables();
@@ -111,8 +121,28 @@ export class EnvironmentView {
     }
   }
 
-  /** Update visible terrain chunks without affecting gameplay state. */
-  setFocus(x: number, z: number, coverage?: number): void { this.terrainChunks.setFocus(x, z, coverage); }
+  /** Stream terrain, deposit and gatherable models without unloading gameplay state. */
+  setFocus(x: number, z: number, coverage?: number): void {
+    const changes = this.terrainChunks.setFocus(x, z, coverage);
+    for (const chunk of changes.unloaded) for (const deposit of chunk.deposits) {
+      const entry = this.depositModels.get(deposit.id);
+      if (entry) { this.depositRoot.remove(entry.model); entry.ground.dispose(); this.depositModels.delete(deposit.id); this.highlightBindings.delete(deposit.id); }
+    }
+    for (const chunk of changes.unloaded) for (const definition of chunk.gatherables) {
+      const model = this.gatherableModels.get(definition.id);
+      if (model) { this.gatherableRoot.remove(model); this.gatherableModels.delete(definition.id); this.highlightBindings.delete(definition.id); }
+    }
+    this.loadDeposits(changes.loaded);
+    this.loadGatherables(changes.loaded);
+  }
+
+  private loadDeposits(chunks: readonly WorldChunk[]): void {
+    for (const chunk of chunks) for (const deposit of chunk.deposits) this.makeDeposit(deposit);
+  }
+
+  private loadGatherables(chunks: readonly WorldChunk[]): void {
+    for (const chunk of chunks) for (const definition of chunk.gatherables) this.makeGatherable(definition);
+  }
 
   /** Called before rendering; removed resources disappear without rebuilding the world. */
   syncGatherables(): void {
@@ -127,6 +157,8 @@ export class EnvironmentView {
   }
 
   dispose(): void {
+    for (const entry of this.depositModels.values()) entry.ground.dispose();
+    this.depositModels.clear();
     this.biomeDetails.dispose();
     this.terrainChunks.dispose();
     for (const geometry of this.geometries) {
@@ -285,7 +317,7 @@ export class EnvironmentView {
     const colors: Record<string, number> = { 'iron-ore': 0x63757c, 'copper-ore': 0xb87348,
       limestone: 0xd0c8aa, coal: 0x202830, stone: 0x89928c, wood: 0x895e3c };
     const materials = new Map<string, MeshStandardMaterial>();
-    for (const deposit of world.deposits) {
+    this.makeDeposit = (deposit): void => {
       let material = materials.get(deposit.itemId);
       if (!material) {
         material = new MeshStandardMaterial({ color: colors[deposit.itemId] ?? 0x777777,
@@ -316,16 +348,16 @@ export class EnvironmentView {
       detail.castShadow = true; detail.receiveShadow = true;
       const ring = new Mesh(ringGeometry, ringMaterial);
       ring.name = `${model.name}:highlight-ring`; ring.rotation.x = Math.PI / 2;
-      ring.position.y = 1.65; ring.visible = false;
+      ring.position.y = 1.65; ring.visible = this.highlightedId === deposit.id;
       const aura = new Mesh(auraGeometry, marker.aura);
       aura.name = `${model.name}:aura`; aura.rotation.x = Math.PI / 2; aura.position.y = 1.4;
       const groundGeometry = this.createDepositGroundMark(world, deposit);
-      this.registerGeometry(groundGeometry);
       const ground = new Mesh(groundGeometry, marker.ground);
       ground.name = `${model.name}:ground-mark`;
       model.add(body, detail, ring, aura, ground); group.add(model);
       this.highlightBindings.set(deposit.id, { ring });
-    }
+      this.depositModels.set(deposit.id, { model, ground: groundGeometry });
+    };
     return group;
   }
 
@@ -388,7 +420,9 @@ export class EnvironmentView {
       const mesh = new Mesh(geometry, material); mesh.name = `${model.name}:${name}`;
       mesh.castShadow = true; mesh.receiveShadow = true; model.add(mesh); return mesh;
     };
-    for (const [index, d] of world.gatherables.definitions.entries()) {
+    const indices = new Map(world.gatherables.definitions.map((definition, index) => [definition.id, index]));
+    this.makeGatherable = (d): void => {
+      const index = indices.get(d.id)!;
       const model = new Group(); model.name = `environment:gatherable:${d.id}`;
       model.position.set(d.x, d.y, d.z);
       // Rotation varies by stable definition order, not random state or simulation.
@@ -406,10 +440,11 @@ export class EnvironmentView {
       }
       const halo = new Mesh(ring, highlight); halo.name = `${model.name}:highlight-ring`;
       halo.rotation.x = Math.PI / 2; halo.position.y = d.kind === 'tree' ? 3.35 : .42;
-      halo.scale.setScalar(d.kind === 'tree' ? 1.4 : .72); halo.visible = false;
+      halo.scale.setScalar(d.kind === 'tree' ? 1.4 : .72); halo.visible = this.highlightedId === d.id;
+      model.visible = this.gatherables.active(d.id);
       model.add(halo); group.add(model);
       this.highlightBindings.set(d.id, { ring: halo }); this.gatherableModels.set(d.id, model);
-    }
+    };
     return group;
   }
 

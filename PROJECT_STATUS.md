@@ -3,11 +3,33 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 10 — World expansion
-**Phase Status:** 🟡 In progress — biome-aware deposits, terrain mesh streaming and bounded voxel data cache
-**Next Recommended Task:** Continue chunking other world data and implement preservation of factory state; profile streaming in the browser.
+**Phase Status:** 🟡 In progress — chunk lifecycle, streamed terrain/resources and bounded voxel data cache
+**Next Recommended Task:** Extend world-data streaming, implement cross-reload preservation, and profile and validate chunk transitions in the browser.
 **Last Updated:** 2026-11-11
 
 ---
+
+## Phase 10 — chunk lifecycle and resource visuals
+
+- A renderer-independent `ChunkManager` tracks unique, finite, camera-centred
+  regions and creates metadata on demand: column range, bounds, centre biome,
+  deposits, gatherables, obstacles and interactables. Position-based objects
+  belong to one chunk by centre; current buildings are queried by intersecting
+  footprints and can appear in several chunks. The biome can vary within a chunk.
+  Terrain mesh visibility now follows this manager's load/unload transitions.
+- Deposit and gatherable models are created and removed with those transitions.
+  Shared assets survive unload; per-deposit ground-mark geometry is disposed and
+  regenerated. Highlight and gathered state are restored on return. Natural rock
+  instances, props, biome details and buildings are not streamed; deposit and
+  gatherable definitions and collisions remain resident in the finite world.
+- Automated tests exercise unique ownership, regeneration, edge-spanning buildings,
+  disposal and unloaded-resource state, plus a powered constructor, fuel and a
+  conveyor item while its chunk is absent. Factory simulation remains resident
+  and active; this is preservation in the same session, not serialization.
+- Phase 10 is **not complete**: whole-world data are not yet streamed, the source
+  heightfield and simulation remain resident, and cross-reload factory persistence
+  is not implemented (full saves are also Phase 12 scope). No browser performance
+  profiling or separate browser acceptance of these transitions has been performed.
 
 ## Phase 10 — bounded terrain data cache
 
@@ -58,8 +80,8 @@
   mesh and performance needs browser profiling; no improvement is asserted.
 - Mesh streaming alone does not unload buildings, simulation, resources, flora or
   other scene objects. Machines continue running while terrain meshes are absent.
-  The later bounded voxel data cache is described above; the source heightfield
-  and other world data remain resident. No save/load, wetlands or water yet.
+  The later bounded voxel cache and chunk lifecycle are described above; the source
+  heightfield and other world data remain resident. No save/load, wetlands or water yet.
 
 ## Phase 9 — advanced manufacturing globally user-validated
 

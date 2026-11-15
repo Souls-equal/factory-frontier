@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased — Phase 10 chunk lifecycle and resource rendering
+
+- Track camera-centred chunk metadata for terrain, biome, deposits, gatherables,
+  obstacles and props; query live buildings by footprint, including chunk edges.
+- Stream deposit and gatherable models alongside terrain. Dispose and regenerate
+  per-deposit ground geometry, retain shared assets and restore selection and
+  collection state. Simulation and mutable world state remain resident.
+- Test chunk ownership and regeneration, model lifecycles and in-session factory
+  state during unload. Full world streaming, cross-reload saves and browser
+  performance/transition validation remain outstanding.
+
 ## Unreleased — Phase 10 bounded voxel data cache
 
 - Regenerate immutable voxel levels in bounded LRU chunks on demand, retaining
