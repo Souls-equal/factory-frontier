@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — Phase 10 biome visual enrichment
+
+- Add instanced, seed-stable voxel flora for meadows, forests, deserts and
+  highlands; decorations are non-interactive and hide beneath constructions.
+- Add varied forest-floor, rippled sand and mossy-stone top textures, plus
+  biome-sensitive rock and forest-tree tints. Terrain geometry is unchanged.
+- Add automated determinism, biome, bounds, cleanup and building-occlusion tests.
+  Visual player validation and the rest of Phase 10 remain outstanding.
+
 ## Unreleased — Phase 10 initial biomes
 
 - Add reproducible grassland, forest, desert and highland biome regions and

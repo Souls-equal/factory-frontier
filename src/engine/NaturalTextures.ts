@@ -3,7 +3,7 @@ import { DataTexture, NearestFilter, RGBAFormat, SRGBColorSpace } from 'three';
 /** Small, deterministic pixel-art texture tiles. No DOM, network or runtime randomness. */
 const SIZE = 32;
 type RGB = readonly [number, number, number];
-type Pattern = 'grass' | 'grass-side' | 'dirt' | 'stone' | 'sand' | 'bark' | 'leaves';
+type Pattern = 'grass' | 'grass-side' | 'dirt' | 'stone' | 'sand' | 'forest-floor' | 'moss-stone' | 'sand-ripple' | 'bark' | 'leaves';
 
 function hash(x: number, y: number, salt: number): number {
   let value = Math.imul(x + salt * 19, 374761393) + Math.imul(y + salt * 7, 668265263);
@@ -19,6 +19,17 @@ function pixel(pattern: Pattern, x: number, y: number): RGB {
   }
   if (pattern === 'grass-side' || pattern === 'dirt') {
     return patch > .73 ? [141, 102, 65] : fine > .81 ? [157, 119, 76] : fine < .18 ? [105, 72, 48] : [124, 86, 55];
+  }
+  if (pattern === 'forest-floor') {
+    const leaf = (Math.floor(x / 3) + Math.floor(y / 4) * 3) % 9 === 0;
+    return leaf && fine > .3 ? [167, 147, 77] : patch > .65 ? [77, 124, 61] : [58, 104, 55];
+  }
+  if (pattern === 'moss-stone') {
+    return patch > .48 ? [113, 143, 108] : fine > .8 ? [174, 182, 157] : [138, 153, 137];
+  }
+  if (pattern === 'sand-ripple') {
+    const ripple = (y + Math.floor(x / 6)) % 9 < 2;
+    return ripple ? [197, 159, 103] : patch > .68 ? [236, 209, 155] : [221, 192, 132];
   }
   if (pattern === 'sand') {
     return patch > .72 ? [226, 199, 139] : fine > .8 ? [239, 215, 160] : [211, 183, 125];

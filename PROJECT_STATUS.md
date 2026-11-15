@@ -3,8 +3,8 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 10 — World expansion
-**Phase Status:** 🟡 In progress — initial seeded biome regions and natural resources
-**Next Recommended Task:** Validate biomes in-game and implement chunk streaming without losing factory state.
+**Phase Status:** 🟡 In progress — seeded biomes, natural resources and visual detail
+**Next Recommended Task:** Validate biome visuals in-game, then implement chunk streaming without losing factory state.
 **Last Updated:** 2026-11-11
 
 ---
@@ -20,6 +20,12 @@
   original guaranteed starter objects and ore deposit algorithm are unchanged.
   Biomes do not yet affect ore, terrain shape, or water; they are sampled with
   discrete boundaries and some seeds or small worlds may not show every region.
+- Added voxel-style meadow grass and flowers, forest ferns, desert scrub and
+  alpine plants in seeded bounded instanced batches. Forest-floor, sand-ripple and
+  mossy-stone surface variants, biome-tinted rocks and forest tree foliage enrich
+  the look. These are presentation-only (not targets, resources or colliders);
+  they hide under building footprints and reappear when buildings are demolished.
+  The renderer caps the decoration count at 2,200 and does not stream it.
 - The world is still finite and generated/rendered in full: no chunk loading or
   unloading, no factory modification persistence across reloads, no wetlands.
   Existing factory state stays in memory only. Phase 10 remains in progress and

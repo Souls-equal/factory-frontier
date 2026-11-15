@@ -1834,3 +1834,21 @@ forests and stones in highlands, with sparse desert stones. Existing collision,
 interaction, inventory and gathering state handle these objects. They are not
 chunked, respawnable or persistent. The finite world and all resources still load
 as a whole; this slice is not chunk streaming or save/load.
+
+## Phase 10 — presentation-only biome details
+
+`BiomeDecorationView` samples the existing deterministic biome field on a
+bounded, jittered grid. It builds up to 2,200 small voxel-style grass, flower,
+fern, desert scrub and alpine plant instances in at most five material/geometry
+batches. Seeded priority sampling avoids truncating from one map edge. Decorative
+instances have no interaction, resource or collision state. They stay away from
+natural resources and props; their presentation hides under all building
+footprints and reappears when those buildings are removed. A spatial bucket map
+is rebuilt only on building revision and the instance matrix is refreshed then.
+Materials and geometries are disposed with the environment.
+
+The terrain atlas adds forest floor, mossy rock and rippled sand variants; seeded
+coarse patches select top tiles without changing the voxel geometry. Rocks and
+collectable forest trees use biome-sensitive tints. The classification still has
+discrete boundaries, no water, chunks or save/load. Cosmetic details are bounded
+to the existing play area and have not been visually validated in a browser.
