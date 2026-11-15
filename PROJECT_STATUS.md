@@ -3,11 +3,27 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 10 — World expansion
-**Phase Status:** 🟡 In progress — biome-aware deposits and initial terrain-render streaming
-**Next Recommended Task:** Validate biomes and exploratory deposits in-game; extend chunking beyond rendering and preserve world state.
+**Phase Status:** 🟡 In progress — biome-aware deposits, terrain mesh streaming and bounded voxel data cache
+**Next Recommended Task:** Continue chunking other world data and implement preservation of factory state; profile streaming in the browser.
 **Last Updated:** 2026-11-11
 
 ---
+
+## Phase 10 — bounded terrain data cache
+
+- `VoxelTerrain` supports a bounded least-recently-used cache of regenerated
+  column chunks. World assembly uses 64-column chunks, at most 16; queries,
+  collisions, construction and mesh borders use the same deterministic levels.
+  The default 240-column world can still fit entirely in the cache. The source
+  heightfield remains resident, all columns are sampled during initial validation
+  and mesh-budget calculation, and mesh streaming and data eviction are separate.
+  This is not on-demand generation of the complete world, nor full streaming of
+  resources, decorations or factory simulation. Sampling is synchronous and cache
+  churn may cost CPU; browser memory and performance have not been profiled.
+- The user reports the map is very playable, without individual results for
+  each biome, deposit or streaming scenario. State survives mesh/data eviction in
+  memory but is still lost on page reload; Phase 10 remains open and Phase 11
+  has not begun.
 
 ## Phase 10 — initial biome regions
 
@@ -40,12 +56,10 @@
   The small default world can remain mostly or entirely loaded because the fog
   distance is large. Chunk count increases draw calls versus the former single
   mesh and performance needs browser profiling; no improvement is asserted.
-- This is presentation-only streaming: the finite world voxel grid, collisions,
-  buildings, simulation, resources, flora and other scene objects remain resident.
-  Machines continue running while terrain chunks are absent. There is no world
-  data streaming, procedural generation on demand, save/load or persistence across
-  reloads; no wetlands or water. Phase 10 remains in progress and the slice
-  still needs player validation.
+- Mesh streaming alone does not unload buildings, simulation, resources, flora or
+  other scene objects. Machines continue running while terrain meshes are absent.
+  The later bounded voxel data cache is described above; the source heightfield
+  and other world data remain resident. No save/load, wetlands or water yet.
 
 ## Phase 9 — advanced manufacturing globally user-validated
 

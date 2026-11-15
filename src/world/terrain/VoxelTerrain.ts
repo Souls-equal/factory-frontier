@@ -15,6 +15,8 @@ export interface VoxelTerrainOptions {
   readonly bottomLevel: number;
   /** Sampled at each column centre. Equal inputs must return equal heights. */
   readonly sampleHeight: (x: number, z: number) => number;
+  /** Optional bounded on-demand cache. The sampling function must remain deterministic for the terrain lifetime. */
+  readonly chunkCache?: { readonly columns: number; readonly maxChunks: number };
 }
 
 /** Half-open column range. Neighbouring columns still contribute to face culling. */
@@ -42,7 +44,16 @@ export class VoxelTerrain implements TerrainQuery {
   readonly columnsZ: number;
   readonly blockSize: number;
   readonly bottomLevel: number;
-  private readonly levels: Int32Array;
+  private readonly levels: Int32Array | null;
+  private readonly sampleHeight: (x: number, z: number) => number;
+  private readonly chunkCache: { readonly columns: number; readonly maxChunks: number } | undefined;
+  private readonly chunks = new Map<string, Int32Array>();
+  private maxLevel = -Infinity;
+  private recentKey: string | undefined;
+  private recentChunk: Int32Array | undefined;
+
+  /** Number of cached voxel chunks (zero for the eager storage mode). */
+  get cachedChunkCount(): number { return this.chunks.size; }
 
   constructor(options: VoxelTerrainOptions) {
     const { originX, originZ, columnsX, columnsZ, blockSize, bottomLevel, sampleHeight } = options;
@@ -59,22 +70,51 @@ export class VoxelTerrain implements TerrainQuery {
     this.size = columnsX * blockSize; this.resolution = columnsX; this.cellSize = blockSize;
     this.bounds = Object.freeze({ minX: originX, maxX: originX + columnsX * blockSize,
       minZ: originZ, maxZ: originZ + columnsZ * blockSize });
-    this.levels = new Int32Array(columnsX * columnsZ);
-    for (let z = 0; z < columnsZ; z++) for (let x = 0; x < columnsX; x++) {
-      const height = sampleHeight(originX + (x + .5) * blockSize, originZ + (z + .5) * blockSize);
-      const level = Math.round(height / blockSize);
-      // Bounding the vertical range also bounds worst-case mesh allocation.
-      if (!Number.isFinite(height) || !Number.isSafeInteger(level) || level <= bottomLevel || level - bottomLevel > 512) {
-        throw new RangeError('Voxel column height is outside the supported range.');
-      }
-      this.levels[z * columnsX + x] = level;
+    const cache = options.chunkCache;
+    if (cache && (!Number.isSafeInteger(cache.columns) || cache.columns < 1 || cache.columns > 512 ||
+        !Number.isSafeInteger(cache.maxChunks) || cache.maxChunks < 1 || cache.maxChunks > 262144)) {
+      throw new RangeError('Invalid voxel chunk cache options.');
     }
+    this.chunkCache = cache ? { ...cache } : undefined;
+    this.sampleHeight = sampleHeight;
+    this.levels = cache ? null : new Int32Array(columnsX * columnsZ);
+    for (let z = 0; z < columnsZ; z++) for (let x = 0; x < columnsX; x++) {
+      const level = this.sampleLevel(x, z);
+      this.maxLevel = Math.max(this.maxLevel, level);
+      if (this.levels) this.levels[z * columnsX + x] = level;
+    }
+  }
+
+  private sampleLevel(x: number, z: number): number {
+    const height = this.sampleHeight(this.originX + (x + .5) * this.blockSize, this.originZ + (z + .5) * this.blockSize);
+    const level = Math.round(height / this.blockSize);
+    if (!Number.isFinite(height) || !Number.isSafeInteger(level) || level <= this.bottomLevel || level - this.bottomLevel > 512)
+      throw new RangeError('Voxel column height is outside the supported range.');
+    return level;
   }
 
   /** Exclusive upper block level, or null when outside the finite terrain. */
   topLevel(x: number, z: number): number | null {
     if (!Number.isInteger(x) || !Number.isInteger(z) || x < 0 || z < 0 || x >= this.columnsX || z >= this.columnsZ) return null;
-    return this.levels[z * this.columnsX + x]!;
+    if (this.levels) return this.levels[z * this.columnsX + x]!;
+    const { columns, maxChunks } = this.chunkCache!;
+    const cx = Math.floor(x / columns), cz = Math.floor(z / columns), key = `${cx},${cz}`;
+    let chunk = key === this.recentKey ? this.recentChunk : this.chunks.get(key);
+    if (chunk && key !== this.recentKey) {
+      // Map insertion order tracks least-recently used chunks.
+      this.chunks.delete(key); this.chunks.set(key, chunk);
+    } else if (!chunk) {
+      const width = Math.min(columns, this.columnsX - cx * columns);
+      const depth = Math.min(columns, this.columnsZ - cz * columns);
+      chunk = new Int32Array(width * depth);
+      for (let dz = 0; dz < depth; dz++) for (let dx = 0; dx < width; dx++)
+        chunk[dz * width + dx] = this.sampleLevel(cx * columns + dx, cz * columns + dz);
+      if (this.chunks.size >= maxChunks) this.chunks.delete(this.chunks.keys().next().value!);
+      this.chunks.set(key, chunk);
+    }
+    this.recentKey = key; this.recentChunk = chunk;
+    const width = Math.min(columns, this.columnsX - cx * columns);
+    return chunk[(z - cz * columns) * width + (x - cx * columns)]!;
   }
 
   /** Occupancy in integer column/level coordinates, including the bottom. */
@@ -108,7 +148,7 @@ export class VoxelTerrain implements TerrainQuery {
   }
   normalAt(_x: number, _z: number): { x: number; y: number; z: number } { return { x: 0, y: 1, z: 0 }; }
   slopeAt(_x: number, _z: number): number { return 0; }
-  get maxHeight(): number { let max = -Infinity; for (const level of this.levels) max = Math.max(max, level); return max * this.blockSize; }
+  get maxHeight(): number { return this.maxLevel * this.blockSize; }
 
   /** Highest column top below the feet that intersects the horizontal player circle. */
   groundBelow(x: number, z: number, feetY: number, radius: number): number {

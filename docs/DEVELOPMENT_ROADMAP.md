@@ -20,8 +20,9 @@ The user globally validated Phases 7 and 8 and now reports that everything works
 following Phase 9, explicitly requesting the next phase. Individual scenario
 results were not supplied. Phase 10 includes seed-driven biome regions, biased
 resources and exploratory deposits, visual enrichment and camera-driven terrain
-mesh streaming; it is not complete or player-validated. Full world-data chunk streaming, preservation
-across reloads, and further world diversity remain outstanding.
+mesh streaming and a bounded voxel-column cache. The user finds the map very playable,
+but has not provided individual scenario results. Full world-data chunk streaming,
+preservation across reloads, and further world diversity remain outstanding.
 
 The user explicitly authorized the next step after confirming in-game miner →
 conveyor → terminal transport, turns/slopes without item loss, and blockage/recovery.
@@ -56,7 +57,7 @@ detailed evidence and verification results live in `PROJECT_STATUS.md`.
 | 7 — Advanced logistics | ✅ Globally user-validated | Player reports no apparent bugs in their tests; individual checklist results not specified; documented limits apply |
 | 8 — Electricity | ✅ Globally user-validated | Automatic visible links, biomass generation, machine power and inspection; documented limitations remain |
 | 9 — Advanced manufacturing | ✅ Globally user-validated | Player reports everything works; individual scenario results not supplied |
-| 10 — World expansion | 🟡 In progress | Seeded biomes, exploratory deposits and initial terrain rendering chunks; world-data streaming and state preservation outstanding |
+| 10 — World expansion | 🟡 In progress | Seeded biomes, exploratory deposits, terrain rendering chunks and bounded voxel data cache; full world-data streaming and state preservation outstanding |
 | 11 — Progression | ◻ Planned | — |
 | 12 — Persistence | ◻ Planned | — |
 | 13 — Polish and optimization | ◻ Planned | — |
