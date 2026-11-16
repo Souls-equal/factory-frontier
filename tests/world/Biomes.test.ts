@@ -16,12 +16,12 @@ describe('phase 10 biome regions', () => {
     const points = Array.from({ length: 441 }, (_, i) => ({ x: (i % 21 - 10) * 10, z: (Math.floor(i / 21) - 10) * 10 }));
     const samples = points.map(p => first.at(p.x, p.z));
     expect(points.slice().reverse().map(p => again.at(p.x, p.z)).reverse()).toEqual(samples);
-    expect(new Set(samples)).toEqual(new Set<Biome>(['grassland', 'forest', 'desert', 'highlands']));
+    expect(new Set(samples)).toEqual(new Set<Biome>(['grassland', 'forest', 'desert', 'highlands', 'wetlands']));
     expect(points.map(p => other.at(p.x, p.z))).not.toEqual(samples);
     expect(first.at(0, 9)).toBe('grassland');
     const defaults = new BiomeField(20261111, { x: 0, z: 9 });
     const accessible = points.filter(p => Math.hypot(p.x, p.z) < 115);
-    expect(new Set(accessible.map(p => defaults.at(p.x, p.z)))).toEqual(new Set<Biome>(['grassland', 'forest', 'desert', 'highlands']));
+    expect(new Set(accessible.map(p => defaults.at(p.x, p.z)))).toEqual(new Set<Biome>(['grassland', 'forest', 'desert', 'highlands', 'wetlands']));
     expect(() => first.at(NaN, 0)).toThrow(RangeError);
   });
   it('applies biome materials to actual terrain geometry without changing collision', () => {

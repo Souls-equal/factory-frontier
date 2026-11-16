@@ -1,0 +1,51 @@
+import { describe, expect, it, vi } from 'vitest';
+import { InstancedMesh, Matrix4, Vector3, type Material } from 'three';
+import { createGameConfig } from '../../src/core/Configuration';
+import { createWorld } from '../../src/world/World';
+import { EnvironmentView } from '../../src/engine/EnvironmentView';
+
+describe('streamed shallow water visuals', () => {
+  it('hides and restores puddles with buildings, reloads deterministically, and disposes owned assets', () => {
+    const world = createWorld(createGameConfig());
+    const t = world.terrain, chunkSize = 16;
+    const cells = world.shallowWater.cells({ minX: 0, minZ: 0, maxX: t.columnsX, maxZ: t.columnsZ });
+    const far = { x: 1000, z: 1000, radius: .4 };
+    world.buildings.setCreativeMode(true);
+    const cell = cells.find(c => world.buildings.validate('foundation', c.x, c.z, 0, far).reason === 'valid');
+    expect(cell).toBeDefined();
+    const c = cell!, cx = Math.floor(c.columnX / chunkSize), cz = Math.floor(c.columnZ / chunkSize);
+    const range = { minX: cx * chunkSize, minZ: cz * chunkSize, maxX: Math.min((cx + 1) * chunkSize, t.columnsX), maxZ: Math.min((cz + 1) * chunkSize, t.columnsZ) };
+    const index = world.shallowWater.cells(range).findIndex(p => p.columnX === c.columnX && p.columnZ === c.columnZ);
+    const view = new EnvironmentView(world, 0, chunkSize);
+    const name = `environment:shallow-water:${cx},${cz}`;
+    view.setFocus(c.x, c.z, 0);
+    const mesh = view.group.getObjectByName(name) as InstancedMesh;
+    expect(mesh).toBeInstanceOf(InstancedMesh);
+    const getMatrix = (m: InstancedMesh) => { const matrix = new Matrix4(); m.getMatrixAt(index, matrix); return matrix; };
+    const before = getMatrix(mesh);
+    expect(new Vector3().setFromMatrixPosition(before).x).toBeCloseTo(c.x);
+    expect(new Vector3().setFromMatrixScale(before).length()).toBeGreaterThan(0);
+    const placed = world.buildings.place('foundation', c.x, c.z, 0, far);
+    expect(placed.reason).toBe('valid');
+    view.syncGatherables();
+    expect(new Vector3().setFromMatrixScale(getMatrix(mesh)).length()).toBe(0);
+    const meshDispose = vi.spyOn(mesh, 'dispose'), geometryDispose = vi.spyOn(mesh.geometry, 'dispose');
+    const materialDispose = vi.spyOn(mesh.material as Material, 'dispose');
+    view.setFocus(c.x < 0 ? t.originX + t.columnsX * t.blockSize - 1 : t.originX + 1,
+      c.z < 0 ? t.originZ + t.columnsZ * t.blockSize - 1 : t.originZ + 1, 0);
+    expect(view.group.getObjectByName(name)).toBeUndefined();
+    expect(meshDispose).toHaveBeenCalledOnce(); expect(geometryDispose).not.toHaveBeenCalled();
+    view.setFocus(c.x, c.z, 0);
+    const restored = view.group.getObjectByName(name) as InstancedMesh;
+    expect(restored).not.toBe(mesh); expect(restored.geometry).toBe(mesh.geometry);
+    expect(new Vector3().setFromMatrixScale(getMatrix(restored)).length()).toBe(0);
+    expect(world.buildings.demolish(placed.building!.id)).toBe('removed');
+    view.syncGatherables(); expect(getMatrix(restored).elements).toEqual(before.elements);
+    view.setFocus(c.x, c.z, 0);
+    const root = view.group.getObjectByName('environment:shallow-water')!;
+    expect(root.children.filter(child => child.name === name)).toHaveLength(1);
+    const restoredDispose = vi.spyOn(restored, 'dispose');
+    view.dispose();
+    expect(restoredDispose).toHaveBeenCalledOnce(); expect(geometryDispose).toHaveBeenCalledOnce(); expect(materialDispose).toHaveBeenCalledOnce();
+  });
+});

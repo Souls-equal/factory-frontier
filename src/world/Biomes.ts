@@ -1,8 +1,8 @@
 import { valueNoise2D } from './noise';
 
-export type Biome = 'grassland' | 'forest' | 'desert' | 'highlands';
+export type Biome = 'grassland' | 'forest' | 'desert' | 'highlands' | 'wetlands';
 export const BIOME_LABELS: Readonly<Record<Biome, string>> = Object.freeze({
-  grassland: 'Grassland', forest: 'Forest', desert: 'Desert', highlands: 'Highlands',
+  grassland: 'Grassland', forest: 'Forest', desert: 'Desert', highlands: 'Highlands', wetlands: 'Wetlands',
 });
 
 /** Deterministic, coordinate-based regions; independent of visit or generation order. */
@@ -17,6 +17,7 @@ export class BiomeField {
     const ruggedness = valueNoise2D(this.seed ^ 0x1e63a1, x / 48, z / 48);
     if (ruggedness > .68) return 'highlands';
     if (moisture < .37) return 'desert';
+    if (moisture > .72) return 'wetlands';
     if (moisture > .61) return 'forest';
     return 'grassland';
   }

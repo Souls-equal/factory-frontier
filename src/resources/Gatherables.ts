@@ -68,7 +68,7 @@ export function generateGatherables(terrain: TerrainQuery, obstacles: readonly O
       const biome = biomes.at(x, z);
       // Forests favour wood, highlands favour stone, deserts remain sparse.
       const roll = extra.next();
-      const kind: GatherableKind | null = biome === 'forest' ? (roll < .65 ? 'tree' : roll < .78 ? 'stone' : null)
+      const kind: GatherableKind | null = (biome === 'forest' || biome === 'wetlands') ? (roll < .65 ? 'tree' : roll < .78 ? 'stone' : null)
         : biome === 'highlands' ? (roll < .55 ? 'stone' : roll < .65 ? 'tree' : null)
         : biome === 'desert' ? (roll < .2 ? 'stone' : null)
         : roll < .22 ? 'tree' : roll < .42 ? 'stone' : null;
