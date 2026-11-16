@@ -26,10 +26,9 @@ import { InputManager } from './input/InputManager';
 import { Inventory } from './items/Inventory';
 import { createDefaultItemRegistry } from './items/ItemRegistry';
 import { GatherableCollision } from './resources/Gatherables';
-import { DepositInteractable } from './resources/ResourceDeposit';
 import { InventoryUI } from './ui/InventoryUI';
 import { InteractionSystem } from './interaction/InteractionSystem';
-import { createWorldInteractables } from './interaction/WorldInteractables';
+import { WorldInteractionChunks } from './interaction/WorldInteractionChunks';
 import { PlayerController } from './player/PlayerController';
 import { ControlsHint } from './ui/ControlsHint';
 import { InteractionPrompt } from './ui/InteractionPrompt';
@@ -75,6 +74,7 @@ let constructionUI: ConstructionUI | undefined;
 let machineUI: MachineUI | undefined;
 let logisticsUI: LogisticsUI | undefined;
 let dashboardUI: FactoryDashboard | undefined;
+let worldInteractionChunks: WorldInteractionChunks | undefined;
 
 function measureViewport(): { width: number; height: number } {
   const width = app?.clientWidth ?? 0;
@@ -110,6 +110,7 @@ function shutdown(): void {
   machineUI = undefined;
   logisticsUI?.dispose(); logisticsUI = undefined;
   dashboardUI?.dispose(); dashboardUI = undefined;
+  worldInteractionChunks?.dispose(); worldInteractionChunks = undefined;
   game?.dispose();
 }
 
@@ -260,17 +261,9 @@ async function boot(): Promise<void> {
     range: config.interaction.range,
     viewProvider: () => player.view,
   });
-  for (const interactable of createWorldInteractables(world.interactables)) {
-    interaction.register(interactable);
-  }
-  for (const deposit of world.deposits) {
-    interaction.register(new DepositInteractable(deposit, registry, config.interaction.range,
-      () => !buildings.all().some((building) => building.depositId === deposit.id), world.biomes.at(deposit.x, deposit.z)));
-  }
-
-  for (const gatherable of world.gatherables.interactables(inventory, config.interaction.range)) {
-    interaction.register(gatherable);
-  }
+  const worldInteractions = new WorldInteractionChunks(world, interaction, inventory, config.interaction.range);
+  worldInteractionChunks = worldInteractions;
+  worldInteractions.update(player.view.position.x, player.view.position.z);
 
   const machineInteractions = new Map<string, () => void>();
   const syncMachines = (): void => {
@@ -429,6 +422,7 @@ async function boot(): Promise<void> {
           interactionPrompt.showFeedback(result === 'removed' ? (free ? 'Free building demolished; no materials to refund.' : 'Building demolished; materials refunded.') : `Cannot demolish: ${result}.`);
         }
       }
+      worldInteractions.update(player.view.position.x, player.view.position.z);
       syncMachines(); syncPower(); syncLogistics(); syncBeltItems(); syncGroundItems();
       const interactPressed = createdInput.consumeInteract();
       if (interactPressed && action === null && !construction.active && !constructionUI?.isOpen && !inventoryUI?.isOpen && !machineUI?.isOpen && !logisticsUI?.isOpen && !dashboardUI?.isOpen) {

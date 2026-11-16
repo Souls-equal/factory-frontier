@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — Phase 10 streamed world interactions
+
+- Register static-world interaction adapters around the player by chunk, separate
+  from visual chunk streaming; retain resource and prop state across transitions.
+- Keep factory/moving-item interactions unchanged; fix stale unregister callbacks
+  so they cannot remove later registrations. Test targeting equivalence, partial
+  chopping, prop state, mine placement, cleanup and conflict recovery.
+- Definitions, collision data and factory simulation remain resident; cross-reload
+  persistence and full streaming are not implemented.
+
 ## Unreleased — Phase 10 chunk lifecycle and resource rendering
 
 - Track camera-centred chunk metadata for terrain, biome, deposits, gatherables,

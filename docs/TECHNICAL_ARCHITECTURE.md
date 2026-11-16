@@ -1944,3 +1944,26 @@ persisted across browser reloads. Loading is synchronous and performance has not
 been measured in a browser. The chunk size and camera coverage are configurable
 through constructors; the game uses 64 columns and its fog/frustum coverage.
 This supersedes earlier presentation-only terrain descriptions where applicable.
+
+
+## Phase 10 — streamed static-world interactions
+
+`WorldInteractionChunks` owns a separate `ChunkManager` focused on the current
+authoritative player position each fixed tick, before interaction requests are
+processed. Its default chunk width is 16 terrain columns, independent of the
+64-column render chunks. It registers nearby world props, deposit inspection and
+gatherable interaction adapters, and unregisters them when their region leaves
+the reach plus largest target radius and chunk margin. Player movement, aiming
+and interaction rules are unchanged. Factory, conveyor item and ground item
+interactions retain their existing lifecycles. A comparison test covers target
+selection against an all-registered reference at many boundary positions.
+
+`GatherableField` still owns quantities and partial chopping; the two stateful
+world prop instances also stay resident. Adapters are reconstructed on return,
+while deposit availability is dynamically checked against buildings. State and
+collisions are not evicted, and there is no reload persistence. On a registration
+conflict the chunk interaction registry is cleared so it can be retried, without
+removing external interactions. `InteractionSystem` unregistration is idempotent
+even if the same object is registered again later. World definitions and all
+collision data remain resident; this is not full world-data streaming. Browser
+performance and a separate in-game transition test remain outstanding.

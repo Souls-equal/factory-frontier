@@ -64,8 +64,11 @@ export class InteractionSystem implements SimulationSystem {
       throw new Error(`Interactable "${id}" is already registered.`);
     }
     this.interactables.set(id, interactable);
+    let registered = true;
     return () => {
-      this.interactables.delete(id);
+      if (!registered) return;
+      registered = false;
+      if (this.interactables.get(id) === interactable) this.interactables.delete(id);
     };
   }
 

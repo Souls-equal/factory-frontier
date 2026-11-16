@@ -3,11 +3,29 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 10 — World expansion
-**Phase Status:** 🟡 In progress — chunk lifecycle, streamed terrain/resources and bounded voxel data cache
+**Phase Status:** 🟡 In progress — streamed world interactions, chunk lifecycle and bounded voxel data cache
 **Next Recommended Task:** Extend world-data streaming, implement cross-reload preservation, and profile and validate chunk transitions in the browser.
 **Last Updated:** 2026-11-11
 
 ---
+
+## Phase 10 — streamed world interactions
+
+- A separate 16-column chunk lifecycle now creates and removes interaction
+  adapters for nearby deposits, gatherables and world props around the real
+  player on fixed simulation steps. Its radius includes interaction reach,
+  target radius and a chunk margin; it is independent of render visibility.
+  Factory and moving-item interactions continue to be managed separately.
+- Resource and prop state remain authoritative outside the adapters: partial
+  tree chops, collection and beacon/relay state survive unload and return. A
+  deposit's availability is checked against the current buildings. Tests compare
+  targets against a globally registered reference around many chunk boundaries,
+  and cover collection, prop state, miner placement and cleanup/retry.
+- This streams interaction adapters, not the whole world: definitions,
+  collisions, terrain source, mutable factory simulation and resource states
+  remain resident. In-session unload persistence has automated coverage, but
+  cross-reload save/load and separate real-browser acceptance are still absent.
+  Phase 10 remains in progress; performance has not been measured in a browser.
 
 ## Phase 10 — chunk lifecycle and resource visuals
 
@@ -22,6 +40,7 @@
   regenerated. Highlight and gathered state are restored on return. Natural rock
   instances, props, biome details and buildings are not streamed; deposit and
   gatherable definitions and collisions remain resident in the finite world.
+  Interaction adapters are streamed separately as described above.
 - Automated tests exercise unique ownership, regeneration, edge-spanning buildings,
   disposal and unloaded-resource state, plus a powered constructor, fuel and a
   conveyor item while its chunk is absent. Factory simulation remains resident
