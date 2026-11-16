@@ -13,6 +13,7 @@ import { BiomeField } from './Biomes';
 import { createRandom } from './rng';
 import { TerrainHeightfield, type TerrainQuery } from './terrain/TerrainHeightfield';
 import { VoxelTerrain } from './terrain/VoxelTerrain';
+import { ShallowWaterField } from './ShallowWater';
 
 /**
  * Phase 1 world assembly.
@@ -61,6 +62,7 @@ export interface World {
   readonly interactables: readonly InteractableDefinition[];
   readonly deposits: readonly ResourceDeposit[];
   readonly gatherables: GatherableField;
+  readonly shallowWater: ShallowWaterField;
   readonly spawn: WorldSpawn;
 }
 
@@ -131,6 +133,7 @@ export function createWorld(config: GameConfig, inventory = new Inventory(create
     biomes,
     playAreaRadius: config.controls.playAreaRadius,
     gatherables,
+    shallowWater: new ShallowWaterField(terrain, biomes, obstacles.definitions, gatherables.definitions, config.controls.playAreaRadius),
     buildings: new BuildingSystem(buildingRegistry, inventory, terrain,
       obstacles.definitions, config.construction.gridSize, config.controls.playAreaRadius, deposits, () => gatherables.placementObstacles()),
     obstacles,

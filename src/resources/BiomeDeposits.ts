@@ -10,9 +10,9 @@ export const DEPOSIT_BIOME_PREFERENCES: Readonly<Record<string, readonly Biome[]
   'iron-ore': Object.freeze(['highlands'] as const),
   'copper-ore': Object.freeze(['desert'] as const),
   limestone: Object.freeze(['desert'] as const),
-  coal: Object.freeze(['highlands', 'forest'] as const),
+  coal: Object.freeze(['highlands', 'forest', 'wetlands'] as const),
   stone: Object.freeze(['highlands'] as const),
-  wood: Object.freeze(['forest'] as const),
+  wood: Object.freeze(['forest', 'wetlands'] as const),
 });
 
 function stableSeed(seed: number, id: string): number {

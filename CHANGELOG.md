@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — Phase 10 wetlands
+
+- Add seeded wetland biome, reeds, terrain tint and chunk-streamed decorative
+  shallow puddles; preserve forest resource behavior and foundation rules.
+- Test determinism, chunk edges, obstacle avoidance, resource compatibility,
+  building occlusion, reload and disposal. No browser visual validation yet.
+- Full world streaming, reload persistence and Phase 10 acceptance remain open.
+
 ## Unreleased — Phase 10 collision cache and resource changes
 
 - Load natural collision hash buckets on demand into a bounded LRU, retaining the

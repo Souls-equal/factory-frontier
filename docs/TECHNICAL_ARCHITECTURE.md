@@ -1990,3 +1990,24 @@ are not a save format and do not survive page reload. Definitions, player/factor
 state and the source heightfield remain resident; this is not complete data
 streaming. No foundation or placement algorithm was changed. Earlier notes
 describing an entirely eager natural collision index are historical.
+
+
+## Phase 10 — decorative wetlands and shallow water
+
+`BiomeField` reclassifies the wettest forest regions as wetlands, with the
+existing spawn clearing and highland priority unchanged. Secondary deposit
+preferences and gatherable probabilities treat wetlands like their former forest
+classification. Terrain shading and reed instances provide visual distinction.
+
+`ShallowWaterField` samples voxel columns deterministically by biome and noise,
+rejecting cells outside the playable radius and those intersecting resident
+natural obstacle or gatherable definitions. It has no mutable state and is
+independent of chunk partition or visitation order. `ShallowWaterView` creates
+instanced horizontal planes per loaded terrain chunk, shares its geometry and
+material, and hides any cell intersecting a building footprint when the building
+revision changes. Reloading a chunk recomputes that visibility. These are surface
+decals, not physical or simulated water; ground shape, collision, construction
+and mining remain unchanged. No particular seed guarantees puddles. Sampling
+scans resident object definitions, and performance and visual appearance have
+not been validated in a browser. Full world streaming and persistence across
+reload are still absent.

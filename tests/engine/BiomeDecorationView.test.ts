@@ -22,7 +22,7 @@ describe('biome detail presentation', () => {
     const a = new EnvironmentView(world), b = new EnvironmentView(again);
     const first = instances(a), second = instances(b);
     expect(first.map(m => m.name)).toEqual(second.map(m => m.name));
-    expect(first.length).toBe(5);
+    expect(first.length).toBe(6);
     expect(first.reduce((sum, m) => sum + m.count, 0)).toBeLessThanOrEqual(2200);
     for (let k = 0; k < first.length; k++) {
       const mesh = first[k]!;
@@ -33,6 +33,7 @@ describe('biome detail presentation', () => {
         const position = new Vector3().setFromMatrixPosition(matrix(mesh, i));
         const biome = world.biomes.at(position.x, position.z);
         if (mesh.name.endsWith(':fern')) expect(biome).toBe('forest');
+        if (mesh.name.endsWith(':reeds')) expect(biome).toBe('wetlands');
         if (mesh.name.endsWith(':scrub')) expect(biome).toBe('desert');
         if (mesh.name.endsWith(':alpine')) expect(biome).toBe('highlands');
         if (mesh.name.endsWith(':meadow')) expect(biome).toBe('grassland');

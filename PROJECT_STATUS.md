@@ -3,11 +3,28 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 10 — World expansion
-**Phase Status:** 🟡 In progress — bounded terrain/collision caches and streamed world interactions
+**Phase Status:** 🟡 In progress — wetlands, partial chunk streaming and bounded terrain/collision caches
 **Next Recommended Task:** Extend world-data streaming, implement cross-reload preservation, and profile and validate chunk transitions in the browser.
 **Last Updated:** 2026-11-11
 
 ---
+
+## Phase 10 — wetlands and decorative shallow water
+
+- Add seed-driven wetland regions, reed decoration and terrain tint. Wetlands
+  reclassify the wettest former forest regions; forest resource preferences and
+  gatherable probabilities are preserved. The spawn clearing is still grassland.
+- Render shallow puddle cells on voxel tops, on demand by terrain chunk. They
+  avoid the play boundary and natural objects, hide under buildings and return
+  after demolition. They are visual only: not water simulation, an extractable
+  resource, a collider, or a change to terrain and foundation rules. Not every
+  seed or finite map guarantees a wetland or puddle.
+- Automated tests cover seeded generation, chunk partitioning, object avoidance,
+  unchanged resource generation for representative seeds, building occlusion,
+  unload/reload and cleanup. No browser visual or performance validation yet.
+- Phase 10 remains open: world-data streaming is partial, modified state remains
+  in memory only, and in-game chunk transitions need separate validation. Full
+  save/load is planned for Phase 12; do not treat this slice as that feature.
 
 ## Phase 10 — on-demand collision data and sparse resource changes
 

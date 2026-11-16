@@ -27,6 +27,7 @@ import { createNaturalTexture } from './NaturalTextures';
 import { createNaturalBlockGeometry, createRockGeometry } from './NaturalModels';
 import { BiomeDecorationView } from './BiomeDecorationView';
 import { TerrainChunkView } from './TerrainChunkView';
+import { ShallowWaterView } from './ShallowWaterView';
 
 /**
  * Renderer for the Phase 1 environment.
@@ -69,6 +70,7 @@ export class EnvironmentView {
   private readonly gatherables: GatherableField;
   private readonly biomeDetails: BiomeDecorationView;
   private readonly terrainChunks: TerrainChunkView;
+  private readonly shallowWater: ShallowWaterView;
   private readonly gatherableModels = new Map<string, Group>();
   private readonly depositModels = new Map<string, { model: Group; ground: BufferGeometry }>();
   private depositRoot!: Group;
@@ -85,6 +87,9 @@ export class EnvironmentView {
     this.group.add(this.createSky());
     this.terrainChunks = new TerrainChunkView(world, fogDistance, chunkColumns);
     this.group.add(this.terrainChunks.group);
+    this.shallowWater = new ShallowWaterView(world);
+    this.group.add(this.shallowWater.group);
+    this.shallowWater.load(this.terrainChunks.loadedChunks());
     this.group.add(this.createRocks(world));
     this.depositRoot = this.createDeposits(world);
     this.group.add(this.depositRoot);
@@ -124,6 +129,8 @@ export class EnvironmentView {
   /** Stream terrain, deposit and gatherable models without unloading gameplay state. */
   setFocus(x: number, z: number, coverage?: number): void {
     const changes = this.terrainChunks.setFocus(x, z, coverage);
+    this.shallowWater.unload(changes.unloaded);
+    if (changes.loaded.length) this.shallowWater.load(changes.loaded);
     for (const chunk of changes.unloaded) for (const deposit of chunk.deposits) {
       const entry = this.depositModels.get(deposit.id);
       if (entry) { this.depositRoot.remove(entry.model); entry.ground.dispose(); this.depositModels.delete(deposit.id); this.highlightBindings.delete(deposit.id); }
@@ -147,6 +154,7 @@ export class EnvironmentView {
   /** Called before rendering; removed resources disappear without rebuilding the world. */
   syncGatherables(): void {
     this.biomeDetails.sync();
+    this.shallowWater.sync();
     if (this.gatherablesRevision === this.gatherables.revision) return;
     for (const [id, model] of this.gatherableModels) model.visible = this.gatherables.active(id);
     this.gatherablesRevision = this.gatherables.revision;
@@ -160,6 +168,7 @@ export class EnvironmentView {
     for (const entry of this.depositModels.values()) entry.ground.dispose();
     this.depositModels.clear();
     this.biomeDetails.dispose();
+    this.shallowWater.dispose();
     this.terrainChunks.dispose();
     for (const geometry of this.geometries) {
       geometry.dispose();
@@ -284,7 +293,7 @@ export class EnvironmentView {
         const shade = 0.82 + ((solidIndex * 7919) % 100) / 320;
         const biome = world.biomes.at(obstacle.x, obstacle.z);
         if (biome === 'desert') tint.setRGB(shade, shade * .82, shade * .62);
-        else if (biome === 'forest') tint.setRGB(shade * .75, shade * .90, shade * .74);
+        else if (biome === 'forest' || biome === 'wetlands') tint.setRGB(shade * .75, shade * .90, shade * .74);
         else if (biome === 'highlands') tint.setRGB(shade * .86, shade * .91, shade);
         else tint.setRGB(shade * 0.92, shade * 0.97, shade);
         mesh.setColorAt(instance, tint);
@@ -429,7 +438,7 @@ export class EnvironmentView {
       model.rotation.y = (index * 2.3999632297) % (Math.PI * 2);
       if (d.kind === 'tree') {
         part(model, 'trunk', treeBark, bark);
-        const forest = world.biomes.at(d.x, d.z) === 'forest';
+        const forest = ['forest', 'wetlands'].includes(world.biomes.at(d.x, d.z));
         part(model, 'crown', leaves, forest ? forestFoliage : foliage);
         part(model, 'crown-light', leavesLight, forest ? forestLight : foliageLight);
       } else if (d.kind === 'branch') {

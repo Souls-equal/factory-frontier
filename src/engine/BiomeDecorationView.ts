@@ -5,7 +5,7 @@ import type { World } from '../world/World';
 import type { Footprint } from '../buildings/Transform';
 
 /** Presentation-only detail: never registered for physics, targeting or placement. */
-type Kind = 'meadow' | 'flower' | 'fern' | 'scrub' | 'alpine';
+type Kind = 'meadow' | 'flower' | 'fern' | 'scrub' | 'alpine' | 'reeds';
 type Part = { x: number; y: number; z: number; w: number; h: number; d: number; color: number; yaw?: number };
 type Decoration = { x: number; y: number; z: number; yaw: number; scale: number; tint: number };
 type Candidate = { kind: Kind; decoration: Decoration; priority: number };
@@ -15,6 +15,12 @@ const CAP = 2200;
 const SPACING = 3;
 
 const PARTS: Record<Kind, readonly Part[]> = {
+  reeds: [
+    { x: -.10, y: .30, z: 0, w: .07, h: .60, d: .07, color: 0x567447 },
+    { x: .10, y: .40, z: .08, w: .07, h: .80, d: .07, color: 0x729250 },
+    { x: .10, y: .81, z: .08, w: .10, h: .20, d: .10, color: 0x765944 },
+    { x: -.10, y: .62, z: 0, w: .09, h: .16, d: .09, color: 0x7e6046 },
+  ],
   meadow: [
     { x: -.10, y: .15, z: 0, w: .08, h: .30, d: .08, color: 0x689c48, yaw: .2 },
     { x: .10, y: .20, z: .08, w: .09, h: .40, d: .09, color: 0x88b75a, yaw: -.3 },
@@ -66,7 +72,7 @@ export class BiomeDecorationView {
   private revision = -1;
   constructor(private readonly world: World) {
     this.group.name = 'environment:biome-details';
-    const records: Record<Kind, Decoration[]> = { meadow: [], flower: [], fern: [], scrub: [], alpine: [] };
+    const records: Record<Kind, Decoration[]> = { meadow: [], flower: [], fern: [], scrub: [], alpine: [], reeds: [] };
     const seed = world.biomes.seed, bounds = world.terrain.bounds;
     // There is no streaming yet: stay bounded even for extreme configurations.
     const radius = Math.min(world.playAreaRadius, 150);
@@ -80,7 +86,8 @@ export class BiomeDecorationView {
       const x = (gx + (rand(11) - .5) * .55) * SPACING, z = (gz + (rand(31) - .5) * .55) * SPACING;
       if (Math.hypot(x, z) > radius - 1 || Math.hypot(x - world.spawn.x, z - world.spawn.z) < 3) continue;
       const biome = world.biomes.at(x, z), chance = rand(101);
-      const kind: Kind | null = biome === 'forest' ? (chance < .38 ? 'fern' : chance < .48 ? 'flower' : null)
+      const kind: Kind | null = biome === 'wetlands' ? (chance < .42 ? 'reeds' : chance < .49 ? 'flower' : null)
+        : biome === 'forest' ? (chance < .38 ? 'fern' : chance < .48 ? 'flower' : null)
         : biome === 'desert' ? (chance < .16 ? 'scrub' : null)
         : biome === 'highlands' ? (chance < .23 ? 'alpine' : null)
         : chance < .22 ? 'meadow' : chance < .32 ? 'flower' : null;

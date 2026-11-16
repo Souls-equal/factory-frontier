@@ -53,13 +53,13 @@ export class TerrainChunkView {
       const patch = hash2D(world.biomes.seed ^ 0x431b, Math.floor(x / 5), Math.floor(z / 5));
       const tile = biome === 'desert' ? (ny === 1 && patch > .55 ? 7 : 4)
         : biome === 'highlands' ? (ny === 1 && patch > .65 ? 6 : 3)
-        : ny === 1 ? (biome === 'forest' && patch > .25 ? 5 : 0)
+        : ny === 1 ? ((biome === 'forest' || biome === 'wetlands') && patch > .25 ? 5 : 0)
         : Math.abs(topY - world.terrain.heightAt(x, z)) < world.terrain.blockSize * .001 ? 1 : 2;
       const [u0, v0, u1, v1] = terrainTileUv(tile, 8);
       uv.set([u0, v0, u0, v1, u1, v1, u1, v0], face * 8);
       // Position-based shade is stable across unloading, reloading and chunk sizes.
       const shade = .91 + .09 * hash2D(world.biomes.seed ^ 0x17a39, Math.floor(x / world.terrain.blockSize), Math.floor(z / world.terrain.blockSize));
-      for (let vertex = 0; vertex < 4; vertex++) colors.set(biome === 'forest' ? [shade * .78, shade, shade * .76] : [shade, shade, shade], p + vertex * 3);
+      for (let vertex = 0; vertex < 4; vertex++) colors.set(biome === 'wetlands' ? [shade * .72, shade * .88, shade * .75] : biome === 'forest' ? [shade * .78, shade, shade * .76] : [shade, shade, shade], p + vertex * 3);
     }
     geometry.setAttribute('color', new BufferAttribute(colors, 3));
     geometry.setAttribute('uv', new BufferAttribute(uv, 2));
