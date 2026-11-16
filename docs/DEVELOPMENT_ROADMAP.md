@@ -21,7 +21,7 @@ following Phase 9, explicitly requesting the next phase. Individual scenario
 results were not supplied. Phase 10 includes seed-driven biome regions, biased
 resources and exploratory deposits, visual enrichment and camera-driven terrain
 mesh streaming, a bounded voxel-column cache, chunk-managed resource visuals and
-nearby world interaction adapters.
+nearby world interaction adapters and bounded on-demand collision-index buckets.
 Factories remain active in memory when chunks unload. The user finds the map very playable,
 but has not provided individual scenario results. Full world-data chunk streaming,
 preservation across reloads, and further world diversity remain outstanding.
@@ -59,7 +59,7 @@ detailed evidence and verification results live in `PROJECT_STATUS.md`.
 | 7 — Advanced logistics | ✅ Globally user-validated | Player reports no apparent bugs in their tests; individual checklist results not specified; documented limits apply |
 | 8 — Electricity | ✅ Globally user-validated | Automatic visible links, biomass generation, machine power and inspection; documented limitations remain |
 | 9 — Advanced manufacturing | ✅ Globally user-validated | Player reports everything works; individual scenario results not supplied |
-| 10 — World expansion | 🟡 In progress | Seeded biomes, chunk manager, terrain/resource visuals, world interaction adapters and bounded voxel cache; full data streaming and cross-reload preservation outstanding |
+| 10 — World expansion | 🟡 In progress | Seeded biomes, chunk manager, terrain/resource visuals, interaction adapters and bounded terrain/collision caches; full data streaming and cross-reload preservation outstanding |
 | 11 — Progression | ◻ Planned | — |
 | 12 — Persistence | ◻ Planned | — |
 | 13 — Polish and optimization | ◻ Planned | — |

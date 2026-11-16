@@ -122,7 +122,7 @@ export function createWorld(config: GameConfig, inventory = new Inventory(create
   const obstacles = new ObstacleField([...original.definitions, ...deposits.map((deposit) => ({
     id: `${deposit.id}-collider`, kind: 'prop' as const, x: deposit.x, y: deposit.y,
     z: deposit.z, radius: deposit.radius, height: 1.5, yaw: 0, variant: 0,
-  }))]);
+  }))], { maxCachedBuckets: 128 });
 
   const gatherables = new GatherableField(generateGatherables(terrain, obstacles.definitions, deposits,
     worldConfig.seed, { x: SPAWN_X, z: SPAWN_Z }, config.controls.playAreaRadius, biomes));

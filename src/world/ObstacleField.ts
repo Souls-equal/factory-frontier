@@ -71,9 +71,17 @@ export class ObstacleField implements CollisionQuery {
   readonly definitions: readonly ObstacleDefinition[];
 
   private readonly buckets = new Map<string, number[]>();
+  private readonly maxCachedBuckets: number | undefined;
 
-  constructor(definitions: readonly ObstacleDefinition[]) {
+  /** Buckets currently retained; in eager mode this is the whole spatial index. */
+  get cachedBucketCount(): number { return this.buckets.size; }
+
+  constructor(definitions: readonly ObstacleDefinition[], options?: { readonly maxCachedBuckets: number }) {
+    if (options && (!Number.isSafeInteger(options.maxCachedBuckets) || options.maxCachedBuckets < 1))
+      throw new RangeError('Invalid obstacle bucket cache limit.');
+    this.maxCachedBuckets = options?.maxCachedBuckets;
     this.definitions = Object.freeze([...definitions]);
+    if (this.maxCachedBuckets !== undefined) return;
 
     for (let index = 0; index < this.definitions.length; index += 1) {
       const definition = this.definitions[index];
@@ -314,6 +322,25 @@ export class ObstacleField implements CollisionQuery {
     return this.candidatesInBounds(x - radius, x + radius, z - radius, z + radius);
   }
 
+  /** Load exactly the same insertion-ordered indices as the eager spatial hash. */
+  private bucket(x: number, z: number): readonly number[] {
+    const key = bucketKey(x, z), existing = this.buckets.get(key);
+    if (this.maxCachedBuckets === undefined) return existing ?? EMPTY;
+    if (existing) {
+      this.buckets.delete(key); this.buckets.set(key, existing);
+      return existing;
+    }
+    const indices: number[] = [];
+    for (let index = 0; index < this.definitions.length; index++) {
+      const d = this.definitions[index]!;
+      if (x >= Math.floor((d.x - d.radius) / CELL_SIZE) && x <= Math.floor((d.x + d.radius) / CELL_SIZE) &&
+          z >= Math.floor((d.z - d.radius) / CELL_SIZE) && z <= Math.floor((d.z + d.radius) / CELL_SIZE)) indices.push(index);
+    }
+    if (this.buckets.size >= this.maxCachedBuckets) this.buckets.delete(this.buckets.keys().next().value!);
+    this.buckets.set(key, indices);
+    return indices;
+  }
+
   private candidatesInBounds(minX: number, maxX: number, minZ: number, maxZ: number): readonly number[] {
     const minKeyX = Math.floor(minX / CELL_SIZE);
     const maxKeyX = Math.floor(maxX / CELL_SIZE);
@@ -321,17 +348,14 @@ export class ObstacleField implements CollisionQuery {
     const maxKeyZ = Math.floor(maxZ / CELL_SIZE);
 
     if (minKeyX === maxKeyX && minKeyZ === maxKeyZ) {
-      return this.buckets.get(bucketKey(minKeyX, minKeyZ)) ?? EMPTY;
+      return this.bucket(minKeyX, minKeyZ);
     }
 
     const seen = new Set<number>();
     const result: number[] = [];
     for (let keyX = minKeyX; keyX <= maxKeyX; keyX += 1) {
       for (let keyZ = minKeyZ; keyZ <= maxKeyZ; keyZ += 1) {
-        const bucket = this.buckets.get(bucketKey(keyX, keyZ));
-        if (bucket === undefined) {
-          continue;
-        }
+        const bucket = this.bucket(keyX, keyZ);
         for (const index of bucket) {
           if (!seen.has(index)) {
             seen.add(index);

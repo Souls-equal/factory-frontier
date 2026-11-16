@@ -1967,3 +1967,26 @@ removing external interactions. `InteractionSystem` unregistration is idempotent
 even if the same object is registered again later. World definitions and all
 collision data remain resident; this is not full world-data streaming. Browser
 performance and a separate in-game transition test remain outstanding.
+
+
+## Phase 10 — collision bucket cache and sparse resource state
+
+`ObstacleField` supports an optional bounded LRU for its existing eight-metre
+spatial-hash buckets. Each missing bucket is reconstructed from the ordered
+resident obstacle definitions using the same inclusive bounding-cell rule as the
+eager index. Querying all touched buckets still deduplicates indices in the same
+order, including across long sweeps and large obstacles. The default for generic
+callers remains eager; generated world obstacles and the `GatherableCollision`
+composite use at most 128 cached buckets. Tree removal invalidates and replaces
+the composite so unloaded buckets cannot revive a removed tree. Cache misses
+scan the definitions synchronously; browser performance is not measured.
+
+`GatherableField` keeps an ID lookup for all generated definitions but allocates
+mutable overrides only for changed resources. Defaults are derived from each
+definition, and partial chops, full-inventory final chops, partial collections and
+complete removal retain their existing semantics. Overrides remain authoritative
+in memory regardless of render, interaction or collision cache eviction. They
+are not a save format and do not survive page reload. Definitions, player/factory
+state and the source heightfield remain resident; this is not complete data
+streaming. No foundation or placement algorithm was changed. Earlier notes
+describing an entirely eager natural collision index are historical.

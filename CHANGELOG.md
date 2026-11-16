@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased — Phase 10 collision cache and resource changes
+
+- Load natural collision hash buckets on demand into a bounded LRU, retaining the
+  same solver, and preserve only modified gatherable state in memory.
+- Compare cached and eager collision including voxel composition, and test partial
+  gathering and a powered factory running while its chunks are absent.
+- Definitions, world simulation and the source terrain remain resident; saves
+  across reloads, full streaming and browser performance tests remain open.
+
 ## Unreleased — Phase 10 streamed world interactions
 
 - Register static-world interaction adapters around the player by chunk, separate
