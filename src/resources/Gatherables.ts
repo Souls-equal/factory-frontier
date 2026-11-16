@@ -88,16 +88,20 @@ export function generateGatherables(terrain: TerrainQuery, obstacles: readonly O
 
 /** Mutable finite resource state; visuals and collision query it, never own it. */
 export class GatherableField {
+  // Unmodified objects use their immutable generated defaults; only changes
+  // survive the unloading of nearby adapters/collision buckets.
   private readonly states = new Map<string, { remaining: number; chops: number }>();
+  private readonly byId = new Map<string, GatherableDefinition>();
   private revisionValue = 0;
   constructor(readonly definitions: readonly GatherableDefinition[]) {
     for (const d of definitions) {
-      if (this.states.has(d.id)) throw new Error(`Duplicate gatherable: ${d.id}`);
-      this.states.set(d.id, { remaining: d.quantity, chops: d.kind === 'tree' ? 3 : 0 });
+      if (this.byId.has(d.id)) throw new Error(`Duplicate gatherable: ${d.id}`);
+      this.byId.set(d.id, d);
     }
   }
   get revision(): number { return this.revisionValue; }
-  remaining(id: string): number { return this.states.get(id)?.remaining ?? 0; }
+  get modifiedCount(): number { return this.states.size; }
+  remaining(id: string): number { return this.states.get(id)?.remaining ?? this.byId.get(id)?.quantity ?? 0; }
   active(id: string): boolean { return this.remaining(id) > 0; }
   /** Active shapes for placement validation; loose objects do not block movement. */
   placementObstacles(): readonly ObstacleDefinition[] {
@@ -112,28 +116,33 @@ export class GatherableField {
   }
   /** Create interaction adapters for a subset; authoritative state stays in this field. */
   interactables(inventory: Inventory, range: number, definitions: readonly GatherableDefinition[] = this.definitions): readonly Interactable[] {
-    return definitions.map((d) => ({
-      descriptor: Object.freeze({ id: d.id, displayName: d.kind === 'tree' ? 'Tree' : d.kind === 'branch' ? 'Fallen Branch' : 'Loose Stone',
-        hint: d.kind === 'tree' ? 'Chop for wood · 3 presses' : d.kind === 'branch' ? 'Collect wood' : 'Collect stone',
-        position: Object.freeze({ x: d.x, y: d.y + (d.kind === 'tree' ? 1.15 : .25), z: d.z }),
-        targetRadius: d.kind === 'tree' ? .65 : .4, range }),
-      isAvailable: () => this.active(d.id),
-      interact: () => this.collect(d, inventory),
-    }));
+    return definitions.map((definition) => {
+      const d = this.byId.get(definition.id);
+      if (!d) throw new RangeError(`Unknown gatherable: ${definition.id}`);
+      return {
+        descriptor: Object.freeze({ id: d.id, displayName: d.kind === 'tree' ? 'Tree' : d.kind === 'branch' ? 'Fallen Branch' : 'Loose Stone',
+          hint: d.kind === 'tree' ? 'Chop for wood · 3 presses' : d.kind === 'branch' ? 'Collect wood' : 'Collect stone',
+          position: Object.freeze({ x: d.x, y: d.y + (d.kind === 'tree' ? 1.15 : .25), z: d.z }),
+          targetRadius: d.kind === 'tree' ? .65 : .4, range }),
+        isAvailable: () => this.active(d.id),
+        interact: () => this.collect(d, inventory),
+      };
+    });
   }
   private collect(d: GatherableDefinition, inventory: Inventory): InteractionOutcome {
-    const state = this.states.get(d.id)!;
+    const state = this.states.get(d.id) ?? { remaining: d.quantity, chops: d.kind === 'tree' ? 3 : 0 };
     if (state.remaining <= 0) return { ok: false, message: 'Already collected.' };
     if (state.chops > 1) {
-      state.chops--;
-      return { ok: true, message: `Tree: ${state.chops} more ${state.chops === 1 ? 'chop' : 'chops'}.` };
+      const chops = state.chops - 1;
+      this.states.set(d.id, { remaining: state.remaining, chops });
+      return { ok: true, message: `Tree: ${chops} more ${chops === 1 ? 'chop' : 'chops'}.` };
     }
-    state.chops = 0;
     const transfer = inventory.addItem(d.itemId, state.remaining);
-    state.remaining = transfer.remainder;
-    if (!transfer.moved) return { ok: false, message: `Inventory full — ${state.remaining} ${d.itemId} remains.` };
-    if (!state.remaining) this.revisionValue++;
-    return { ok: true, message: `Collected ${transfer.moved} ${d.itemId}${state.remaining ? ` · ${state.remaining} remains` : ''}.` };
+    // A final chop changes the tree even if the inventory is full.
+    if (state.chops || transfer.moved) this.states.set(d.id, { remaining: transfer.remainder, chops: 0 });
+    if (!transfer.moved) return { ok: false, message: `Inventory full — ${transfer.remainder} ${d.itemId} remains.` };
+    if (!transfer.remainder) this.revisionValue++;
+    return { ok: true, message: `Collected ${transfer.moved} ${d.itemId}${transfer.remainder ? ` · ${transfer.remainder} remains` : ''}.` };
   }
 }
 
@@ -144,7 +153,7 @@ export class GatherableCollision implements CollisionQuery {
   constructor(private readonly base: ObstacleField, private readonly gatherables: GatherableField) { this.field = base; }
   moveCircle(x: number, z: number, dx: number, dz: number, radius: number, feetY: number, headY: number): MovementResult {
     if (this.seenRevision !== this.gatherables.revision) {
-      this.field = new ObstacleField([...this.base.definitions, ...this.gatherables.treeObstacles()]);
+      this.field = new ObstacleField([...this.base.definitions, ...this.gatherables.treeObstacles()], { maxCachedBuckets: 128 });
       this.seenRevision = this.gatherables.revision;
     }
     return this.field.moveCircle(x, z, dx, dz, radius, feetY, headY);
