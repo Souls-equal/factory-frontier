@@ -268,6 +268,17 @@ describe('InteractionSystem execution', () => {
     expect(system.size).toBe(1);
   });
 
+  it('a stale unregister cannot remove a later registration, even for the same object', () => {
+    const { system } = createSystem(), target = stubInteractable();
+    const unregister = system.register(target);
+    unregister();
+    const next = system.register(target);
+    unregister();
+    expect(system.size).toBe(1);
+    expect(system.refreshTarget()?.id).toBe(target.descriptor.id);
+    next(); expect(system.size).toBe(0);
+  });
+
   it('rejects an empty id and an invalid range', () => {
     const { system } = createSystem();
     expect(() => system.register(stubInteractable({ id: ' ' }))).toThrow(/must not be empty/);

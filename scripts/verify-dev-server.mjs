@@ -56,6 +56,7 @@ try {
     '/src/world/terrain/TerrainHeightfield.ts',
     '/src/world/ObstacleField.ts',
     '/src/interaction/InteractionSystem.ts',
+    '/src/interaction/WorldInteractionChunks.ts',
     '/src/engine/EnvironmentView.ts',
     '/src/ui/InteractionPrompt.ts',
     '/src/ui/ControlsHint.ts',
@@ -79,7 +80,9 @@ try {
 
   const mainModule = await fetch(`${origin}/src/main.ts`).then((response) => response.text());
   check('main module keeps the bootstrap logic', mainModule.includes('StatusOverlay'));
-  check('main module wires resources and inventory', mainModule.includes('DepositInteractable') && mainModule.includes('InventoryUI'));
+  const worldInteractions = await fetch(`${origin}/src/interaction/WorldInteractionChunks.ts`).then((response) => response.text());
+  check('main module wires resources and inventory', mainModule.includes('WorldInteractionChunks') && mainModule.includes('InventoryUI') &&
+    worldInteractions.includes('DepositInteractable') && worldInteractions.includes('gatherables.interactables'));
   check(
     'main module wires the Phase 1 systems',
     mainModule.includes('createWorld') &&

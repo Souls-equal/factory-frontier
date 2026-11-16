@@ -110,8 +110,9 @@ export class GatherableField {
     return { id: d.id, kind: 'prop', x: d.x, y: d.y, z: d.z, radius: d.radius,
       height: d.kind === 'tree' ? 3 : .3, yaw: 0, variant: 0 };
   }
-  interactables(inventory: Inventory, range: number): readonly Interactable[] {
-    return this.definitions.map((d) => ({
+  /** Create interaction adapters for a subset; authoritative state stays in this field. */
+  interactables(inventory: Inventory, range: number, definitions: readonly GatherableDefinition[] = this.definitions): readonly Interactable[] {
+    return definitions.map((d) => ({
       descriptor: Object.freeze({ id: d.id, displayName: d.kind === 'tree' ? 'Tree' : d.kind === 'branch' ? 'Fallen Branch' : 'Loose Stone',
         hint: d.kind === 'tree' ? 'Chop for wood · 3 presses' : d.kind === 'branch' ? 'Collect wood' : 'Collect stone',
         position: Object.freeze({ x: d.x, y: d.y + (d.kind === 'tree' ? 1.15 : .25), z: d.z }),
