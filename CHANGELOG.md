@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — Phase 10 streamed rock visuals
+
+- Stream boulders and formations by chunk with shared assets and a radius margin,
+  preserving existing transforms, tints, shadows, collisions and placement rules.
+- Test parity, boundaries, reload, cleanup, empty worlds and unchanged collisions.
+- Record the user's validation of the puddles; browser performance and chunk
+  transitions still need validation. Full world streaming and saves remain open.
+
 ## Unreleased — Phase 10 wetlands
 
 - Add seeded wetland biome, reeds, terrain tint and chunk-streamed decorative

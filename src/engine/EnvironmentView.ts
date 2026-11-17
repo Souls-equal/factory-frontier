@@ -6,11 +6,9 @@ import {
   Color,
   DoubleSide,
   Group,
-  InstancedMesh,
   Mesh,
   MeshBasicMaterial,
   MeshStandardMaterial,
-  Object3D,
   SphereGeometry,
   TorusGeometry,
   type BufferGeometry as BufferGeometryType,
@@ -28,6 +26,7 @@ import { createNaturalBlockGeometry, createRockGeometry } from './NaturalModels'
 import { BiomeDecorationView } from './BiomeDecorationView';
 import { TerrainChunkView } from './TerrainChunkView';
 import { ShallowWaterView } from './ShallowWaterView';
+import { RockChunkView } from './RockChunkView';
 
 /**
  * Renderer for the Phase 1 environment.
@@ -39,7 +38,7 @@ import { ShallowWaterView } from './ShallowWaterView';
  *
  * Performance notes:
  * - streamed terrain chunks share a pixel texture atlas and vertex tint,
- * - boulders and formations share three instanced meshes,
+ * - boulders and formations use per-chunk instanced meshes with shared assets,
  * - geometries and materials are created once and disposed together,
  * - gatherable and decorative visibility update only when their state changes.
  */
@@ -71,6 +70,7 @@ export class EnvironmentView {
   private readonly biomeDetails: BiomeDecorationView;
   private readonly terrainChunks: TerrainChunkView;
   private readonly shallowWater: ShallowWaterView;
+  private readonly rocks: RockChunkView;
   private readonly gatherableModels = new Map<string, Group>();
   private readonly depositModels = new Map<string, { model: Group; ground: BufferGeometry }>();
   private depositRoot!: Group;
@@ -90,7 +90,8 @@ export class EnvironmentView {
     this.shallowWater = new ShallowWaterView(world);
     this.group.add(this.shallowWater.group);
     this.shallowWater.load(this.terrainChunks.loadedChunks());
-    this.group.add(this.createRocks(world));
+    this.rocks = new RockChunkView(world, fogDistance, chunkColumns);
+    this.group.add(this.rocks.group);
     this.depositRoot = this.createDeposits(world);
     this.group.add(this.depositRoot);
     this.loadDeposits(this.terrainChunks.loadedChunks());
@@ -126,9 +127,10 @@ export class EnvironmentView {
     }
   }
 
-  /** Stream terrain, deposit and gatherable models without unloading gameplay state. */
+  /** Stream terrain, rocks, deposits and gatherables without unloading gameplay state. */
   setFocus(x: number, z: number, coverage?: number): void {
     const changes = this.terrainChunks.setFocus(x, z, coverage);
+    this.rocks.setFocus(x, z, coverage);
     this.shallowWater.unload(changes.unloaded);
     if (changes.loaded.length) this.shallowWater.load(changes.loaded);
     for (const chunk of changes.unloaded) for (const deposit of chunk.deposits) {
@@ -169,6 +171,7 @@ export class EnvironmentView {
     this.depositModels.clear();
     this.biomeDetails.dispose();
     this.shallowWater.dispose();
+    this.rocks.dispose();
     this.terrainChunks.dispose();
     for (const geometry of this.geometries) {
       geometry.dispose();
@@ -226,87 +229,6 @@ export class EnvironmentView {
     this.registerGeometry(geometry);
     this.registerMaterial(material);
     return sky;
-  }
-
-  private createRocks(world: World): Group {
-    const rocks = new Group();
-    rocks.name = 'environment:rocks';
-
-    const solids = world.obstacleDefinitions.filter((obstacle) => obstacle.kind !== 'prop');
-    if (solids.length === 0) {
-      return rocks;
-    }
-
-    const variants: BufferGeometryType[] = [
-      createRockGeometry(0),
-      createRockGeometry(1),
-      createRockGeometry(2),
-    ];
-    for (const geometry of variants) {
-      this.registerGeometry(geometry);
-    }
-
-    const buckets: number[][] = variants.map(() => []);
-    solids.forEach((obstacle, index) => {
-      buckets[obstacle.variant % variants.length]?.push(index);
-    });
-
-    const dummy = new Object3D();
-    const tint = new Color();
-
-    const rockTexture = this.naturalTexture(['stone']);
-    variants.forEach((geometry, variantIndex) => {
-      const indices = buckets[variantIndex];
-      if (indices === undefined || indices.length === 0) {
-        return;
-      }
-
-      const material = new MeshStandardMaterial({
-        color: 0xffffff,
-        map: rockTexture,
-        roughness: 0.92,
-        metalness: 0.08,
-        flatShading: true,
-      });
-      this.registerMaterial(material);
-
-      const mesh = new InstancedMesh(geometry, material, indices.length);
-      mesh.name = `environment:rocks-${variantIndex}`;
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-
-      indices.forEach((solidIndex, instance) => {
-        const obstacle = solids[solidIndex];
-        if (obstacle === undefined) {
-          return;
-        }
-        const width = obstacle.radius;
-        const height = obstacle.height;
-
-        dummy.position.set(obstacle.x, obstacle.y, obstacle.z);
-        dummy.rotation.set(0, obstacle.yaw, 0);
-        dummy.scale.set(width, height, width);
-        dummy.updateMatrix();
-        mesh.setMatrixAt(instance, dummy.matrix);
-
-        // Deterministic tint variation per rock.
-        const shade = 0.82 + ((solidIndex * 7919) % 100) / 320;
-        const biome = world.biomes.at(obstacle.x, obstacle.z);
-        if (biome === 'desert') tint.setRGB(shade, shade * .82, shade * .62);
-        else if (biome === 'forest' || biome === 'wetlands') tint.setRGB(shade * .75, shade * .90, shade * .74);
-        else if (biome === 'highlands') tint.setRGB(shade * .86, shade * .91, shade);
-        else tint.setRGB(shade * 0.92, shade * 0.97, shade);
-        mesh.setColorAt(instance, tint);
-      });
-
-      mesh.instanceMatrix.needsUpdate = true;
-      if (mesh.instanceColor !== null) {
-        mesh.instanceColor.needsUpdate = true;
-      }
-      rocks.add(mesh);
-    });
-
-    return rocks;
   }
 
   private createDeposits(world: World): Group {

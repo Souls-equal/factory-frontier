@@ -82,7 +82,8 @@ describe('SceneManager', () => {
 
     expect(solidCount).toBeGreaterThan(0);
     expect(totalInstances).toBe(solidCount);
-    expect(instanced.length).toBeLessThanOrEqual(3);
+    const maxChunks = Math.ceil(world.terrain.columnsX / 64) * Math.ceil(world.terrain.columnsZ / 64);
+    expect(instanced.length).toBeLessThanOrEqual(3 * maxChunks);
   });
 
   it('places interactable props on the terrain with a hidden highlight ring', () => {
