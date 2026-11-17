@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased — Phase 10 chunked biome details
+
+- Stream decorative vegetation instance meshes with terrain chunks, preserving
+  the existing seeded selection, cap and building-occlusion behaviour.
+- Test chunk-size and exploration-order parity, restoration after construction
+  while unloaded, disposal, and factory continuity through real visual and
+  interaction chunk transitions. A headless Chromium/WebGL smoke test also
+  checks vegetation unloading, occlusion and restoration.
+- Decoration records and other world definitions remain resident; full data
+  streaming, a complete player walkthrough and browser profiling remain open.
+
 ## Unreleased — Phase 10 streamed rock visuals
 
 - Stream boulders and formations by chunk with shared assets and a radius margin,

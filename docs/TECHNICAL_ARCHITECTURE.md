@@ -2032,3 +2032,27 @@ unload. The additional chunk metadata and draws have not been benchmarked, and
 the default view can cover the entire small map. This is not full world-data
 streaming or cross-reload persistence. This note supersedes earlier descriptions
 of rocks as a single resident set of instance batches.
+
+
+## Phase 10 — chunked biome-detail visuals
+
+`BiomeDecorationView` still computes the original bounded, globally prioritised
+selection of up to 2,200 decoration records for the play area at startup. This
+preserves the seeded layout and cap independent of chunk size and visitation
+order. The bounded selected records are indexed by chunk at startup.
+`EnvironmentView` loads and unloads instanced decoration batches with
+terrain chunks. Their common per-kind geometry and materials stay alive across
+chunk transitions and are disposed with the environment; per-chunk instance
+meshes are disposed on unload. Newly loaded batches are synchronized with the
+current building revision, so construction and demolition while a chunk was
+absent are reflected immediately. Decorative records and the source heightfield
+are still resident: only their render batches stream, not world generation. The
+additional draw calls and initial selection have not been profiled on a representative
+GPU. A headless Chromium/WebGL smoke test with a reduced fog distance exercised
+decoration unload, placement while unloaded, reload, hiding and demolition with
+no browser errors. This is not a full player walkthrough or performance test.
+
+The powered factory continuity test now also exercises the real environment and
+interaction chunk lifecycles while factory simulation continues. It is an
+automated in-memory test, not a save/load test or browser play-test. Earlier
+notes describing biome decoration meshes as globally resident are historical.

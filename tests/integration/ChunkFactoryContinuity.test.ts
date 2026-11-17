@@ -10,6 +10,9 @@ import { MachineManager } from '../../src/machines/MachineManager';
 import { PowerManager } from '../../src/power/PowerManager';
 import { ChunkManager } from '../../src/world/ChunkManager';
 import { createWorld } from '../../src/world/World';
+import { EnvironmentView } from '../../src/engine/EnvironmentView';
+import { InteractionSystem } from '../../src/interaction/InteractionSystem';
+import { WorldInteractionChunks } from '../../src/interaction/WorldInteractionChunks';
 
 describe('factory continuity across chunk changes', () => {
   it('keeps a powered foundry-to-constructor belt line and storage active while its chunks are absent', () => {
@@ -21,6 +24,11 @@ describe('factory continuity across chunk changes', () => {
     buildings.setCreativeMode(true);
     const world = { ...base, buildings };
     const chunks = new ChunkManager(world, 4);
+    const environment = new EnvironmentView(world, 0, 4);
+    const beacon = world.interactables.find(prop => prop.kind === 'survey-beacon')!;
+    const interaction = new InteractionSystem({ range: 3.6,
+      viewProvider: () => ({ position: { x: beacon.x, y: beacon.y, z: beacon.z }, yaw: 0, pitch: 0 }) });
+    const interactionChunks = new WorldInteractionChunks(world, interaction, inventory, 3.6, 4);
     const far = { x: 1000, z: 1000, radius: .4 };
     const place = (type: string, x: number, z: number) => {
       const result = buildings.place(type, x, z, 0, far);
@@ -45,17 +53,27 @@ describe('factory continuity across chunk changes', () => {
     const current = world.terrain.columnAt(foundry.transform.x, foundry.transform.z)!;
     const cx = Math.floor(current.x / 4), cz = Math.floor(current.z / 4);
     expect(chunks.buildings(chunks.get(cx, cz)!)).toContain(foundry);
-    chunks.update(-39, 39, 0); expect(chunks.get(cx, cz)).toBeUndefined();
+    const terrainName = `environment:terrain:${cx},${cz}`;
+    environment.setFocus(0, 0, 0); interactionChunks.update(0, 0);
+    expect(environment.group.getObjectByName(terrainName)).toBeDefined();
+    expect(interaction.refreshTarget()?.id).toBe(beacon.id);
+    chunks.update(-39, 39, 0); environment.setFocus(-39, 39, 0); interactionChunks.update(-39, 39);
+    expect(chunks.get(cx, cz)).toBeUndefined();
+    expect(environment.group.getObjectByName(terrainName)).toBeUndefined();
+    expect(interaction.refreshTarget()?.id).not.toBe(beacon.id);
     for (let i = 0; i < 2200; i++) { power.fixedUpdate(50); logistics.fixedUpdate(50); }
     expect(logistics.terminal(terminal.id)!.getItemCount('steel-plate')).toBe(8);
     expect(f.produced('steel-ingot')).toBe(8); expect(c.produced('steel-plate')).toBe(8);
     expect(ground.all()).toHaveLength(0);
     expect(logistics.network.get(left.id)!.items).toHaveLength(0); expect(logistics.network.get(right.id)!.items).toHaveLength(0);
-    chunks.update(0, 0, 0);
+    chunks.update(0, 0, 0); environment.setFocus(0, 0, 0); interactionChunks.update(0, 0);
+    expect(environment.group.getObjectByName(terrainName)).toBeDefined();
+    expect(interaction.refreshTarget()?.id).toBe(beacon.id);
     expect(chunks.buildings(chunks.get(cx, cz)!)).toContain(foundry);
     expect(machines.advanced(foundry.id)).toBe(f); expect(machines.constructorMachine(constructor.id)).toBe(c);
     expect(logistics.network.get(bridge.id)!.receiver?.id).toBe(constructor.id);
     expect(power.generator(generator.id)!.fuelTimeMs).toBeLessThan(300000);
     expect(buildings.all()).toHaveLength(9);
+    interactionChunks.dispose(); expect(interaction.size).toBe(0); environment.dispose();
   });
 });
