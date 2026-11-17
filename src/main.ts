@@ -19,7 +19,9 @@ import { MachineUI } from './ui/MachineUI';
 import { FactoryDashboard } from './ui/FactoryDashboard';
 import { ProductionHistory } from './statistics/ProductionHistory';
 import { ConstructionUI } from './ui/ConstructionUI';
-import { createGameConfig } from './core/Configuration';
+import { createGameConfig, DEFAULT_WORLD_CONFIG } from './core/Configuration';
+import { viewDistanceOverride } from './core/ViewDistance';
+import { worldSeedOverride } from './core/WorldSeed';
 import { Game } from './core/Game';
 import { Engine } from './engine/Engine';
 import { InputManager } from './input/InputManager';
@@ -64,6 +66,8 @@ const config = createGameConfig({
   version: __APP_VERSION__,
   basePath: import.meta.env.BASE_URL,
   debug: import.meta.env.DEV || query.has('debug'),
+  render: viewDistanceOverride(query),
+  world: { seed: worldSeedOverride(query) ?? DEFAULT_WORLD_CONFIG.seed },
 });
 
 let game: Game | undefined;

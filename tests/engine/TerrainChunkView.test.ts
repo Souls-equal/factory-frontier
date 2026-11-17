@@ -95,3 +95,19 @@ describe('terrain chunk streaming', () => {
     engine.dispose();
   });
 });
+
+it('applies a player-selected fog distance to real engine streaming transitions', async () => {
+  const { viewDistanceOverride } = await import('../../src/core/ViewDistance');
+  const cfg = createGameConfig({ world: { sizeMeters: 240, obstacleCount: 0 },
+    render: viewDistanceOverride(new URLSearchParams('viewDistance=24')) });
+  const world = createWorld(cfg), engine = new Engine({ config: cfg, world, renderer: new FakeRenderBackend() });
+  const terrain = engine.scene.getObjectByName('environment:terrain')!;
+  const view = (x: number, z: number) => engine.applyView({ position: { x, y: 10, z }, yaw: 0, pitch: 0 });
+  view(-110, -110);
+  expect(terrain.getObjectByName('environment:terrain:0,0')).toBeDefined();
+  view(110, 110);
+  expect(terrain.getObjectByName('environment:terrain:0,0')).toBeUndefined();
+  view(-110, -110);
+  expect(terrain.getObjectByName('environment:terrain:0,0')).toBeDefined();
+  engine.dispose();
+});

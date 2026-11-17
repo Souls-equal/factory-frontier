@@ -2056,3 +2056,30 @@ The powered factory continuity test now also exercises the real environment and
 interaction chunk lifecycles while factory simulation continues. It is an
 automated in-memory test, not a save/load test or browser play-test. Earlier
 notes describing biome decoration meshes as globally resident are historical.
+
+
+## Phase 10 — on-demand decorative records and testing configuration
+
+`BiomeDecorationField` runs the existing bounded global candidate scan at
+construction to calculate only the last selected priority and its row-major tie
+break. It does not retain the complete selected decoration list. Each half-open
+chunk bounds query reconstructs candidates using the same coordinate hashes,
+biome and natural-object exclusions, rejects priorities beyond the cutoff, then
+computes heights, transforms and colours only for that chunk. Stable sorting and
+tie-breaking preserve the exact previous seeded appearance and 2,200 cap,
+independent of chunk partition and order. Chunk visuals own the resulting
+records and discard them on unload. Selection still scans the bounded global
+play area at startup and exclusion checks still use resident object definitions;
+the globally relaxed source heightfield is also resident. This is partial data
+streaming, not on-demand generation of the entire world.
+
+`seed` and `viewDistance` URL parameters select a validated integer seed and
+16–500 m fog/view distance, respectively. Defaults remain unchanged and invalid
+or duplicated values are ignored. Fog-near scales down with fog-far to preserve
+a valid range. Render chunk coverage continues to include frustum corners and
+a chunk margin; interaction range and physics are unaffected. Settings are
+session-only, and changing or reloading the URL discards unsaved state. A
+headless Chromium/WebGL smoke test loaded seeds 123 and 124 with 24 m fog and
+sent movement input without page errors, but software-rendering timings are not
+representative browser/GPU profiling. Earlier documentation saying selected
+decoration records remain resident is superseded by this note.

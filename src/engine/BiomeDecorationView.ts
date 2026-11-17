@@ -1,20 +1,16 @@
 import { BoxGeometry, BufferAttribute, Color, Group, InstancedMesh, MeshStandardMaterial, Object3D, type BufferGeometry } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { hash2D } from '../world/noise';
+import { BiomeDecorationField, type Decoration, type DecorationKind } from '../world/BiomeDecorations';
 import type { World } from '../world/World';
 import type { Footprint } from '../buildings/Transform';
 import type { WorldChunk } from '../world/ChunkManager';
 
 /** Presentation-only detail: never registered for physics, targeting or placement. */
-type Kind = 'meadow' | 'flower' | 'fern' | 'scrub' | 'alpine' | 'reeds';
+type Kind = DecorationKind;
 type Part = { x: number; y: number; z: number; w: number; h: number; d: number; color: number; yaw?: number };
-type Decoration = { x: number; y: number; z: number; yaw: number; scale: number; tint: number };
-type Candidate = { kind: Kind; decoration: Decoration; priority: number };
 
 type Batch = { mesh: InstancedMesh; decorations: Decoration[] };
 type Asset = { geometry: BufferGeometry; material: MeshStandardMaterial };
-const CAP = 2200;
-const SPACING = 3;
 
 const PARTS: Record<Kind, readonly Part[]> = {
   reeds: [
@@ -72,45 +68,12 @@ export class BiomeDecorationView {
   readonly group = new Group();
   private readonly batches = new Map<string, Batch[]>();
   private readonly assets = new Map<Kind, Asset>();
-  private readonly selected = new Map<string, Candidate[]>();
+  private readonly field: BiomeDecorationField;
   private revision = -1;
   constructor(private readonly world: World, private readonly chunkColumns = 64) {
     if (!Number.isSafeInteger(chunkColumns) || chunkColumns < 1 || chunkColumns > 512) throw new RangeError('Invalid decoration chunk size.');
     this.group.name = 'environment:biome-details';
-    const seed = world.biomes.seed, bounds = world.terrain.bounds;
-    // Preserve the bounded, globally prioritised layout independently of chunk size.
-    const radius = Math.min(world.playAreaRadius, 150);
-    const minX = Math.ceil(Math.max(bounds.minX + 1, -radius) / SPACING);
-    const maxX = Math.floor(Math.min(bounds.maxX - 1, radius) / SPACING);
-    const minZ = Math.ceil(Math.max(bounds.minZ + 1, -radius) / SPACING);
-    const maxZ = Math.floor(Math.min(bounds.maxZ - 1, radius) / SPACING);
-    const candidates: Candidate[] = [];
-    for (let gz = minZ; gz <= maxZ; gz++) for (let gx = minX; gx <= maxX; gx++) {
-      const rand = (salt: number) => hash2D(seed ^ salt, gx, gz);
-      const x = (gx + (rand(11) - .5) * .55) * SPACING, z = (gz + (rand(31) - .5) * .55) * SPACING;
-      if (Math.hypot(x, z) > radius - 1 || Math.hypot(x - world.spawn.x, z - world.spawn.z) < 3) continue;
-      const biome = world.biomes.at(x, z), chance = rand(101);
-      const kind: Kind | null = biome === 'wetlands' ? (chance < .42 ? 'reeds' : chance < .49 ? 'flower' : null)
-        : biome === 'forest' ? (chance < .38 ? 'fern' : chance < .48 ? 'flower' : null)
-        : biome === 'desert' ? (chance < .16 ? 'scrub' : null)
-        : biome === 'highlands' ? (chance < .23 ? 'alpine' : null)
-        : chance < .22 ? 'meadow' : chance < .32 ? 'flower' : null;
-      if (!kind) continue;
-      // Keep resource markers, solid obstacles and interactables legible.
-      if (world.obstacleDefinitions.some(o => Math.hypot(o.x - x, o.z - z) < o.radius + .65) ||
-          world.gatherables.definitions.some(o => Math.hypot(o.x - x, o.z - z) < o.radius + .7)) continue;
-      candidates.push({ kind, priority: rand(503), decoration: { x, z, y: world.terrain.heightAt(x, z) + .01,
-        yaw: rand(203) * Math.PI * 2, scale: .75 + rand(307) * .5,
-        tint: kind === 'flower' ? [0xffffff, 0xffd9b3, 0xbcdcff][Math.floor(rand(409) * 3)]! : 0xffffff } });
-    }
-    // Seeded priorities avoid preferentially filling the cap from one edge.
-    candidates.sort((a, b) => a.priority - b.priority);
-    for (const candidate of candidates.slice(0, CAP)) {
-      const column = world.terrain.columnAt(candidate.decoration.x, candidate.decoration.z)!;
-      const id = `${Math.floor(column.x / chunkColumns)},${Math.floor(column.z / chunkColumns)}`;
-      const selected = this.selected.get(id) ?? [];
-      selected.push(candidate); this.selected.set(id, selected);
-    }
+    this.field = new BiomeDecorationField(world);
   }
 
   /** Create render batches only for newly loaded terrain chunks. */
@@ -126,7 +89,7 @@ export class BiomeDecorationView {
     for (const chunk of chunks) {
       if (this.batches.has(chunk.id)) continue;
       const records: Record<Kind, Decoration[]> = { meadow: [], flower: [], fern: [], scrub: [], alpine: [], reeds: [] };
-      for (const { kind, decoration } of this.selected.get(chunk.id) ?? []) records[kind].push(decoration);
+      for (const { kind, decoration } of this.field.inBounds(chunk.bounds)) records[kind].push(decoration);
       const batches: Batch[] = [];
       for (const kind of Object.keys(records) as Kind[]) {
         const decorations = records[kind]; if (!decorations.length) continue;
@@ -187,6 +150,6 @@ export class BiomeDecorationView {
     for (const batches of this.batches.values()) for (const { mesh } of batches) mesh.dispose();
     this.batches.clear(); this.group.clear();
     for (const { geometry, material } of this.assets.values()) { geometry.dispose(); material.dispose(); }
-    this.assets.clear(); this.selected.clear();
+    this.assets.clear();
   }
 }
