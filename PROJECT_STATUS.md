@@ -3,11 +3,33 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 10 — World expansion
-**Phase Status:** 🟡 In progress — streamed terrain, natural-object and biome-detail visuals; world-data streaming remains partial
+**Phase Status:** 🟡 In progress — procedural biome-detail chunks and configurable view distance; world-data streaming remains partial
 **Next Recommended Task:** Extend world-data streaming and validate chunk transitions and performance in the browser; full cross-reload saves are Phase 12 scope.
 **Last Updated:** 2026-11-11
 
 ---
+
+## Phase 10 — on-demand biome-detail data and world settings
+
+- `BiomeDecorationField` now recreates decorative records from seed and chunk
+  bounds when requested. A global startup pass retains only the selection cutoff,
+  preserving the existing cap and exact layout without retaining all selected
+  records. Decoration data and instance meshes are released with their chunks.
+  The cutoff still requires a bounded global scan; natural definitions and source
+  heightfield remain resident. This is not full world-data streaming.
+- `?seed=123&viewDistance=24&debug=1` allows reproducible seed selection and
+  a shorter fog/view distance for chunk testing. Bounds and invalid or repeated
+  inputs are validated, with unchanged defaults. Reloading always loses the
+  current session; this is not a save mechanism.
+- Tests cover exact former layout and colours for three configurations including
+  the 2,200 cap, arbitrary chunk partitions and order, exclusion of resources,
+  validation, seeded world differences and the real engine's chunk transitions.
+  A headless Chromium/WebGL smoke test started seeds 123 and 124 with a 24 m view
+  and sent movement input without page errors. It used software rendering and is
+  not a representative performance benchmark or a full player walkthrough.
+- Phase 10 remains open: natural definitions and the globally relaxed terrain
+  source still do not unload, and complete in-game acceptance and representative
+  performance measurements remain outstanding. Save/load is Phase 12 scope.
 
 ## Phase 10 — chunked biome-detail visuals
 
@@ -16,8 +38,8 @@
   shared materials and geometry survive chunk eviction. Returning chunks restore
   visibility from the current building footprints, including construction while
   the area was unloaded. The selected decoration records are still computed for
-  the finite play area at startup and retained; this is visual streaming, not
-  complete on-demand world generation.
+  the finite play area at startup; a later change described above regenerates
+  individual records on demand instead of retaining them.
 - Tests compare the full layout across chunk sizes and visitation orders and
   exercise building occlusion after eviction, demolition, shared-asset lifecycle
   and duplicate prevention. The powered foundry/constructor continuity test now

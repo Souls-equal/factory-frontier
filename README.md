@@ -17,14 +17,15 @@ The assembler and foundry support multiple inputs; H opens a factory dashboard.
 The user has globally validated Phases 7–9. Individual earlier acceptance
 scenarios remain outstanding; see `PROJECT_STATUS.md` for details.
 
-The first Phase 10 slice adds seeded grassland, forest, desert and rocky regions,
-with extra removable natural resources, voxel vegetation and varied surface
-textures. Small decorative plants are non-interactive and hide under buildings.
-Secondary deposits favour different biomes, with the first of each resource
-kept in its starting location. Terrain height is unchanged. Terrain meshes load
-in camera-relative chunks, while world data and factory simulation stay resident. Full world-data streaming, persistent saves and
-wetlands are not implemented. The world remains finite and factory state is lost
-on reload.
+Phase 10 adds seeded grassland, forest, desert, rocky highland and wetland regions,
+with removable resources, decorative vegetation, shallow puddles and varied
+surface textures. Small decorative plants and puddles are non-interactive and hide
+under buildings. Secondary deposits favour different biomes, with the first of
+each resource kept in its starting location. Terrain, natural models and
+interactions stream by camera/player location, while factory simulation, source
+heightfield and natural definitions remain resident. Full world-data streaming
+and persistent saves are not implemented. The world remains finite and factory
+state is lost on reload.
 
 ## Quick start
 
@@ -46,6 +47,14 @@ foundation and press **F** to demolish it for a full refund; if the full refund
 does not fit, demolition is refused. **Escape** cancels placement.
 If the mouse is not captured during placement, drag to look and right-click to request capture; a short left click places. Add `?debug=1` to the URL to show live engine statistics (FPS, frame time,
 simulation time, ticks, draw calls, triangles, frame systems).
+
+Optional URL parameters allow testing worlds and chunk transitions:
+`?seed=123&viewDistance=24&debug=1`. `seed` accepts integers from 0 to
+2,147,483,647; the default is 20261111. `viewDistance` sets the fog distance in
+metres from 16 to 500 (default 265); shorter distances visibly increase fog and
+make chunk transitions easier to observe. Invalid or repeated parameters fall
+back to defaults. **Loading or reloading any URL starts a new session and loses
+all construction and inventory**; there is no save/load yet.
 
 ### Controls
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased — Phase 10 procedural decoration data
+
+- Regenerate cosmetic decoration records per chunk while preserving the exact
+  previous seeded selection, cap and appearance; retain only its cutoff key.
+- Add validated `seed` and `viewDistance` URL settings for world and chunk tests.
+- Test old-layout parity, partitions, generation, settings and engine chunk
+  transitions; smoke-test two seeds in headless Chromium/WebGL. Source terrain
+  and natural definitions remain resident; full streaming and browser profiling
+  remain open. Reloading still loses the current game.
+
 ## Unreleased — Phase 10 chunked biome details
 
 - Stream decorative vegetation instance meshes with terrain chunks, preserving
