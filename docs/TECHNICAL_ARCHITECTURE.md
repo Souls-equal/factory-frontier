@@ -2008,6 +2008,27 @@ material, and hides any cell intersecting a building footprint when the building
 revision changes. Reloading a chunk recomputes that visibility. These are surface
 decals, not physical or simulated water; ground shape, collision, construction
 and mining remain unchanged. No particular seed guarantees puddles. Sampling
-scans resident object definitions, and performance and visual appearance have
-not been validated in a browser. Full world streaming and persistence across
+scans resident object definitions. The user subsequently validated the appearance
+of the puddles; performance and other individual scenarios remain unvalidated.
+Full world streaming and persistence across
 reload are still absent.
+
+
+## Phase 10 — streamed natural-rock visuals
+
+`RockChunkView` uses its own `ChunkManager` at the terrain chunk size and the
+same camera focus and frustum/fog coverage. Coverage is expanded by the maximum
+rock radius before the manager's one-chunk margin so even a formation whose
+centre is outside the requested view can remain visible. Each loaded chunk
+batches its boulders and formations by variant; instances reproduce the previous
+world-space transforms, biome tint based on the stable global rock index, texture
+and shadow flags. Props and deposit colliders are excluded. Asset geometry,
+material and texture are shared across batches; unload disposes the instance
+mesh, while full disposal releases shared assets once.
+
+The render lifecycle is independent from collision and simulation. Definitions
+and collision state remain resident and continue to work when visual chunks
+unload. The additional chunk metadata and draws have not been benchmarked, and
+the default view can cover the entire small map. This is not full world-data
+streaming or cross-reload persistence. This note supersedes earlier descriptions
+of rocks as a single resident set of instance batches.

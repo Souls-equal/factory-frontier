@@ -3,11 +3,27 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 10 — World expansion
-**Phase Status:** 🟡 In progress — wetlands, partial chunk streaming and bounded terrain/collision caches
-**Next Recommended Task:** Extend world-data streaming, implement cross-reload preservation, and profile and validate chunk transitions in the browser.
+**Phase Status:** 🟡 In progress — streamed natural-rock visuals and partial world-data streaming
+**Next Recommended Task:** Extend world-data streaming and validate chunk transitions and performance in the browser; full cross-reload saves are Phase 12 scope.
 **Last Updated:** 2026-11-11
 
 ---
+
+## Phase 10 — streamed natural-rock visuals
+
+- Rock and formation instance batches now load and unload by chunk. The renderer
+  retains their original transforms, seeded tint and shadows, and shares geometry,
+  material and texture across chunks. A radius margin covers formations whose
+  centres are just outside the view. Colliders and world definitions remain resident;
+  this does not change physics, construction or factory simulation.
+- Tests compare against the original visual calculations at different chunk sizes,
+  exercise unload/reload, absence of duplicates, large formations, empty worlds,
+  cleanup and collision parity. Chunking may increase draw calls; performance and
+  the new transition behavior have not been validated in a real browser.
+- The user validated the appearance of the decorative puddles, without separately
+  validating every wetland or chunk scenario. Full streaming, in-game transition
+  validation and performance profiling remain open. Factory changes survive chunk
+  eviction in memory; saving across page reload belongs to Phase 12 and is absent.
 
 ## Phase 10 — wetlands and decorative shallow water
 
@@ -21,7 +37,8 @@
   seed or finite map guarantees a wetland or puddle.
 - Automated tests cover seeded generation, chunk partitioning, object avoidance,
   unchanged resource generation for representative seeds, building occlusion,
-  unload/reload and cleanup. No browser visual or performance validation yet.
+  unload/reload and cleanup. The user subsequently validated the appearance of
+  the puddles; browser performance and other scenarios remain unvalidated.
 - Phase 10 remains open: world-data streaming is partial, modified state remains
   in memory only, and in-game chunk transitions need separate validation. Full
   save/load is planned for Phase 12; do not treat this slice as that feature.
@@ -74,9 +91,9 @@
   Terrain mesh visibility now follows this manager's load/unload transitions.
 - Deposit and gatherable models are created and removed with those transitions.
   Shared assets survive unload; per-deposit ground-mark geometry is disposed and
-  regenerated. Highlight and gathered state are restored on return. Natural rock
-  instances, props, biome details and buildings are not streamed; deposit and
-  gatherable and collider definitions remain resident in the finite world.
+  regenerated. Highlight and gathered state are restored on return. Natural rocks
+  are now streamed as described above; props, biome details and buildings are not.
+  Deposit, gatherable and collider definitions remain resident in the finite world.
   Interaction adapters are streamed separately as described above.
 - Automated tests exercise unique ownership, regeneration, edge-spanning buildings,
   disposal and unloaded-resource state, plus a powered constructor, fuel and a
@@ -137,7 +154,8 @@
 - Mesh streaming alone does not unload buildings, simulation, resources, flora or
   other scene objects. Machines continue running while terrain meshes are absent.
   The later bounded voxel cache and chunk lifecycle are described above; the source
-  heightfield and other world data remain resident. No save/load, wetlands or water yet.
+  heightfield and other world data remain resident. The later wetlands slice is
+  described above; save/load remains absent.
 
 ## Phase 9 — advanced manufacturing globally user-validated
 
