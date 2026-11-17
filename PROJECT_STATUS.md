@@ -3,11 +3,33 @@
 **Project:** Factory Frontier
 **Version:** 0.3.0
 **Current Phase:** Phase 10 — World expansion
-**Phase Status:** 🟡 In progress — streamed natural-rock visuals and partial world-data streaming
+**Phase Status:** 🟡 In progress — streamed terrain, natural-object and biome-detail visuals; world-data streaming remains partial
 **Next Recommended Task:** Extend world-data streaming and validate chunk transitions and performance in the browser; full cross-reload saves are Phase 12 scope.
 **Last Updated:** 2026-11-11
 
 ---
+
+## Phase 10 — chunked biome-detail visuals
+
+- Decorative vegetation now follows terrain chunk loads and unloads. The
+  existing global seeded priority selection and 2,200-instance cap are preserved;
+  shared materials and geometry survive chunk eviction. Returning chunks restore
+  visibility from the current building footprints, including construction while
+  the area was unloaded. The selected decoration records are still computed for
+  the finite play area at startup and retained; this is visual streaming, not
+  complete on-demand world generation.
+- Tests compare the full layout across chunk sizes and visitation orders and
+  exercise building occlusion after eviction, demolition, shared-asset lifecycle
+  and duplicate prevention. The powered foundry/constructor continuity test now
+  also unloads actual terrain/environment visuals and interaction adapters while
+  production continues, then reloads them. A headless Chromium/WebGL smoke test
+  with a reduced fog distance also verified decoration unload, building placement
+  while unloaded, restoration and demolition; it reported no page errors. This
+  does not replace a player walkthrough or representative GPU profiling.
+- Phase 10 remains open: natural definitions and the source heightfield remain
+  resident, and a complete player walkthrough and representative browser
+  performance measurements are still missing. Full save/load after page reload
+  remains Phase 12 scope.
 
 ## Phase 10 — streamed natural-rock visuals
 
@@ -92,7 +114,7 @@
 - Deposit and gatherable models are created and removed with those transitions.
   Shared assets survive unload; per-deposit ground-mark geometry is disposed and
   regenerated. Highlight and gathered state are restored on return. Natural rocks
-  are now streamed as described above; props, biome details and buildings are not.
+  and biome details are now streamed as described above; props and buildings are not.
   Deposit, gatherable and collider definitions remain resident in the finite world.
   Interaction adapters are streamed separately as described above.
 - Automated tests exercise unique ownership, regeneration, edge-spanning buildings,
@@ -144,7 +166,8 @@
   mossy-stone surface variants, biome-tinted rocks and forest tree foliage enrich
   the look. These are presentation-only (not targets, resources or colliders);
   they hide under building footprints and reappear when buildings are demolished.
-  The renderer caps the decoration count at 2,200 and does not stream it.
+  The selection remains capped at 2,200; the later chunked visual lifecycle is
+  described above.
 - Terrain rendering now loads and disposes 64-column mesh chunks around the camera.
   Coverage includes the camera frustum through the fog distance, with a chunk
   margin; chunks read neighbouring columns to avoid seams and rebuild identically.

@@ -98,8 +98,9 @@ export class EnvironmentView {
     this.gatherableRoot = this.createGatherables(world);
     this.group.add(this.gatherableRoot);
     this.loadGatherables(this.terrainChunks.loadedChunks());
-    this.biomeDetails = new BiomeDecorationView(world);
+    this.biomeDetails = new BiomeDecorationView(world, chunkColumns);
     this.group.add(this.biomeDetails.group);
+    this.biomeDetails.load(this.terrainChunks.loadedChunks());
     this.syncGatherables();
 
     const props = new Group();
@@ -127,10 +128,12 @@ export class EnvironmentView {
     }
   }
 
-  /** Stream terrain, rocks, deposits and gatherables without unloading gameplay state. */
+  /** Stream terrain and environmental visuals without unloading gameplay state. */
   setFocus(x: number, z: number, coverage?: number): void {
     const changes = this.terrainChunks.setFocus(x, z, coverage);
     this.rocks.setFocus(x, z, coverage);
+    this.biomeDetails.unload(changes.unloaded);
+    this.biomeDetails.load(changes.loaded);
     this.shallowWater.unload(changes.unloaded);
     if (changes.loaded.length) this.shallowWater.load(changes.loaded);
     for (const chunk of changes.unloaded) for (const deposit of chunk.deposits) {

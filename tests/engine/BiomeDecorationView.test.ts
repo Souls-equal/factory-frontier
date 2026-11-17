@@ -4,6 +4,7 @@ import { createGameConfig } from '../../src/core/Configuration';
 import { createWorld } from '../../src/world/World';
 import { EnvironmentView } from '../../src/engine/EnvironmentView';
 import { BiomeDecorationView } from '../../src/engine/BiomeDecorationView';
+import { ChunkManager } from '../../src/world/ChunkManager';
 
 function instances(view: EnvironmentView): InstancedMesh[] {
   return view.group.getObjectByName('environment:biome-details')!.children as InstancedMesh[];
@@ -22,7 +23,7 @@ describe('biome detail presentation', () => {
     const a = new EnvironmentView(world), b = new EnvironmentView(again);
     const first = instances(a), second = instances(b);
     expect(first.map(m => m.name)).toEqual(second.map(m => m.name));
-    expect(first.length).toBe(6);
+    expect(new Set(first.map(m => m.name.split(':').at(-1)))).toEqual(new Set(['meadow', 'flower', 'fern', 'scrub', 'alpine', 'reeds']));
     expect(first.reduce((sum, m) => sum + m.count, 0)).toBeLessThanOrEqual(2200);
     for (let k = 0; k < first.length; k++) {
       const mesh = first[k]!;
@@ -54,6 +55,8 @@ describe('biome detail presentation', () => {
   it('keeps decoration counts bounded and distributed across a large configured world', () => {
     const world = createWorld(createGameConfig({ world: { sizeMeters: 2000, resolution: 8, heightScale: 0, rimHeight: 0, obstacleCount: 0 }, controls: { playAreaRadius: 150 } }));
     const details = new BiomeDecorationView(world);
+    const chunks = new ChunkManager(world);
+    details.load(chunks.update(0, 0, 2000).loaded);
     const meshes = details.group.children as InstancedMesh[];
     const positions = meshes.flatMap(mesh => Array.from({ length: mesh.count }, (_, i) => new Vector3().setFromMatrixPosition(matrix(mesh, i))));
     expect(positions.length).toBeGreaterThan(1000); expect(positions.length).toBeLessThanOrEqual(2200);

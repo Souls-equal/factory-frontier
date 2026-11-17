@@ -3,6 +3,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { hash2D } from '../world/noise';
 import type { World } from '../world/World';
 import type { Footprint } from '../buildings/Transform';
+import type { WorldChunk } from '../world/ChunkManager';
 
 /** Presentation-only detail: never registered for physics, targeting or placement. */
 type Kind = 'meadow' | 'flower' | 'fern' | 'scrub' | 'alpine' | 'reeds';
@@ -10,7 +11,8 @@ type Part = { x: number; y: number; z: number; w: number; h: number; d: number; 
 type Decoration = { x: number; y: number; z: number; yaw: number; scale: number; tint: number };
 type Candidate = { kind: Kind; decoration: Decoration; priority: number };
 
-type Batch = { mesh: InstancedMesh; decorations: Decoration[]; geometry: BufferGeometry; material: MeshStandardMaterial };
+type Batch = { mesh: InstancedMesh; decorations: Decoration[] };
+type Asset = { geometry: BufferGeometry; material: MeshStandardMaterial };
 const CAP = 2200;
 const SPACING = 3;
 
@@ -68,13 +70,15 @@ function geometryFor(kind: Kind): BufferGeometry {
 /** Bounded, seeded instance batches. Only updates when building topology changes. */
 export class BiomeDecorationView {
   readonly group = new Group();
-  private readonly batches: Batch[] = [];
+  private readonly batches = new Map<string, Batch[]>();
+  private readonly assets = new Map<Kind, Asset>();
+  private readonly selected = new Map<string, Candidate[]>();
   private revision = -1;
-  constructor(private readonly world: World) {
+  constructor(private readonly world: World, private readonly chunkColumns = 64) {
+    if (!Number.isSafeInteger(chunkColumns) || chunkColumns < 1 || chunkColumns > 512) throw new RangeError('Invalid decoration chunk size.');
     this.group.name = 'environment:biome-details';
-    const records: Record<Kind, Decoration[]> = { meadow: [], flower: [], fern: [], scrub: [], alpine: [], reeds: [] };
     const seed = world.biomes.seed, bounds = world.terrain.bounds;
-    // There is no streaming yet: stay bounded even for extreme configurations.
+    // Preserve the bounded, globally prioritised layout independently of chunk size.
     const radius = Math.min(world.playAreaRadius, 150);
     const minX = Math.ceil(Math.max(bounds.minX + 1, -radius) / SPACING);
     const maxX = Math.floor(Math.min(bounds.maxX - 1, radius) / SPACING);
@@ -101,19 +105,55 @@ export class BiomeDecorationView {
     }
     // Seeded priorities avoid preferentially filling the cap from one edge.
     candidates.sort((a, b) => a.priority - b.priority);
-    for (const candidate of candidates.slice(0, CAP)) records[candidate.kind].push(candidate.decoration);
-    for (const kind of Object.keys(records) as Kind[]) {
-      const decorations = records[kind]; if (!decorations.length) continue;
-      const geometry = geometryFor(kind), material = new MeshStandardMaterial({ vertexColors: true, roughness: .95 });
-      const mesh = new InstancedMesh(geometry, material, decorations.length);
-      mesh.name = `environment:detail:${kind}`;
-      mesh.receiveShadow = true;
-      const color = new Color();
-      decorations.forEach((item, i) => mesh.setColorAt(i, color.setHex(item.tint)));
-      mesh.instanceColor!.needsUpdate = true;
-      this.batches.push({ mesh, decorations, geometry, material }); this.group.add(mesh);
+    for (const candidate of candidates.slice(0, CAP)) {
+      const column = world.terrain.columnAt(candidate.decoration.x, candidate.decoration.z)!;
+      const id = `${Math.floor(column.x / chunkColumns)},${Math.floor(column.z / chunkColumns)}`;
+      const selected = this.selected.get(id) ?? [];
+      selected.push(candidate); this.selected.set(id, selected);
     }
-    this.sync();
+  }
+
+  /** Create render batches only for newly loaded terrain chunks. */
+  load(chunks: readonly WorldChunk[]): void {
+    if (!chunks.length) return;
+    const t = this.world.terrain, width = this.chunkColumns;
+    for (const { x, z, range } of chunks) {
+      if (range.minX !== x * width || range.minZ !== z * width ||
+          range.maxX !== Math.min((x + 1) * width, t.columnsX) ||
+          range.maxZ !== Math.min((z + 1) * width, t.columnsZ))
+        throw new RangeError('Decoration chunks must use the configured chunk size.');
+    }
+    for (const chunk of chunks) {
+      if (this.batches.has(chunk.id)) continue;
+      const records: Record<Kind, Decoration[]> = { meadow: [], flower: [], fern: [], scrub: [], alpine: [], reeds: [] };
+      for (const { kind, decoration } of this.selected.get(chunk.id) ?? []) records[kind].push(decoration);
+      const batches: Batch[] = [];
+      for (const kind of Object.keys(records) as Kind[]) {
+        const decorations = records[kind]; if (!decorations.length) continue;
+        let asset = this.assets.get(kind);
+        if (!asset) {
+          asset = { geometry: geometryFor(kind), material: new MeshStandardMaterial({ vertexColors: true, roughness: .95 }) };
+          this.assets.set(kind, asset);
+        }
+        const mesh = new InstancedMesh(asset.geometry, asset.material, decorations.length);
+        mesh.name = `environment:detail:${chunk.id}:${kind}`;
+        mesh.receiveShadow = true;
+        const color = new Color();
+        decorations.forEach((item, i) => mesh.setColorAt(i, color.setHex(item.tint)));
+        if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+        batches.push({ mesh, decorations }); this.group.add(mesh);
+      }
+      this.batches.set(chunk.id, batches);
+    }
+    // Newly created instances must reflect buildings already present on return.
+    this.revision = -1; this.sync();
+  }
+
+  unload(chunks: readonly WorldChunk[]): void {
+    for (const chunk of chunks) {
+      for (const { mesh } of this.batches.get(chunk.id) ?? []) { this.group.remove(mesh); mesh.dispose(); }
+      this.batches.delete(chunk.id);
+    }
   }
 
   /** Hide details beneath any building, and restore them after demolition. */
@@ -131,7 +171,7 @@ export class BiomeDecorationView {
         }
     }
     const dummy = new Object3D();
-    for (const { mesh, decorations } of this.batches) {
+    for (const batches of this.batches.values()) for (const { mesh, decorations } of batches) {
       decorations.forEach((item, i) => {
         const hidden = (buckets.get(key(Math.floor(item.x / cell), Math.floor(item.z / cell))) ?? []).some(f => item.x >= f.minX - .35 && item.x <= f.maxX + .35 && item.z >= f.minZ - .35 && item.z <= f.maxZ + .35);
         dummy.position.set(item.x, item.y, item.z); dummy.rotation.set(0, item.yaw, 0);
@@ -144,7 +184,9 @@ export class BiomeDecorationView {
   }
 
   dispose(): void {
-    for (const { mesh, geometry, material } of this.batches) { mesh.dispose(); geometry.dispose(); material.dispose(); }
-    this.batches.length = 0; this.group.clear();
+    for (const batches of this.batches.values()) for (const { mesh } of batches) mesh.dispose();
+    this.batches.clear(); this.group.clear();
+    for (const { geometry, material } of this.assets.values()) { geometry.dispose(); material.dispose(); }
+    this.assets.clear(); this.selected.clear();
   }
 }

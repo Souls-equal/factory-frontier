@@ -22,7 +22,8 @@ results were not supplied. Phase 10 includes seed-driven biome regions, biased
 resources and exploratory deposits, visual enrichment and camera-driven terrain
 mesh streaming, a bounded voxel-column cache, chunk-managed resource visuals and
 nearby world interaction adapters, bounded on-demand collision-index buckets,
-decorative wetlands with chunk-rendered shallow puddles, and streamed rock visuals.
+decorative wetlands with chunk-rendered shallow puddles, and streamed rock and
+biome-detail visuals.
 The user validated the appearance of the puddles; other chunk scenarios are not
 individually validated.
 Factories remain active in memory when chunks unload. The user finds the map very playable,
@@ -62,7 +63,7 @@ detailed evidence and verification results live in `PROJECT_STATUS.md`.
 | 7 — Advanced logistics | ✅ Globally user-validated | Player reports no apparent bugs in their tests; individual checklist results not specified; documented limits apply |
 | 8 — Electricity | ✅ Globally user-validated | Automatic visible links, biomass generation, machine power and inspection; documented limitations remain |
 | 9 — Advanced manufacturing | ✅ Globally user-validated | Player reports everything works; individual scenario results not supplied |
-| 10 — World expansion | 🟡 In progress | Seeded biomes and decorative wetlands, chunk manager, terrain/resource/rock visuals, interaction adapters and bounded terrain/collision caches; full data streaming and cross-reload preservation outstanding |
+| 10 — World expansion | 🟡 In progress | Seeded biomes and decorative wetlands, chunk manager, terrain/resource/rock/decoration visuals, interaction adapters and bounded terrain/collision caches; full data streaming and cross-reload preservation outstanding |
 | 11 — Progression | ◻ Planned | — |
 | 12 — Persistence | ◻ Planned | — |
 | 13 — Polish and optimization | ◻ Planned | — |
